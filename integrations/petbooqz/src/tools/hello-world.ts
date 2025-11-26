@@ -22,7 +22,7 @@ export const helloWorld: ToolHandler<HelloWorldInput, HelloWorldOutput> = async 
   const environmentName = context.env.SKEDYUL_ENV ?? 'local'
 
   return {
-    message: `Hello, ${name}! This response is coming from the serverless MCP starter.`,
+    message: `Hello, ${name}! This resp is coming from the serverless MCP starter.`,
     environmentName,
   }
 }
