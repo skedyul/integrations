@@ -2,12 +2,14 @@ FROM public.ecr.aws/lambda/nodejs:22 AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* tsconfig.json ./
+COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.tests.json ./
 COPY src ./src
+COPY tests ./tests
 
-RUN (npm ci || npm install) && \
-    npm run build && \
-    npm cache clean --force && \
+RUN corepack enable && \
+    pnpm install --frozen-lockfile && \
+    pnpm run build && \
+    pnpm store prune && \
     rm -rf /tmp/* /var/cache/apk/* ~/.npm
 
 FROM public.ecr.aws/lambda/nodejs:22
