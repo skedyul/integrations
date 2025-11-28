@@ -1,7 +1,7 @@
 {
-  "name": "typescript-serverless-mcp-starter",
+  "name": "@skedyul/petbooqz",
   "version": "1.0.0",
-  "description": "TypeScript MCP server starter for Node.js 22 Lambda (serverless)",
+  "description": "Petbooqz integration for Skedyul",
   "main": "dist/server/mcp-server.js",
   "scripts": {
     "build": "tsc",
@@ -9,7 +9,9 @@
     "test": "npm run build && node --test tests/**/*.test.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "skedyul": "skedyul",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
