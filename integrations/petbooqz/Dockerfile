@@ -23,5 +23,3 @@ ARG MCP_ENV_JSON="{}"
 ENV MCP_ENV_JSON=${MCP_ENV_JSON}
 
 CMD ["dist/server/mcp-server.handler"]
-
-

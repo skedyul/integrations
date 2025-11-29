@@ -50,8 +50,6 @@ The integration provides the following tools:
 - **calendar_slots.release** – Release a temporarily reserved slot
 - **calendar_slots.cancel** – Cancel a confirmed appointment
 
-## Building and Testing
-
 ### Build Docker Image
 
 ```bash
