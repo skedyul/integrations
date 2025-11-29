@@ -1,6 +1,6 @@
 # Petbooqz Integration (Node.js 22 Lambda)
 
-This is the Petbooqz integration for Skedyul, a **serverless** MCP server targeting the `public.ecr.aws/lambda/nodejs:22` runtime
+This is the Petbooqz integration for Skedyul, a **serverless** MCP server targeting the `public.ecr.aws/lambda/nodejs:22` runtime.
 
 ## Structure
 
