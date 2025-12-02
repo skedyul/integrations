@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.tests.json ./
 COPY src ./src
-COPY tests ./tests
 
 # Install deps, build, then prune down to production dependencies for the final image
 RUN corepack enable && \
@@ -14,16 +13,20 @@ RUN corepack enable && \
     pnpm store prune && \
     rm -rf /tmp/* /var/cache/apk/* ~/.npm
 
-FROM public.ecr.aws/lambda/nodejs:22
+FROM gcr.io/distroless/nodejs22-debian12
 
-WORKDIR ${LAMBDA_TASK_ROOT}
+WORKDIR /app
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=nonroot:nonroot /app/node_modules ./node_modules
+COPY --from=builder --chown=nonroot:nonroot /app/dist ./dist
 
-# Baked-in MCP env for this Lambda container image (JSON string). At runtime you
-# can override/extend via MCP_ENV, which the MCP server merges with MCP_ENV_JSON.
+# Baked-in MCP env for this image (JSON string). At runtime you can add/override
+# with MCP_ENV_JSON / MCP_ENV to match the inline templates used by worker-compute.
 ARG MCP_ENV_JSON="{}"
 ENV MCP_ENV_JSON=${MCP_ENV_JSON}
 
-CMD ["dist/server/mcp-server.handler"]
+# HTTP MCP server entrypoint for dedicated Petbooqz server.
+# This exposes a /mcp JSON-RPC endpoint, matching what worker-compute expects.
+CMD ["dist/server/mcp-server-dedicated.js"]
+
+
