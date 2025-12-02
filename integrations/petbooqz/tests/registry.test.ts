@@ -1,8 +1,10 @@
+/// <reference types="node" />
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { server } from 'skedyul'
 import type {
   ServerlessServerInstance,
+  ToolMetadata,
   ToolRegistry,
 } from 'skedyul'
 import { registry } from '../src/registry'
@@ -184,6 +186,102 @@ test('calendar_slots.cancel calls mocked DELETE endpoint and returns success', a
     delete process.env.PETBOOQZ_PASSWORD
   }
 })
+
+test('MCP tools/list returns JSON schemas for every tool', async () => {
+  const serverless = server.create(
+    {
+      computeLayer: 'serverless',
+      metadata: {
+        name: 'petbooqz-tools-list-test',
+        version: '0.0.1',
+      },
+    },
+    registry as ToolRegistry,
+  ) as ServerlessServerInstance
+
+  const { handler } = serverless
+
+  const listRequest = {
+    jsonrpc: '2.0' as const,
+    id: 1,
+    method: 'tools/list',
+    params: {},
+  }
+
+  const response = await handler({
+    path: '/mcp',
+    httpMethod: 'POST',
+    body: JSON.stringify(listRequest),
+    headers: {},
+    queryStringParameters: null,
+    requestContext: { requestId: 'tools-list' },
+  })
+
+  assert.strictEqual(response.statusCode, 200)
+  const parsed = JSON.parse(response.body)
+  assert.ok(parsed.result)
+
+  const tools = parsed.result.tools as ToolMetadata[]
+
+  // Ensure all registry tools are exposed by MCP tools/list
+  const toolNames = tools.map((t) => t.name).sort()
+  const registryNames = Object.keys(registry).sort()
+  assert.deepStrictEqual(toolNames, registryNames)
+
+  const appointmentsTool = tools.find(
+    (t) => t.name === 'appointment_types.list',
+  )
+  assert.ok(
+    appointmentsTool,
+    'appointment_types.list should be present in tools/list',
+  )
+
+  const cancelTool = tools.find((t) => t.name === 'calendar_slots.cancel')
+  assert.ok(cancelTool, 'calendar_slots.cancel should be present in tools/list')
+
+  assertJsonSchemaObject(
+    appointmentsTool?.inputSchema,
+    'appointment_types.list inputSchema',
+  )
+  assertJsonSchemaObject(
+    appointmentsTool?.outputSchema,
+    'appointment_types.list outputSchema',
+  )
+  assertJsonSchemaObject(
+    cancelTool?.inputSchema,
+    'calendar_slots.cancel inputSchema',
+  )
+  assertJsonSchemaObject(
+    cancelTool?.outputSchema,
+    'calendar_slots.cancel outputSchema',
+  )
+
+  const outputSchema = appointmentsTool?.outputSchema as
+    | Record<string, unknown>
+    | undefined
+  assert.strictEqual(outputSchema?.type, 'object')
+  const outputProperties = outputSchema?.properties as
+    | Record<string, { type?: string }>
+    | undefined
+  assert.ok(outputProperties)
+  assert.strictEqual(
+    outputProperties?.appointmentTypes?.type ?? 'array',
+    'array',
+    'appointment_types.list outputSchema should describe an array',
+  )
+})
+
+function assertJsonSchemaObject(
+  schema: unknown,
+  label: string,
+): asserts schema is Record<string, unknown> {
+  if (!schema || typeof schema !== 'object') {
+    assert.fail(`${label} is missing or not an object`)
+  }
+  const keys = Object.keys(schema as Record<string, unknown>)
+  assert.ok(keys.length > 0, `${label} should contain JSON Schema data`)
+}
+
 
 
 
