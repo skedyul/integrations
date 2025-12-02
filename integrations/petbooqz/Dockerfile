@@ -28,5 +28,3 @@ ENV MCP_ENV_JSON=${MCP_ENV_JSON}
 # HTTP MCP server entrypoint for dedicated Petbooqz server.
 # This exposes a /mcp JSON-RPC endpoint, matching what worker-compute expects.
 CMD ["dist/server/mcp-server-dedicated.js"]
-
-
