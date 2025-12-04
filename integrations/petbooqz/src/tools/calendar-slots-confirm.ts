@@ -34,7 +34,7 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
   CalendarSlotsConfirmOutput
 > = {
   name: 'calendar_slots.confirm',
-  description: 'Confirm a calendar slot',
+  description: 'Confirm a calendar slot on the Petbooqz calendar',
   inputs: CalendarSlotsConfirmInputSchema,
   outputSchema: CalendarSlotsConfirmOutputSchema,
   handler: async ({ input, context }) => {

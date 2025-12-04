@@ -44,7 +44,7 @@ export const clientsGetRegistry: ToolDefinition<
   ClientsGetOutput
 > = {
   name: 'clients.get',
-  description: 'Get client information by ID',
+  description: 'Get client information by ID on Petbooqz',
   inputs: ClientsGetInputSchema,
   outputSchema: ClientsGetOutputSchema,
   handler: async ({ input, context }) => {

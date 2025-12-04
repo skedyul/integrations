@@ -25,7 +25,7 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   CalendarSlotsReserveOutput
 > = {
   name: 'calendar_slots.reserve',
-  description: 'Reserve a calendar slot',
+  description: 'Reserve a calendar slot on the Petbooqz calendar',
   inputs: CalendarSlotsReserveInputSchema,
   outputSchema: CalendarSlotsReserveOutputSchema,
   handler: async ({ input, context }) => {

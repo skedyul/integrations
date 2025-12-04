@@ -35,7 +35,7 @@ export const calendarSlotsAvailibilityListRegistry: ToolDefinition<
   CalendarSlotsAvailibilityListOutput
 > = {
   name: 'calendar_slots.availibility.list',
-  description: 'List available calendar slots for given calendars and dates',
+  description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
   inputs: CalendarSlotsAvailibilityListInputSchema,
   outputSchema: CalendarSlotsAvailibilityListOutputSchema,
   handler: async ({ input, context }) => {

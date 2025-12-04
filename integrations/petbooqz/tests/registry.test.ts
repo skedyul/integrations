@@ -187,6 +187,152 @@ test('calendar_slots.cancel calls mocked DELETE endpoint and returns success', a
   }
 })
 
+test('appointments.book reserves and confirms a slot via MCP server', async () => {
+  const originalFetch = globalThis.fetch
+
+  const requested: Array<{ url: string; method: string }> = []
+
+  globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+    const url = String(input)
+    const method = init?.method ?? 'GET'
+
+    requested.push({ url, method })
+
+    if (url.endsWith('/calendars') && method === 'GET') {
+      return createJsonResponse([
+        {
+          column: 'cal-1',
+          name: 'Main calendar',
+        },
+      ])
+    }
+
+    if (url.endsWith('/slots') && method === 'POST') {
+      return createJsonResponse([
+        {
+          calendar: 'cal-1',
+          date: '2025-12-02',
+          slots: ['17:00'],
+        },
+      ])
+    }
+
+    if (url.endsWith('/calendars/cal-1/reserve') && method === 'POST') {
+      return createJsonResponse([
+        {
+          slot_id: 123,
+        },
+      ])
+    }
+
+    if (url.endsWith('/calendars/cal-1/confirm') && method === 'POST') {
+      return createJsonResponse({
+        client_id: 'client-1',
+        patient_id: 'patient-1',
+      })
+    }
+
+    return createJsonResponse(undefined)
+  }) as typeof fetch
+
+  try {
+    process.env.PETBOOQZ_BASE_URL = 'https://api.petbooqz.test'
+    process.env.PETBOOQZ_USERNAME = 'user'
+    process.env.PETBOOQZ_PASSWORD = 'pass'
+
+    const serverless = server.create(
+      {
+        computeLayer: 'serverless',
+        metadata: {
+          name: 'petbooqz-book-appointment-test',
+          version: '0.0.1',
+        },
+      },
+      registry as ToolRegistry,
+    ) as ServerlessServerInstance
+
+    const { handler } = serverless
+
+    const toolCall = {
+      jsonrpc: '2.0' as const,
+      id: 1,
+      method: 'tools/call',
+      params: {
+        name: 'appointments.book',
+        arguments: {
+          datetime: '2025-12-02T17:00:00',
+          durationMinutes: 30,
+          clientFirst: 'Jane',
+          clientLast: 'Doe',
+          emailAddress: 'jane@example.com',
+          phoneNumber: '+15555555555',
+          patientName: 'Fluffy',
+          appointmentType: 'CONSULTATION',
+        },
+      },
+    }
+
+    const response = await handler({
+      path: '/mcp',
+      httpMethod: 'POST',
+      body: JSON.stringify(toolCall),
+      headers: {},
+      queryStringParameters: null,
+      requestContext: { requestId: 'book-appointment' },
+    })
+
+    assert.strictEqual(response.statusCode, 200)
+
+    const parsed = JSON.parse(response.body)
+    assert.ok(parsed.result)
+
+    const outputText = parsed.result.content[0]?.text as string | undefined
+    assert.ok(outputText, 'appointments.book should return JSON text content')
+
+    const output = JSON.parse(outputText) as {
+      success: boolean
+      message: string
+      calendarName?: string
+      requestedTime?: string
+      reservedTime?: string
+      slotId?: number
+      clientId?: string | null
+      patientId?: string | null
+    }
+
+    assert.strictEqual(output.success, true)
+    assert.strictEqual(output.calendarName, 'Main calendar')
+    assert.strictEqual(output.requestedTime, '2025-12-02T17:00:00')
+    assert.strictEqual(output.reservedTime, '2025-12-02T17:00')
+    assert.strictEqual(output.slotId, 123)
+    assert.strictEqual(output.clientId, 'client-1')
+    assert.strictEqual(output.patientId, 'patient-1')
+
+    const calledUrls = requested.map((entry) => entry.url)
+    assert.ok(
+      calledUrls.some((url) => url.endsWith('/calendars')),
+      'Expected calendars endpoint to be called',
+    )
+    assert.ok(
+      calledUrls.some((url) => url.endsWith('/slots')),
+      'Expected slots endpoint to be called',
+    )
+    assert.ok(
+      calledUrls.some((url) => url.endsWith('/calendars/cal-1/reserve')),
+      'Expected reserve endpoint to be called',
+    )
+    assert.ok(
+      calledUrls.some((url) => url.endsWith('/calendars/cal-1/confirm')),
+      'Expected confirm endpoint to be called',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+    delete process.env.PETBOOQZ_BASE_URL
+    delete process.env.PETBOOQZ_USERNAME
+    delete process.env.PETBOOQZ_PASSWORD
+  }
+})
+
 test('MCP tools/list returns JSON schemas for every tool', async () => {
   const serverless = server.create(
     {

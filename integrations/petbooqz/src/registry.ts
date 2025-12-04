@@ -1,4 +1,5 @@
 import { appointmentTypesListRegistry } from './tools/appointment-types-list'
+import { appointmentsBookRegistry } from './tools/appointments-book'
 import { calendarSlotsAvailibilityListRegistry } from './tools/calendar-slots-availibility-list'
 import { calendarSlotsCancelRegistry } from './tools/calendar-slots-cancel'
 import { calendarSlotsConfirmRegistry } from './tools/calendar-slots-confirm'
@@ -15,6 +16,7 @@ import type { ToolRegistry } from 'skedyul'
 
 export const registry: ToolRegistry = {
   'appointment_types.list': appointmentTypesListRegistry,
+  'appointments.book': appointmentsBookRegistry,
   'calendar_slots.availibility.list': calendarSlotsAvailibilityListRegistry,
   'calendar_slots.cancel': calendarSlotsCancelRegistry,
   'calendar_slots.confirm': calendarSlotsConfirmRegistry,

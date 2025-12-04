@@ -41,7 +41,7 @@ export const calenderSlotsGetRegistry: ToolDefinition<
   CalenderSlotsGetOutput
 > = {
   name: 'calender_slots.get',
-  description: 'Get calendar slot details',
+  description: 'Get calendar slot details on the Petbooqz calendar',
   inputs: CalenderSlotsGetInputSchema,
   outputSchema: CalenderSlotsGetOutputSchema,
   handler: async ({ input, context }) => {

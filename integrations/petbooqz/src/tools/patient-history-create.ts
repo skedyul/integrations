@@ -13,7 +13,7 @@ export const patientHistoryCreateRegistry: ToolDefinition<
   PatientHistoryCreateOutput
 > = {
   name: 'patient_history.create',
-  description: 'Create patient history entry',
+  description: 'Create patient history entry on Petbooqz',
   inputs: PatientHistoryCreateInputSchema,
   outputSchema: PatientHistoryCreateOutputSchema,
   handler: async () => {
