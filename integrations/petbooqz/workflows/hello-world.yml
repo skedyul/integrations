@@ -25,4 +25,4 @@ steps:
         system: |-
           say hello to the name
     inputs:
-      prompt: "{{ inputs.name }} yo"
+      prompt: "{{ inputs.name }} yosddf"
