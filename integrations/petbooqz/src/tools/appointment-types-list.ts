@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ToolDefinition } from 'skedyul'
-import { PetbooqzApiClient } from '../lib/api-client'
+import { createClientFromEnv } from '../lib/api-client'
 
 export interface AppointmentType {
   id: string
@@ -34,17 +34,7 @@ export const appointmentTypesListRegistry: ToolDefinition<
   inputs: AppointmentTypesListInputSchema,
   outputSchema: AppointmentTypesListOutputSchema,
   handler: async ({ context }) => {
-  const baseUrl = context.env.PETBOOQZ_BASE_URL
-  const username = context.env.PETBOOQZ_USERNAME
-  const password = context.env.PETBOOQZ_PASSWORD
-
-  if (!baseUrl || !username || !password) {
-    throw new Error(
-      'Missing required environment variables: PETBOOQZ_BASE_URL, PETBOOQZ_USERNAME, PETBOOQZ_PASSWORD',
-    )
-  }
-
-  const client = new PetbooqzApiClient({ baseUrl, username, password })
+  const client = createClientFromEnv(context.env)
   const appointmentTypes = await client.get<AppointmentType[]>('/appointmenttypes')
 
   return {

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ToolDefinition } from 'skedyul'
-import { PetbooqzApiClient } from '../lib/api-client'
+import { createClientFromEnv } from '../lib/api-client'
 
 export interface Slot {
   slot_id: string
@@ -14,12 +14,12 @@ export interface Slot {
   calendar: string
 }
 
-const CalenderSlotsGetInputSchema = z.object({
+const CalendarSlotsGetInputSchema = z.object({
   calendar_id: z.string(),
   slot_id: z.string(),
 })
 
-const CalenderSlotsGetOutputSchema = z.object({
+const CalendarSlotsGetOutputSchema = z.object({
   slot: z.object({
     slot_id: z.string(),
     datetime: z.string(),
@@ -33,29 +33,19 @@ const CalenderSlotsGetOutputSchema = z.object({
   }),
 })
 
-type CalenderSlotsGetInput = z.infer<typeof CalenderSlotsGetInputSchema>
-type CalenderSlotsGetOutput = z.infer<typeof CalenderSlotsGetOutputSchema>
+type CalendarSlotsGetInput = z.infer<typeof CalendarSlotsGetInputSchema>
+type CalendarSlotsGetOutput = z.infer<typeof CalendarSlotsGetOutputSchema>
 
-export const calenderSlotsGetRegistry: ToolDefinition<
-  CalenderSlotsGetInput,
-  CalenderSlotsGetOutput
+export const calendarSlotsGetRegistry: ToolDefinition<
+  CalendarSlotsGetInput,
+  CalendarSlotsGetOutput
 > = {
-  name: 'calender_slots.get',
+  name: 'calendar_slots.get',
   description: 'Get calendar slot details on the Petbooqz calendar',
-  inputs: CalenderSlotsGetInputSchema,
-  outputSchema: CalenderSlotsGetOutputSchema,
+  inputs: CalendarSlotsGetInputSchema,
+  outputSchema: CalendarSlotsGetOutputSchema,
   handler: async ({ input, context }) => {
-  const baseUrl = context.env.PETBOOQZ_BASE_URL
-  const username = context.env.PETBOOQZ_USERNAME
-  const password = context.env.PETBOOQZ_PASSWORD
-
-  if (!baseUrl || !username || !password) {
-    throw new Error(
-      'Missing required environment variables: PETBOOQZ_BASE_URL, PETBOOQZ_USERNAME, PETBOOQZ_PASSWORD',
-    )
-  }
-
-  const client = new PetbooqzApiClient({ baseUrl, username, password })
+  const client = createClientFromEnv(context.env)
   const slot = await client.get<Slot>(
     `/calendars/${input.calendar_id}/check`,
     { slot_id: input.slot_id },

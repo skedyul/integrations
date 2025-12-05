@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ToolDefinition } from 'skedyul'
-import { PetbooqzApiClient } from '../lib/api-client'
+import { createClientFromEnv } from '../lib/api-client'
 
 const CalendarSlotsReleaseInputSchema = z.object({
   calendar_id: z.string(),
@@ -23,17 +23,7 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
   inputs: CalendarSlotsReleaseInputSchema,
   outputSchema: CalendarSlotsReleaseOutputSchema,
   handler: async ({ input, context }) => {
-  const baseUrl = context.env.PETBOOQZ_BASE_URL
-  const username = context.env.PETBOOQZ_USERNAME
-  const password = context.env.PETBOOQZ_PASSWORD
-
-  if (!baseUrl || !username || !password) {
-    throw new Error(
-      'Missing required environment variables: PETBOOQZ_BASE_URL, PETBOOQZ_USERNAME, PETBOOQZ_PASSWORD',
-    )
-  }
-
-  const client = new PetbooqzApiClient({ baseUrl, username, password })
+  const client = createClientFromEnv(context.env)
   await client.delete(
     `/calendars/${input.calendar_id}/release`,
     { slot_id: input.slot_id },
