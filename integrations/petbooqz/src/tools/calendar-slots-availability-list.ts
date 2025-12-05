@@ -8,12 +8,12 @@ export interface AvailableSlot {
   slots: string[]
 }
 
-const CalendarSlotsAvailibilityListInputSchema = z.object({
+const CalendarSlotsAvailabilityListInputSchema = z.object({
   calendars: z.array(z.string()).min(1),
   dates: z.array(z.string()).min(1),
 })
 
-const CalendarSlotsAvailibilityListOutputSchema = z.object({
+const CalendarSlotsAvailabilityListOutputSchema = z.object({
   availableSlots: z.array(
     z.object({
       calendar: z.string(),
@@ -23,21 +23,21 @@ const CalendarSlotsAvailibilityListOutputSchema = z.object({
   ),
 })
 
-type CalendarSlotsAvailibilityListInput = z.infer<
-  typeof CalendarSlotsAvailibilityListInputSchema
+type CalendarSlotsAvailabilityListInput = z.infer<
+  typeof CalendarSlotsAvailabilityListInputSchema
 >
-type CalendarSlotsAvailibilityListOutput = z.infer<
-  typeof CalendarSlotsAvailibilityListOutputSchema
+type CalendarSlotsAvailabilityListOutput = z.infer<
+  typeof CalendarSlotsAvailabilityListOutputSchema
 >
 
-export const calendarSlotsAvailibilityListRegistry: ToolDefinition<
-  CalendarSlotsAvailibilityListInput,
-  CalendarSlotsAvailibilityListOutput
+export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
+  CalendarSlotsAvailabilityListInput,
+  CalendarSlotsAvailabilityListOutput
 > = {
-  name: 'calendar_slots.availibility.list',
+  name: 'calendar_slots.availability.list',
   description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
-  inputs: CalendarSlotsAvailibilityListInputSchema,
-  outputSchema: CalendarSlotsAvailibilityListOutputSchema,
+  inputs: CalendarSlotsAvailabilityListInputSchema,
+  outputSchema: CalendarSlotsAvailabilityListOutputSchema,
   handler: async ({ input, context }) => {
   const baseUrl = context.env.PETBOOQZ_BASE_URL
   const username = context.env.PETBOOQZ_USERNAME
