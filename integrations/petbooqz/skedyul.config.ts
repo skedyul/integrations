@@ -4,7 +4,7 @@ export default defineConfig({
   // App metadata
   name: 'Petbooqz',
   version: '1.0.0',
-  description: 'Petbooqz veterinary practice management integration',
+  description: 'Petbooqz veterinary practice management integration.',
 
   // Runtime configuration
   computeLayer: 'serverless',
