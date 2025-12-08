@@ -13,7 +13,7 @@ importers:
         version: 1.22.0
       skedyul:
         specifier: latest
-        version: 0.1.10
+        version: 0.1.11
       zod:
         specifier: ^4.0.0
         version: 4.1.13
@@ -357,8 +357,8 @@ packages:
     resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
     engines: {node: '>= 0.4'}
 
-  skedyul@0.1.10:
-    resolution: {integrity: sha512-LJxByeKYojZ+NPz/Zm8Kot8CjdQ1wXj76ccPoD22ojFnLjTKNXNjERFykjWsj2G0pCkKPBYRM1la6Xj8FpkbQg==}
+  skedyul@0.1.11:
+    resolution: {integrity: sha512-otFKOlDBD452+kFxkj3jhjr61zzrbXdEbBgAEYkH/a/cANIWXYkTm2VWTTnYHOq3T2NBUHAViFrHGxmpD6/s5g==}
     hasBin: true
 
   statuses@2.0.2:
@@ -827,7 +827,7 @@ snapshots:
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
 
-  skedyul@0.1.10:
+  skedyul@0.1.11:
     dependencies:
       '@modelcontextprotocol/sdk': 1.23.0(zod@4.1.13)
       zod: 4.1.13
