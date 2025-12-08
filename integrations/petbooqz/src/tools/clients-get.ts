@@ -43,7 +43,7 @@ export const clientsGetRegistry: ToolDefinition<
   ClientsGetInput,
   ClientsGetOutput
 > = {
-  name: 'clients.get',
+  name: 'clients_get',
   description: 'Get client information by ID on Petbooqz',
   inputs: ClientsGetInputSchema,
   outputSchema: ClientsGetOutputSchema,

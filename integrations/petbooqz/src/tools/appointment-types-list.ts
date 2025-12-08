@@ -29,7 +29,7 @@ export const appointmentTypesListRegistry: ToolDefinition<
   AppointmentTypesListInput,
   AppointmentTypesListOutput
 > = {
-  name: 'appointment_types.list',
+  name: 'appointment_types_list',
   description: 'List all appointment types on the Petbooqz calendar',
   inputs: AppointmentTypesListInputSchema,
   outputSchema: AppointmentTypesListOutputSchema,

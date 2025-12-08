@@ -12,7 +12,7 @@ export const patientHistoryUpdateRegistry: ToolDefinition<
   PatientHistoryUpdateInput,
   PatientHistoryUpdateOutput
 > = {
-  name: 'patient_history.update',
+  name: 'patient_history_update',
   description: 'Update patient history on Petbooqz',
   inputs: PatientHistoryUpdateInputSchema,
   outputSchema: PatientHistoryUpdateOutputSchema,

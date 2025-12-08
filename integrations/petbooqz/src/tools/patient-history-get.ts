@@ -12,7 +12,7 @@ export const patientHistoryGetRegistry: ToolDefinition<
   PatientHistoryGetInput,
   PatientHistoryGetOutput
 > = {
-  name: 'patient_history.get',
+  name: 'patient_history_get',
   description: 'Get patient history on Petbooqz',
   inputs: PatientHistoryGetInputSchema,
   outputSchema: PatientHistoryGetOutputSchema,

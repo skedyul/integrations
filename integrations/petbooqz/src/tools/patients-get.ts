@@ -35,7 +35,7 @@ export const patientsGetRegistry: ToolDefinition<
   PatientsGetInput,
   PatientsGetOutput
 > = {
-  name: 'patients.get',
+  name: 'patients_get',
   description: 'Get patient information by ID on Petbooqz',
   inputs: PatientsGetInputSchema,
   outputSchema: PatientsGetOutputSchema,

@@ -34,7 +34,7 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   CalendarSlotsAvailabilityListInput,
   CalendarSlotsAvailabilityListOutput
 > = {
-  name: 'calendar_slots.availability.list',
+  name: 'calendar_slots_availability_list',
   description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
   inputs: CalendarSlotsAvailabilityListInputSchema,
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
