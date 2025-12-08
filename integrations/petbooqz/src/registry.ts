@@ -14,19 +14,19 @@ import { patientsGetRegistry } from './tools/patients-get'
 import type { ToolRegistry } from 'skedyul'
 
 export const registry: ToolRegistry = {
-  'appointment_types.list': appointmentTypesListRegistry,
-  'calendar_slots.availability.list': calendarSlotsAvailabilityListRegistry,
-  'calendar_slots.cancel': calendarSlotsCancelRegistry,
-  'calendar_slots.confirm': calendarSlotsConfirmRegistry,
-  'calendar_slots.release': calendarSlotsReleaseRegistry,
-  'calendar_slots.reserve': calendarSlotsReserveRegistry,
-  'calendar_slots.get': calendarSlotsGetRegistry,
-  'calendars.list': calendarsListRegistry,
-  'clients.get': clientsGetRegistry,
-  'patient_history.create': patientHistoryCreateRegistry,
-  'patient_history.get': patientHistoryGetRegistry,
-  'patient_history.update': patientHistoryUpdateRegistry,
-  'patients.get': patientsGetRegistry,
+  'appointment_types_list': appointmentTypesListRegistry,
+  'calendar_slots_availability_list': calendarSlotsAvailabilityListRegistry,
+  'calendar_slots_cancel': calendarSlotsCancelRegistry,
+  'calendar_slots_confirm': calendarSlotsConfirmRegistry,
+  'calendar_slots_release': calendarSlotsReleaseRegistry,
+  'calendar_slots_reserve': calendarSlotsReserveRegistry,
+  'calendar_slots_get': calendarSlotsGetRegistry,
+  'calendars_list': calendarsListRegistry,
+  'clients_get': clientsGetRegistry,
+  'patient_history_create': patientHistoryCreateRegistry,
+  'patient_history_get': patientHistoryGetRegistry,
+  'patient_history_update': patientHistoryUpdateRegistry,
+  'patients_get': patientsGetRegistry,
 }
 
 export type ToolName = keyof typeof registry
