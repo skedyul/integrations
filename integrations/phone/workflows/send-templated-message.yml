@@ -1,0 +1,82 @@
+name: Send Templated Message
+handle: send-templated-message
+description: "Send a templated SMS message to a customer"
+
+variables: {}
+outputs: {}
+
+inputs:
+  instance-id:
+    label: "Instance ID"
+    description: "The ID of the instance"
+    required: true
+    type: id
+  communication-channel-id:
+    label: "From Phone"
+    description: "The phone to send the message from"
+    required: true
+    # only allow communication channels that have been created by the email app
+    type: "@app/channels/sms"
+    control:
+      type: "select"
+      placeholder: "Select a phone number"
+  message:
+    label: "Message"
+    description: "The message to send. Must be a valid Liquid template."
+    required: true
+    type: string
+    control:
+      type: "text-area"
+      placeholder: "Enter the message to send"
+      helpText: "The message to send. Must be a valid Liquid template."
+steps:
+
+  get-instance:
+    type: "task"
+    name: "Get Instance"
+    description: "Get the instance"
+    service:
+      name: "skedyul/crm"
+      cmd: "instance.find"
+    inputs:
+      id: "{{ inputs.instance-id }}"
+
+  generate-liquid-template:
+    needs: [get-instance]
+    type: "task"
+    name: "Generate Liquid Template"
+    description: "Generate a liquid template"
+    service:
+      name: "skedyul/tools"
+      cmd: "liquid.render"
+    inputs:
+      template: "{{ inputs.message }}"
+      data: "{{ steps.get-instance.outputs.response.data }}"
+
+  # Optional: ensure contact association/subscription explicitly (can be omitted to send directly)
+  create-contact:
+    needs: [get-instance]
+    type: "task"
+    name: "Create Contact"
+    description: "Ensure the contact is associated to the instance and subscribed on the channel"
+    service:
+      name: "skedyul/conversations"
+      cmd: "contact.create"
+    inputs:
+      instance-id: "{{ inputs.instance-id }}"
+      communication-channel-id: "{{ inputs.communication-channel-id }}"
+
+  send-message:
+    if: "{% if steps.generate-liquid-template.outputs.response and steps.generate-liquid-template.outputs.response != '' %}true{% else %}false{% endif %}"
+    needs: [generate-liquid-template, create-contact]
+    type: "task"
+    name: "Send Message"
+    description: "Send a message to the customer"
+    service:
+      name: "skedyul/conversations"
+      cmd: "message.create"
+    inputs:
+      message: "{{ steps.generate-liquid-template.outputs.response }}"
+      contact-id: "{{ steps.create-contact.outputs.response.data.id }}"
+      communication-channel-id: "{{ inputs.communication-channel-id }}"
+  

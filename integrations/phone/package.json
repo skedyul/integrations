@@ -1,0 +1,20 @@
+{
+  "name": "@skedyul-integrations/phone",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/registry.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "skedyul dev"
+  },
+  "dependencies": {
+    "skedyul": "0.1.15",
+    "twilio": "^5.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
