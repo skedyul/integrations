@@ -160,7 +160,13 @@ async function handleReceiveSms(
     const result = await communicationChannel.receiveMessage({
       communicationChannelId: channel.id,
       from,
-      message: body,
+      contact: {
+        identifierValue: from,
+      },
+      message: {
+        message: body,
+        remoteId: messageSid || undefined,
+      },
       remoteId: messageSid || undefined,
     })
 
