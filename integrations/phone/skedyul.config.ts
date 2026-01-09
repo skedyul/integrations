@@ -5,7 +5,8 @@ export default defineConfig({
   version: '1.0.0',
   description: 'SMS and voice communication via Twilio',
   computeLayer: 'serverless',
-  tools: './src/registry.ts',
+  tools: import('./src/registry'),
+  webhooks: import('./src/webhooks'),
 
   env: {
     TWILIO_AUTH_TOKEN: {
@@ -79,7 +80,6 @@ export default defineConfig({
       ],
     },
   ],
-
   workflows: [
     {
       path: './workflows/send-templated-message.yml',
