@@ -9,6 +9,8 @@ export default defineConfig({
   webhooks: import('./src/webhooks'),
 
   env: {
+
+    
     TWILIO_AUTH_TOKEN: {
       label: 'Twilio Auth Token',
       required: true,
