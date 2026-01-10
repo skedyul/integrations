@@ -1,7 +1,5 @@
 FROM public.ecr.aws/lambda/nodejs:22 AS builder
 
-RUN groupadd -r nonroot && useradd -r -g nonroot nonroot
-
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml tsconfig.json ./
@@ -17,12 +15,10 @@ RUN corepack enable && \
 
 FROM public.ecr.aws/lambda/nodejs:22
 
-RUN groupadd -r nonroot && useradd -r -g nonroot nonroot
-
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-COPY --from=builder --chown=nonroot:nonroot /app/node_modules ./node_modules
-COPY --from=builder --chown=nonroot:nonroot /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
 
 # Allow overriding the baked-in MCP env at runtime.
 ARG MCP_ENV_JSON="{}"
