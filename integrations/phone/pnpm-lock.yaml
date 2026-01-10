@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       skedyul:
-        specifier: 0.1.24
-        version: 0.1.24(hono@4.11.3)
+        specifier: 0.1.25
+        version: 0.1.25(hono@4.11.3)
       twilio:
         specifier: ^5.0.0
         version: 5.11.1
@@ -462,8 +462,8 @@ packages:
     resolution: {integrity: sha512-ZX99e6tRweoUXqR+VBrslhda51Nh5MTQwou5tnUDgbtyM0dBgmhEDtWGP/xbKn6hqfPRHujUNwz5fy/wbbhnpw==}
     engines: {node: '>= 0.4'}
 
-  skedyul@0.1.24:
-    resolution: {integrity: sha512-/xYPUiy0ebwtFqyJ6isL16PJ0SKbe57H6T5nYTq9ezKqDtQRf66OmwsbyEFWMK4tyPJjzyitGgLHgSMiQiSuig==}
+  skedyul@0.1.25:
+    resolution: {integrity: sha512-ZDtdehIB0qhgAelE/xTt1Lt4ZoiUjlG/vMGABWq4SZK2adbXwO9KJ8t1urGhee0hH9MihLbRrlf/kyFYkVmECQ==}
     hasBin: true
 
   statuses@2.0.2:
@@ -996,7 +996,7 @@ snapshots:
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
 
-  skedyul@0.1.24(hono@4.11.3):
+  skedyul@0.1.25(hono@4.11.3):
     dependencies:
       '@modelcontextprotocol/sdk': 1.25.2(hono@4.11.3)(zod@4.3.5)
       zod: 4.3.5
