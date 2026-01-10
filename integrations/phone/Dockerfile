@@ -1,5 +1,7 @@
 FROM public.ecr.aws/lambda/nodejs:22 AS builder
 
+RUN groupadd -r nonroot && useradd -r -g nonroot nonroot
+
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml tsconfig.json ./
@@ -14,6 +16,8 @@ RUN corepack enable && \
     rm -rf /tmp/* /var/cache/apk/* ~/.npm
 
 FROM public.ecr.aws/lambda/nodejs:22
+
+RUN groupadd -r nonroot && useradd -r -g nonroot nonroot
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 
