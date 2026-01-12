@@ -1,6 +1,9 @@
 import { communicationChannel } from 'skedyul'
 import type {
+  CommunicationChannelLifecycleContext,
   WebhookContext,
+  WebhookLifecycleContext,
+  WebhookLifecycleResult,
   WebhookRegistry,
   WebhookRequest,
   WebhookResponse,
@@ -193,12 +196,128 @@ async function handleReceiveSms(
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Webhook Lifecycle Hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Called when a communication channel is created.
+ * Configures the Twilio phone number's SMS webhook URL.
+ */
+async function handleCommunicationChannelCreatedSmsWebhook(
+  context: CommunicationChannelLifecycleContext,
+): Promise<WebhookLifecycleResult | null> {
+  const { env, webhookUrl, communicationChannel: channel } = context
+
+  const accountSid = env.TWILIO_ACCOUNT_SID
+  const authToken = env.TWILIO_AUTH_TOKEN
+
+  if (!accountSid || !authToken) {
+    console.log('[Webhook Lifecycle] Missing Twilio credentials, manual setup required')
+    return null
+  }
+
+  const client = twilio(accountSid, authToken)
+
+  try {
+    // Find the phone number in Twilio
+    const phoneNumbers = await client.incomingPhoneNumbers.list({
+      phoneNumber: channel.identifierValue,
+    })
+
+    if (phoneNumbers.length === 0) {
+      console.log(`[Webhook Lifecycle] Phone number ${channel.identifierValue} not found in Twilio account`)
+      return null
+    }
+
+    // Update the SMS webhook URL
+    const updated = await client.incomingPhoneNumbers(phoneNumbers[0].sid).update({
+      smsUrl: webhookUrl,
+      smsMethod: 'POST',
+    })
+
+    console.log(`[Webhook Lifecycle] Configured SMS webhook for ${channel.identifierValue}`)
+
+    return {
+      externalId: updated.sid,
+      message: `Configured SMS webhook for ${channel.identifierValue}`,
+      metadata: { phoneNumberSid: updated.sid },
+    }
+  } catch (err) {
+    console.error('[Webhook Lifecycle] Failed to configure Twilio webhook:', err)
+    return null
+  }
+}
+
+/**
+ * Called when a communication channel is updated.
+ * Updates the Twilio phone number's SMS webhook URL.
+ */
+async function handleCommunicationChannelUpdatedSmsWebhook(
+  context: CommunicationChannelLifecycleContext,
+): Promise<WebhookLifecycleResult | null> {
+  // Same logic as create - update the webhook URL
+  return handleCommunicationChannelCreatedSmsWebhook(context)
+}
+
+/**
+ * Called when a communication channel is deleted.
+ * Clears the Twilio phone number's SMS webhook URL.
+ */
+async function handleCommunicationChannelDeletedSmsWebhook(
+  context: CommunicationChannelLifecycleContext,
+): Promise<WebhookLifecycleResult | null> {
+  const { env, communicationChannel: channel } = context
+
+  const accountSid = env.TWILIO_ACCOUNT_SID
+  const authToken = env.TWILIO_AUTH_TOKEN
+
+  if (!accountSid || !authToken) {
+    console.log('[Webhook Lifecycle] Missing Twilio credentials, manual cleanup required')
+    return null
+  }
+
+  const client = twilio(accountSid, authToken)
+
+  try {
+    // Find the phone number in Twilio
+    const phoneNumbers = await client.incomingPhoneNumbers.list({
+      phoneNumber: channel.identifierValue,
+    })
+
+    if (phoneNumbers.length === 0) {
+      console.log(`[Webhook Lifecycle] Phone number ${channel.identifierValue} not found in Twilio account`)
+      return null
+    }
+
+    // Clear the SMS webhook URL
+    const updated = await client.incomingPhoneNumbers(phoneNumbers[0].sid).update({
+      smsUrl: '',
+      smsMethod: 'POST',
+    })
+
+    console.log(`[Webhook Lifecycle] Cleared SMS webhook for ${channel.identifierValue}`)
+
+    return {
+      externalId: updated.sid,
+      message: `Cleared SMS webhook for ${channel.identifierValue}`,
+      metadata: { phoneNumberSid: updated.sid },
+    }
+  } catch (err) {
+    console.error('[Webhook Lifecycle] Failed to clear Twilio webhook:', err)
+    return null
+  }
+}
+
 export const registry: WebhookRegistry = {
   receive_sms: {
     name: 'receive_sms',
     description: 'Receives incoming SMS messages from Twilio webhooks',
     methods: ['POST'],
     handler: handleReceiveSms,
+    onCommunicationChannelCreated: handleCommunicationChannelCreatedSmsWebhook,
+    onCommunicationChannelDeleted: handleCommunicationChannelDeletedSmsWebhook,
+    onCommunicationChannelUpdated: handleCommunicationChannelUpdatedSmsWebhook,
   },
 }
 
