@@ -12,8 +12,7 @@ COPY package.json pnpm-lock.yaml tsconfig.json tsup.config.ts ./
 COPY src ./src
 
 # Install dependencies (including dev deps for build), compile, then prune
-# Use --no-frozen-lockfile to allow GitHub references substituted during build
-RUN pnpm install --no-frozen-lockfile && \
+RUN pnpm install --frozen-lockfile && \
     pnpm run build && \
     pnpm prune --prod && \
     pnpm store prune && \

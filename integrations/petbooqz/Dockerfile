@@ -6,9 +6,8 @@ COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.tests.json ./
 COPY src ./src
 
 # Install deps, build, then prune down to production dependencies for the final image
-# Use --no-frozen-lockfile to allow GitHub references substituted during build
 RUN corepack enable && \
-    pnpm install --no-frozen-lockfile && \
+    pnpm install --frozen-lockfile && \
     pnpm run build && \
     pnpm prune --prod && \
     pnpm store prune && \
