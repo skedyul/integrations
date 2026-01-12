@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./src/registry.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "dev": "skedyul dev"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   }
 }
