@@ -9,7 +9,7 @@
     "dev": "skedyul dev"
   },
   "dependencies": {
-    "skedyul": "0.1.30",
+    "skedyul": "0.1.31",
     "twilio": "^5.0.0",
     "zod": "^4.1.13"
   },
