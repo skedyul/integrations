@@ -113,7 +113,7 @@ export default defineConfig({
 
   install: {
     env: {
-      // none yet
+      // none yet.
     },
   },
 
