@@ -138,15 +138,6 @@ export default defineConfig({
           description: 'The dedicated phone number (E.164 format)',
         },
         {
-          handle: 'bird_channel_id',
-          label: 'Bird Channel ID',
-          type: 'STRING',
-          required: false,
-          unique: true,
-          system: true,
-          description: 'Optional Bird messaging platform channel ID',
-        },
-        {
           handle: 'forwarding_phone_number',
           label: 'Forwarding Phone Number',
           type: 'STRING',
