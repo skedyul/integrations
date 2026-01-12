@@ -12,7 +12,8 @@ COPY package.json pnpm-lock.yaml tsconfig.json tsup.config.ts ./
 COPY src ./src
 
 # Install dependencies (including dev deps for build), compile, then prune
-RUN pnpm install --frozen-lockfile && \
+# Note: Using --no-frozen-lockfile since this is a standalone integration package
+RUN pnpm install --no-frozen-lockfile && \
     pnpm run build && \
     pnpm prune --prod && \
     pnpm store prune && \
