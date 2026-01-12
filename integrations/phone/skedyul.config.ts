@@ -116,7 +116,6 @@ export default defineConfig({
       // none yet..
     },
   },
-
   // Internal models owned by this app
   internalModels: [
     {
