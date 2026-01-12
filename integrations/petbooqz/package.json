@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "skedyul": "latest",
+    "skedyul": "github:skedyul/skedyul-node",
     "zod": "^4.0.0"
   },
   "devDependencies": {
