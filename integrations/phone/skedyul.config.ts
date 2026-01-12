@@ -118,7 +118,6 @@ export default defineConfig({
   },
 
   // Internal models owned by this app
-  // These replace the hard-coded DedicatedPhoneNumber table
   internalModels: [
     {
       handle: 'phone_number',
