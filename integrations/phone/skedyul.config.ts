@@ -114,6 +114,7 @@ export default defineConfig({
   install: {
     env: {
       // none yet..
+      
     },
   },
   // Internal models owned by this app
