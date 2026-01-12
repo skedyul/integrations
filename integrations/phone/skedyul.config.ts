@@ -9,8 +9,6 @@ export default defineConfig({
   webhooks: import('./src/webhooks'),
 
   env: {    
-
-    
     TWILIO_AUTH_TOKEN: {
       label: 'Twilio Auth Token',
       required: true,
@@ -115,18 +113,49 @@ export default defineConfig({
 
   install: {
     env: {
-      TWILIO_ACCOUNT_SID: {
-        label: 'Twilio Account SID',
-        required: true,
-        visibility: 'encrypted',
-        description: 'Your Twilio Account SID from the Twilio Console',
-      },
-      TWILIO_AUTH_TOKEN: {
-        label: 'Twilio Auth Token',
-        required: true,
-        visibility: 'encrypted',
-        description: 'Your Twilio Auth Token from the Twilio Console',
-      },
+      // none yet
     },
   },
+
+  // Internal models owned by this app
+  // These replace the hard-coded DedicatedPhoneNumber table
+  internalModels: [
+    {
+      handle: 'phone_number',
+      name: 'Phone Number',
+      namePlural: 'Phone Numbers',
+      labelTemplate: '{{ phone }}',
+      description: 'Phone numbers assigned to workplaces for SMS/voice communication',
+      fields: [
+        {
+          handle: 'phone',
+          label: 'Phone Number',
+          type: 'STRING',
+          definitionHandle: 'phone',
+          required: true,
+          unique: true,
+          system: true,
+          description: 'The dedicated phone number (E.164 format)',
+        },
+        {
+          handle: 'bird_channel_id',
+          label: 'Bird Channel ID',
+          type: 'STRING',
+          required: false,
+          unique: true,
+          system: true,
+          description: 'Optional Bird messaging platform channel ID',
+        },
+        {
+          handle: 'forwarding_phone_number',
+          label: 'Forwarding Phone Number',
+          type: 'STRING',
+          definitionHandle: 'phone',
+          required: false,
+          system: true,
+          description: 'Phone number to forward calls to',
+        },
+      ],
+    },
+  ],
 })
