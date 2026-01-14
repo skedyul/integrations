@@ -10,7 +10,7 @@ export default defineConfig({
 
   env: {
     // Global environment variables (developer-level, shared across all installs)
-    // Install-specific variables are in preInstall.env and postInstall.env
+    // Install-specific variables are in preInstall.env and postInstall.env...
   },
 
   communicationChannels: [
