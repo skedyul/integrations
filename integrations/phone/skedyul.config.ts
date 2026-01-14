@@ -8,31 +8,9 @@ export default defineConfig({
   tools: import('./src/registry'),
   webhooks: import('./src/webhooks'),
 
-  env: {    
-    TWILIO_AUTH_TOKEN: {
-      label: 'Twilio Auth Token',
-      required: true,
-      visibility: 'encrypted',
-      description: 'Your Twilio Auth Token from the Twilio Console',
-    },
-    TWILIO_CALL_FORWARD_PASSWORD: {
-      label: 'Twilio Call Forward Password',
-      required: true,
-      visibility: 'encrypted',
-      description: 'Your Twilio Call Forward Password from the Twilio Console',
-    },
-    TWILIO_CALL_FORWARD_USERNAME: {
-      label: 'Twilio Call Forward Username',
-      required: true,
-      visibility: 'encrypted',
-      description: 'Your Twilio Call Forward Username from the Twilio Console',
-    },
-    TWILIO_ACCOUNT_SID: {
-      label: 'Twilio Account SID',
-      required: true,
-      visibility: 'encrypted',
-      description: 'Your Twilio Account SID from the Twilio Console',
-    }
+  env: {
+    // Global environment variables (developer-level, shared across all installs)
+    // Install-specific variables are in preInstall.env and postInstall.env
   },
 
   communicationChannels: [
@@ -111,10 +89,44 @@ export default defineConfig({
     },
   ],
 
-  install: {
+  preInstall: {
     env: {
-      // none yet.
-    },
+      TWILIO_ACCOUNT_SID: {
+        label: 'Twilio Account SID',
+        required: true,
+        visibility: 'encrypted',
+        description: 'Your Twilio Account SID from the Twilio Console',
+        placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      },
+      TWILIO_AUTH_TOKEN: {
+        label: 'Twilio Auth Token',
+        required: true,
+        visibility: 'encrypted',
+        description: 'Your Twilio Auth Token from the Twilio Console',
+        placeholder: 'Your auth token',
+      },
+    }
+  },
+  install: {
+    handler: import('./src/install'),
+  },
+  postInstall: {
+    env: {
+      TWILIO_CALL_FORWARD_USERNAME: {
+        label: 'Call Forward Username',
+        required: false,
+        visibility: 'encrypted',
+        description: 'Username for call forwarding authentication',
+        placeholder: 'Optional username',
+      },
+      TWILIO_CALL_FORWARD_PASSWORD: {
+        label: 'Call Forward Password',
+        required: false,
+        visibility: 'encrypted',
+        description: 'Password for call forwarding authentication',
+        placeholder: 'Optional password',
+      },
+    }
   },
   // Internal models owned by this app
   internalModels: [
