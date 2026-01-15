@@ -13,23 +13,46 @@ export default defineConfig({
     // Install-specific variables are in preInstall.env and postInstall.env...
   },
 
-  communicationChannels: [
+  // Unified model definitions (INTERNAL + SHARED)
+  models: [
     {
-      handle: 'sms',
-      name: 'SMS',
-      icon: 'MessageSquare',
-      tools: {
-        send_message: 'send_sms',
-      },
-      identifierValue: {
-        type: 'DEDICATED_PHONE',
-        definitionHandle: 'phone',
-      },
-      appFields: [
+      handle: 'phone_number',
+      name: 'Phone Number',
+      namePlural: 'Phone Numbers',
+      scope: 'INTERNAL', // App owns this, auto-created when feature is provisioned
+      labelTemplate: '{{ phone }}',
+      description: 'Phone numbers assigned to workplaces for SMS/voice communication',
+      fields: [
         {
+          handle: 'phone',
           label: 'Phone Number',
-          fieldHandle: 'phone',
-          entityHandle: 'contact',
+          type: 'STRING',
+          definitionHandle: 'phone',
+          required: true,
+          unique: true,
+          system: true,
+          description: 'The dedicated phone number (E.164 format)',
+        },
+        {
+          handle: 'forwarding_phone_number',
+          label: 'Forwarding Phone Number',
+          type: 'STRING',
+          definitionHandle: 'phone',
+          required: false,
+          system: true,
+          description: 'Phone number to forward calls to',
+        },
+      ],
+    },
+    {
+      handle: 'contact',
+      name: 'Contact',
+      namePlural: 'Contacts',
+      scope: 'SHARED', // User maps to their existing model
+      fields: [
+        {
+          handle: 'phone',
+          label: 'Phone Number',
           definitionHandle: 'phone',
           required: true,
           system: false,
@@ -37,9 +60,8 @@ export default defineConfig({
           visibility: { data: true, list: true, filters: true },
         },
         {
+          handle: 'opt_in',
           label: 'Opt In',
-          fieldHandle: 'opt_in',
-          entityHandle: 'contact',
           definitionHandle: 'system/opt_in',
           required: false,
           system: true,
@@ -47,9 +69,8 @@ export default defineConfig({
           visibility: { data: false, list: true, filters: true },
         },
         {
+          handle: 'last_contacted_at',
           label: 'Last Contacted At',
-          fieldHandle: 'last_contacted_at',
-          entityHandle: 'contact',
           definitionHandle: 'system/last_contacted_at',
           required: false,
           system: true,
@@ -58,9 +79,31 @@ export default defineConfig({
       ],
     },
   ],
+
+  // Communication channels with typed dependencies
+  channels: [
+    {
+      handle: 'sms',
+      name: 'SMS',
+      icon: 'MessageSquare',
+      tools: {
+        send_message: 'send_sms',
+      },
+      // Typed dependencies - models this channel requires
+      requires: [
+        { model: 'phone_number' }, // INTERNAL - auto-created
+        { model: 'contact', fields: ['phone'] }, // SHARED - user picks model + field
+      ],
+    },
+  ],
+
+  // Workflows with typed dependencies
   workflows: [
     {
       path: './workflows/send-templated-message.yml',
+      handle: 'send-templated-message',
+      // Typed dependencies - requires SMS channel to be enabled
+      requires: [{ channel: 'sms' }],
       actions: [
         {
           label: 'Send templated message',
@@ -105,11 +148,13 @@ export default defineConfig({
         description: 'Your Twilio Auth Token from the Twilio Console',
         placeholder: 'Your auth token',
       },
-    }
+    },
   },
+
   install: {
     handler: import('./src/install'),
   },
+
   postInstall: {
     env: {
       TWILIO_CALL_FORWARD_USERNAME: {
@@ -126,37 +171,6 @@ export default defineConfig({
         description: 'Password for call forwarding authentication',
         placeholder: 'Optional password',
       },
-    }
-  },
-  // Internal models owned by this app
-  internalModels: [
-    {
-      handle: 'phone_number',
-      name: 'Phone Number',
-      namePlural: 'Phone Numbers',
-      labelTemplate: '{{ phone }}',
-      description: 'Phone numbers assigned to workplaces for SMS/voice communication',
-      fields: [
-        {
-          handle: 'phone',
-          label: 'Phone Number',
-          type: 'STRING',
-          definitionHandle: 'phone',
-          required: true,
-          unique: true,
-          system: true,
-          description: 'The dedicated phone number (E.164 format)',
-        },
-        {
-          handle: 'forwarding_phone_number',
-          label: 'Forwarding Phone Number',
-          type: 'STRING',
-          definitionHandle: 'phone',
-          required: false,
-          system: true,
-          description: 'Phone number to forward calls to',
-        },
-      ],
     },
-  ],
+  },
 })
