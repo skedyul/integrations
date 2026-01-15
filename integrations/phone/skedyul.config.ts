@@ -11,10 +11,75 @@ export default defineConfig({
   env: {
     // Global environment variables (developer-level, shared across all installs)
     // Install-specific variables are in preInstall.env and postInstall.env...
+    TWILIO_ACCOUNT_SID: {
+      label: 'Twilio Account SID',
+      required: true,
+      visibility: 'encrypted',
+      description: 'Your Twilio Account SID from the Twilio Console',
+      placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    },
+    TWILIO_AUTH_TOKEN: {
+      label: 'Twilio Auth Token',
+      required: true,
+      visibility: 'encrypted',
+      description: 'Your Twilio Auth Token from the Twilio Console',
+      placeholder: 'Your auth token',
+    },
+    TWILIO_CALL_FORWARD_USERNAME: {
+      label: 'Call Forward Username',
+      required: false,
+      visibility: 'encrypted',
+      description: 'Username for call forwarding authentication',
+      placeholder: 'Optional username',
+    },
+    TWILIO_CALL_FORWARD_PASSWORD: {
+      label: 'Call Forward Password',
+      required: false,
+      visibility: 'encrypted',
+      description: 'Password for call forwarding authentication',
+      placeholder: 'Optional password',
+    },
   },
 
   // Unified model definitions (INTERNAL + SHARED)
   models: [
+    {
+      handle: 'compliance_record',
+      name: 'Compliance Record',
+      namePlural: 'Compliance Records',
+      scope: 'INTERNAL', // App owns this, auto-created when feature is provisioned
+      labelTemplate: '{{ file }}',
+      description: 'Compliance records for SMS/voice communication',
+      fields: [
+        {
+          handle: 'file',
+          label: 'Evidence of Business Registration & Address',
+          type: 'FILE',
+          required: true,
+          system: false,
+          description: 'Upload your business registration documentation',
+          owner: 'WORKPLACE', // User provides this file
+        },
+        {
+          handle: 'status',
+          label: 'Status',
+          type: 'STRING',
+          required: true,
+          system: true,
+          defaultValue: { value: 'PENDING' },
+          description: 'Approval status of the compliance record',
+          owner: 'APP', // App controls this (set via webhook callback)
+          definition: {
+            limitChoices: 1,
+            options: [
+              { label: 'Pending', value: 'PENDING', color: 'yellow' },
+              { label: 'Approved', value: 'APPROVED', color: 'green' },
+              { label: 'Rejected', value: 'REJECTED', color: 'red' },
+            ],
+          },
+        },
+      ],
+    },
     {
       handle: 'phone_number',
       name: 'Phone Number',
@@ -22,6 +87,13 @@ export default defineConfig({
       scope: 'INTERNAL', // App owns this, auto-created when feature is provisioned
       labelTemplate: '{{ phone }}',
       description: 'Phone numbers assigned to workplaces for SMS/voice communication',
+      // Requires an APPROVED compliance_record before phone numbers can be provisioned
+      requires: [
+        {
+          model: 'compliance_record',
+          where: { status: { eq: 'APPROVED' } },
+        },
+      ],
       fields: [
         {
           handle: 'phone',
@@ -32,6 +104,7 @@ export default defineConfig({
           unique: true,
           system: true,
           description: 'The dedicated phone number (E.164 format)',
+          owner: 'APP', // Provisioned by app (from Twilio)
         },
         {
           handle: 'forwarding_phone_number',
@@ -39,8 +112,18 @@ export default defineConfig({
           type: 'STRING',
           definitionHandle: 'phone',
           required: false,
-          system: true,
+          system: false,
           description: 'Phone number to forward calls to',
+          owner: 'WORKPLACE', // User provides this
+        },
+        {
+          handle: 'compliance_record_id',
+          label: 'Compliance Record',
+          type: 'RELATION',
+          required: true,
+          system: true,
+          description: 'Link to the approved compliance record',
+          owner: 'APP', // App links this automatically
         },
       ],
     },
@@ -58,6 +141,7 @@ export default defineConfig({
           system: false,
           unique: false,
           visibility: { data: true, list: true, filters: true },
+          owner: 'WORKPLACE', // User maps their existing phone field
         },
         {
           handle: 'opt_in',
@@ -67,6 +151,7 @@ export default defineConfig({
           system: true,
           defaultValue: { value: ['OPT_IN'] },
           visibility: { data: false, list: true, filters: true },
+          owner: 'BOTH', // App can update, user can view/edit
         },
         {
           handle: 'last_contacted_at',
@@ -75,6 +160,7 @@ export default defineConfig({
           required: false,
           system: true,
           visibility: { data: false, list: true, filters: true },
+          owner: 'APP', // App updates this automatically
         },
       ],
     },
@@ -134,20 +220,7 @@ export default defineConfig({
 
   preInstall: {
     env: {
-      TWILIO_ACCOUNT_SID: {
-        label: 'Twilio Account SID',
-        required: true,
-        visibility: 'encrypted',
-        description: 'Your Twilio Account SID from the Twilio Console',
-        placeholder: 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-      },
-      TWILIO_AUTH_TOKEN: {
-        label: 'Twilio Auth Token',
-        required: true,
-        visibility: 'encrypted',
-        description: 'Your Twilio Auth Token from the Twilio Console',
-        placeholder: 'Your auth token',
-      },
+      
     },
   },
 
@@ -157,20 +230,7 @@ export default defineConfig({
 
   postInstall: {
     env: {
-      TWILIO_CALL_FORWARD_USERNAME: {
-        label: 'Call Forward Username',
-        required: false,
-        visibility: 'encrypted',
-        description: 'Username for call forwarding authentication',
-        placeholder: 'Optional username',
-      },
-      TWILIO_CALL_FORWARD_PASSWORD: {
-        label: 'Call Forward Password',
-        required: false,
-        visibility: 'encrypted',
-        description: 'Password for call forwarding authentication',
-        placeholder: 'Optional password',
-      },
+
     },
   },
 })
