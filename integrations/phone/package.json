@@ -5,8 +5,7 @@
   "type": "module",
   "main": "./src/registry.ts",
   "scripts": {
-    "build": "tsup",
-    "dev": "skedyul dev"
+    "build": "tsup"
   },
   "dependencies": {
     "skedyul": "latest",
