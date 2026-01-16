@@ -231,6 +231,38 @@ export default defineConfig({
     },
   ],
 
+  // Pages for internal models (displayed in post-install UI)
+  pages: [
+    {
+      handle: 'compliance_submission',
+      model: 'compliance_record',
+      type: 'INSTANCE',
+      title: 'Compliance Submission',
+      path: '/compliance',
+      blocks: [
+        {
+          type: 'form',
+          title: 'Business Registration',
+          fields: ['file'],
+        },
+      ],
+    },
+    {
+      handle: 'phone_numbers_list',
+      model: 'phone_number',
+      type: 'LIST',
+      title: 'Phone Numbers',
+      path: '/phone-numbers',
+      blocks: [
+        {
+          type: 'spreadsheet',
+          title: 'All Phone Numbers',
+          fields: ['phone', 'forwarding_phone_number'],
+        },
+      ],
+    },
+  ],
+
   preInstall: {
     env: {
       
