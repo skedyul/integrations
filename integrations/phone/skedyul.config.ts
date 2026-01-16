@@ -115,15 +115,8 @@ export default defineConfig({
           description: 'Phone number to forward calls to',
           owner: 'WORKPLACE', // User provides this
         },
-        {
-          handle: 'compliance_record_id',
-          label: 'Compliance Record',
-          type: 'RELATION',
-          required: true,
-          system: true,
-          description: 'Link to the approved compliance record',
-          owner: 'APP', // App links this automatically
-        },
+        // Note: compliance_record relationship field is created automatically
+        // by the relationship definition below
       ],
     },
     {
@@ -162,6 +155,27 @@ export default defineConfig({
           owner: 'APP', // App updates this automatically
         },
       ],
+    },
+  ],
+
+  // Relationships between models
+  relationships: [
+    {
+      // phone_number -> compliance_record (many phone numbers can link to one compliance record)
+      source: {
+        model: 'phone_number',
+        field: 'compliance_record',
+        label: 'Compliance Record',
+        cardinality: 'MANY_TO_ONE',
+        onDelete: 'RESTRICT',
+      },
+      target: {
+        model: 'compliance_record',
+        field: 'phone_numbers',
+        label: 'Phone Numbers',
+        cardinality: 'ONE_TO_MANY',
+        onDelete: 'NONE',
+      },
     },
   ],
 
