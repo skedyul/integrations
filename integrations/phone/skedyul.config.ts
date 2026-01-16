@@ -40,7 +40,6 @@ export default defineConfig({
       placeholder: 'Optional password',
     },
   },
-
   // Unified model definitions (INTERNAL + SHARED)
   models: [
     {

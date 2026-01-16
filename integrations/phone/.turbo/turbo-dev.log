@@ -3,26 +3,6 @@
 > @skedyul-integrations/phone@1.0.0 dev /Users/achadee/Projects/skedyul/skedyul-app/packages/skedyul-integrations/integrations/phone
 > skedyul dev
 
-
-skedyul dev - Development tools for testing MCP servers locally
-
-Usage:
-  skedyul dev <command> [options]
-
-Commands:
-  invoke <tool>   Invoke a tool from the registry
-  tools           List all tools in the registry
-  serve           Start a local MCP server
-  validate        Validate skedyul.config.ts
-  diff            Show what would change on deploy
-
-Examples:
-  skedyul dev invoke my_tool --registry ./dist/registry.js --args '{"key": "value"}'
-  skedyul dev tools --registry ./dist/registry.js
-  skedyul dev serve --registry ./dist/registry.js --port 3001
-  skedyul dev validate
-  skedyul dev diff
-
-Options:
-  --help, -h      Show help for a command
-
+sh: skedyul: command not found
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed.[39m
+[43m[30m WARN [39m[49m  Local package.json exists, but node_modules missing, did you mean to install?
