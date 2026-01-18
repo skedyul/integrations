@@ -231,33 +231,100 @@ export default defineConfig({
     },
   ],
 
-  // Pages for internal models (displayed in post-install UI)
+  // Pages (MVC View layer - displayed in post-install UI)
   pages: [
     {
       handle: 'compliance_submission',
-      model: 'compliance_record',
       type: 'INSTANCE',
       title: 'Compliance Submission',
       path: '/compliance',
+      navigation: true,
+      // Filter to find the compliance record for this installation
+      filter: {
+        model: 'compliance_record',
+        where: { appInstallationId: '$appInstallationId' },
+      },
       blocks: [
         {
           type: 'form',
           title: 'Business Registration',
-          fields: ['file'],
+          fields: [
+            {
+              handle: 'file',
+              type: 'FILE',
+              label: 'Business Registration Document',
+              description: 'Upload your business registration certificate (PDF, JPG, or PNG)',
+              required: true,
+              accept: '.pdf,.jpg,.jpeg,.png',
+              // Data binding: prepopulate from model field
+              source: {
+                model: 'compliance_record',
+                field: 'file',
+              },
+              // Handler called immediately on file upload
+              handler: 'submit_compliance_document',
+            },
+            {
+              handle: 'status',
+              type: 'STRING',
+              label: 'Compliance Status',
+              description: 'Current status of your compliance submission',
+              // Read-only field showing status from model (no handler)
+              source: {
+                model: 'compliance_record',
+                field: 'status',
+              },
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          handle: 'check_status',
+          label: 'Refresh Status',
+          handler: 'check_compliance_status',
+          icon: 'RefreshCw',
+          variant: 'secondary',
         },
       ],
     },
     {
       handle: 'phone_numbers_list',
-      model: 'phone_number',
       type: 'LIST',
       title: 'Phone Numbers',
       path: '/phone-numbers',
+      navigation: true,
+      // Filter to get phone numbers for this installation
+      filter: {
+        model: 'phone_number',
+        where: { appInstallationId: '$appInstallationId' },
+      },
       blocks: [
         {
           type: 'spreadsheet',
           title: 'All Phone Numbers',
-          fields: ['phone', 'forwarding_phone_number'],
+          fields: [
+            {
+              handle: 'phone',
+              type: 'STRING',
+              label: 'Phone Number',
+              description: 'The Twilio phone number',
+              source: {
+                model: 'phone_number',
+                field: 'phone',
+              },
+            },
+            {
+              handle: 'forwarding_phone_number',
+              type: 'STRING',
+              label: 'Forwarding Number',
+              description: 'Number to forward calls to',
+              source: {
+                model: 'phone_number',
+                field: 'forwarding_phone_number',
+              },
+            },
+          ],
         },
       ],
     },
