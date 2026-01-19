@@ -243,6 +243,7 @@ export default defineConfig({
       filter: {
         model: 'compliance_record',
         where: { appInstallationId: '$appInstallationId' },
+        
       },
       blocks: [
         {
@@ -335,7 +336,7 @@ export default defineConfig({
     env: {
       
 
-      
+
     },
   },
 
