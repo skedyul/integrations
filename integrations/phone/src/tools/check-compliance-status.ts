@@ -6,18 +6,12 @@ const { z } = skedyul
 /**
  * Input schema for the check_compliance_status page action handler.
  * This handler is called when a user clicks the "Refresh Status" button.
+ *
+ * Note: Context (appInstallationId, workplace, fieldValues, etc.) is now injected
+ * as the second argument by the runtime, not included in the input schema.
  */
 const CheckComplianceStatusInputSchema = z.object({
-  context: z.object({
-    pageHandle: z.string(),
-    appInstallationId: z.string(),
-    workplace: z.object({
-      id: z.string(),
-      subdomain: z.string(),
-    }),
-    fieldValues: z.record(z.string(), z.unknown()),
-    env: z.record(z.string(), z.string()),
-  }),
+  // Page actions may have empty inputs - all context comes from the second argument
 })
 
 const CheckComplianceStatusOutputSchema = z.object({
@@ -37,9 +31,8 @@ export const checkComplianceStatusRegistry: ToolDefinition<
   description: 'Checks the current compliance status from Twilio',
   inputs: CheckComplianceStatusInputSchema,
   outputSchema: CheckComplianceStatusOutputSchema,
-  handler: async ({ input, context }) => {
-    const { context: actionContext } = input
-    const { env, fieldValues } = actionContext
+  handler: async (input, context) => {
+    const { appInstallationId, workplace, fieldValues, env } = context
 
     // TODO: Implement actual Twilio compliance API status check
     // This would:
@@ -49,8 +42,8 @@ export const checkComplianceStatusRegistry: ToolDefinition<
     // 4. Return the current status
 
     console.log('Checking compliance status:', {
-      appInstallationId: actionContext.appInstallationId,
-      workplace: actionContext.workplace,
+      appInstallationId,
+      workplace,
       currentFieldValues: fieldValues,
     })
 

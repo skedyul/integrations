@@ -4,6 +4,10 @@ import type { ToolDefinition } from 'skedyul'
 const { z } = skedyul
 import { createTwilioClient } from '../lib/twilio-client'
 
+/**
+ * Input schema for sending SMS messages.
+ * This tool can be invoked by agents, workflows, or page actions.
+ */
 const SendSmsInputSchema = z.object({
   to: z.string().describe('Recipient phone number in E.164 format'),
   from: z.string().describe('Sender phone number (must be a Twilio number)'),
@@ -23,7 +27,7 @@ export const sendSmsRegistry: ToolDefinition<SendSmsInput, SendSmsOutput> = {
   description: 'Send an SMS message via Twilio',
   inputs: SendSmsInputSchema,
   outputSchema: SendSmsOutputSchema,
-  handler: async ({ input, context }) => {
+  handler: async (input, context) => {
     const client = createTwilioClient(context.env)
 
     const message = await client.messages.create({
