@@ -1,6 +1,6 @@
 {
   "name": "@skedyul/petbooqz",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Petbooqz integration for Skedyul",
   "main": "dist/server/mcp-server.js",
   "scripts": {
