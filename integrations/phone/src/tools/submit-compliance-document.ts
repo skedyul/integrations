@@ -1,4 +1,7 @@
-import { z, type ToolDefinition } from 'skedyul'
+import skedyul from 'skedyul'
+import type { ToolDefinition } from 'skedyul'
+
+const { z } = skedyul
 
 /**
  * Input schema for the submit_compliance_document field change handler.

@@ -1,4 +1,7 @@
-import { z, type ToolDefinition } from 'skedyul'
+import skedyul from 'skedyul'
+import type { ToolDefinition } from 'skedyul'
+
+const { z } = skedyul
 
 /**
  * Input schema for the check_compliance_status page action handler.
