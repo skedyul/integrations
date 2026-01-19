@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 
 /**
  * Input schema for the submit_compliance_document field change handler.
@@ -17,7 +16,7 @@ const SubmitComplianceDocumentInputSchema = z.object({
       id: z.string(),
       subdomain: z.string(),
     }),
-    env: z.record(z.string()),
+    env: z.record(z.string(), z.string()),
   }),
 })
 

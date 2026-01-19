@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createTwilioClient } from '../lib/twilio-client'
 
 const SendSmsInputSchema = z.object({

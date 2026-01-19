@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "skedyul": "latest",
-    "twilio": "^5.0.0",
-    "zod": "^4.1.13"
+    "twilio": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 
 /**
  * Input schema for the check_compliance_status page action handler.
@@ -13,8 +12,8 @@ const CheckComplianceStatusInputSchema = z.object({
       id: z.string(),
       subdomain: z.string(),
     }),
-    fieldValues: z.record(z.unknown()),
-    env: z.record(z.string()),
+    fieldValues: z.record(z.string(), z.unknown()),
+    env: z.record(z.string(), z.string()),
   }),
 })
 
