@@ -1,4 +1,4 @@
-import skedyul from 'skedyul'
+import skedyul, { type z as ZodType } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
@@ -29,8 +29,8 @@ const SubmitComplianceDocumentOutputSchema = z.object({
   message: z.string().optional().describe('Status message'),
 })
 
-type SubmitComplianceDocumentInput = z.infer<typeof SubmitComplianceDocumentInputSchema>
-type SubmitComplianceDocumentOutput = z.infer<typeof SubmitComplianceDocumentOutputSchema>
+type SubmitComplianceDocumentInput = ZodType.infer<typeof SubmitComplianceDocumentInputSchema>
+type SubmitComplianceDocumentOutput = ZodType.infer<typeof SubmitComplianceDocumentOutputSchema>
 
 export const submitComplianceDocumentRegistry: ToolDefinition<
   SubmitComplianceDocumentInput,

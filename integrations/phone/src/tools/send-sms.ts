@@ -1,4 +1,4 @@
-import skedyul from 'skedyul'
+import skedyul, { type z as ZodType } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
@@ -15,8 +15,8 @@ const SendSmsOutputSchema = z.object({
   status: z.string().describe('Message status'),
 })
 
-type SendSmsInput = z.infer<typeof SendSmsInputSchema>
-type SendSmsOutput = z.infer<typeof SendSmsOutputSchema>
+type SendSmsInput = ZodType.infer<typeof SendSmsInputSchema>
+type SendSmsOutput = ZodType.infer<typeof SendSmsOutputSchema>
 
 export const sendSmsRegistry: ToolDefinition<SendSmsInput, SendSmsOutput> = {
   name: 'send_sms',

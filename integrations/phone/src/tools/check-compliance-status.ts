@@ -1,4 +1,4 @@
-import skedyul from 'skedyul'
+import skedyul, { type z as ZodType } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
@@ -26,8 +26,8 @@ const CheckComplianceStatusOutputSchema = z.object({
   message: z.string().optional().describe('Status message'),
 })
 
-type CheckComplianceStatusInput = z.infer<typeof CheckComplianceStatusInputSchema>
-type CheckComplianceStatusOutput = z.infer<typeof CheckComplianceStatusOutputSchema>
+type CheckComplianceStatusInput = ZodType.infer<typeof CheckComplianceStatusInputSchema>
+type CheckComplianceStatusOutput = ZodType.infer<typeof CheckComplianceStatusOutputSchema>
 
 export const checkComplianceStatusRegistry: ToolDefinition<
   CheckComplianceStatusInput,
