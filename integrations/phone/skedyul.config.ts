@@ -41,6 +41,7 @@ export default defineConfig({
     },
   },
   // Unified model definitions (INTERNAL + SHARED)
+  
   models: [
     {
       handle: 'compliance_record',
