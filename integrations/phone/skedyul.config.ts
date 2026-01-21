@@ -6,7 +6,7 @@ export default defineConfig({
   description: 'SMS and voice communication via Twilio',
   computeLayer: 'serverless',
   tools: import('./src/registry'),
-  webhooks: import('./src/webhooks'),
+  webhooks: import('./src/webhooks/registry'),
 
   env: {
     // Global environment variables (developer-level, shared across all installs)
@@ -51,6 +51,24 @@ export default defineConfig({
       description: 'Compliance records for SMS/voice communication',
       fields: [
         {
+          handle: 'business_name',
+          label: 'Business Name',
+          type: 'STRING',
+          required: true,
+          system: false,
+          description: 'Legal name of your business',
+          owner: 'WORKPLACE', // User provides this
+        },
+        {
+          handle: 'business_email',
+          label: 'Business Email',
+          type: 'STRING',
+          required: true,
+          system: false,
+          description: 'Email address for compliance notifications',
+          owner: 'WORKPLACE', // User provides this
+        },
+        {
           handle: 'file',
           label: 'Evidence of Business Registration & Address',
           type: 'FILE',
@@ -72,10 +90,49 @@ export default defineConfig({
             limitChoices: 1,
             options: [
               { label: 'Pending', value: 'PENDING', color: 'yellow' },
+              { label: 'Submitted', value: 'SUBMITTED', color: 'blue' },
+              { label: 'Pending Review', value: 'PENDING_REVIEW', color: 'orange' },
               { label: 'Approved', value: 'APPROVED', color: 'green' },
               { label: 'Rejected', value: 'REJECTED', color: 'red' },
             ],
           },
+        },
+        // Twilio resource SIDs (system fields, managed by app)
+        {
+          handle: 'bundle_sid',
+          label: 'Bundle SID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'Twilio Regulatory Bundle SID',
+          owner: 'APP',
+        },
+        {
+          handle: 'end_user_sid',
+          label: 'End User SID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'Twilio End-User SID',
+          owner: 'APP',
+        },
+        {
+          handle: 'document_sid',
+          label: 'Document SID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'Twilio Supporting Document SID',
+          owner: 'APP',
+        },
+        {
+          handle: 'rejection_reason',
+          label: 'Rejection Reason',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'Reason for rejection if compliance bundle was rejected',
+          owner: 'APP',
         },
       ],
     },
@@ -251,19 +308,51 @@ export default defineConfig({
           title: 'Business Registration',
           fields: [
             {
-              handle: 'file',
-              type: 'FILE',
-              label: 'Business Registration Document',
-              description: 'Upload your business registration certificate (PDF, JPG, or PNG)',
-              required: true,
-              accept: '.pdf,.jpg,.jpeg,.png',
-              // Data binding: prepopulate from model field
-              source: {
-                model: 'compliance_record',
-                field: 'file',
-              },
-              // Handler called immediately on file upload
+              handle: 'compliance_form',
+              type: 'FORM',
+              label: 'Submit Compliance Documents',
+              description: 'Click to submit your business registration documents for Twilio compliance verification',
               handler: 'submit_compliance_document',
+              // Header for the modal dialog
+              header: {
+                title: 'Business Registration',
+                description: 'Provide your business details and upload supporting documents for Twilio regulatory compliance.',
+              },
+              // Nested fields rendered inside the modal form
+              fields: [
+                {
+                  handle: 'business_name',
+                  type: 'STRING',
+                  label: 'Business Name',
+                  description: 'Legal name of your business',
+                  required: true,
+                },
+                {
+                  handle: 'business_email',
+                  type: 'STRING',
+                  label: 'Business Email',
+                  description: 'Email address for compliance notifications from Twilio',
+                  required: true,
+                },
+                {
+                  handle: 'file',
+                  type: 'FILE',
+                  label: 'Business Registration Document',
+                  description: 'Upload your business registration certificate (PDF, JPG, or PNG)',
+                  required: true,
+                  accept: '.pdf,.jpg,.jpeg,.png',
+                },
+              ],
+              // Action buttons in the modal footer
+              actions: [
+                {
+                  handle: 'submit',
+                  label: 'Submit for Review',
+                  handler: 'submit_compliance_document',
+                  icon: 'Send',
+                  variant: 'primary',
+                },
+              ],
             },
             {
               handle: 'status',
