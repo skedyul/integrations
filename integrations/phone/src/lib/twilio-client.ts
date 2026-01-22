@@ -86,11 +86,40 @@ export type CreateEndUserParams = {
 export type CreateSupportingDocumentParams = {
   friendlyName: string
   type: string
-  attributes?: Record<string, string>
+  attributes?: Record<string, string | string[]>
   /** File content as Buffer for document uploads */
   file?: Buffer
   /** MIME type of the file (e.g., 'application/pdf', 'image/jpeg') */
   mimeType?: string
+}
+
+export type CreateAddressParams = {
+  customerName: string
+  street: string
+  city: string
+  region: string
+  postalCode: string
+  isoCountry: string
+}
+
+/**
+ * Create an Address for regulatory compliance.
+ * Addresses are required for business compliance bundles.
+ * 
+ * @see https://www.twilio.com/docs/usage/api/address
+ */
+export const createAddress = async (
+  client: ReturnType<typeof twilio>,
+  params: CreateAddressParams,
+) => {
+  return client.addresses.create({
+    customerName: params.customerName,
+    street: params.street,
+    city: params.city,
+    region: params.region,
+    postalCode: params.postalCode,
+    isoCountry: params.isoCountry,
+  })
 }
 
 /**
@@ -123,7 +152,7 @@ export const createSupportingDocument = async (
   const createParams: {
     friendlyName: string
     type: string
-    attributes?: Record<string, string>
+    attributes?: Record<string, string | string[]>
     file?: Buffer
   } = {
     friendlyName: params.friendlyName,

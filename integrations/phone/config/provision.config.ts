@@ -67,6 +67,13 @@ const config: ProvisionConfig = {
       description: 'Password for call forwarding authentication',
       placeholder: 'Optional password',
     },
+    GOOGLE_MAPS_API_KEY: {
+      label: 'Google Maps API Key',
+      required: true,
+      visibility: 'encrypted',
+      description: 'Google Maps API key for geocoding addresses (enable Geocoding API)',
+      placeholder: 'AIzaSy...',
+    },
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -134,6 +141,15 @@ const config: ProvisionConfig = {
               { label: 'Australia', value: 'AU' },
             ],
           },
+        },
+        {
+          handle: 'address',
+          label: 'Business Address',
+          type: 'STRING',
+          required: true,
+          system: false,
+          description: 'Full business address (will be parsed automatically)',
+          owner: 'WORKPLACE',
         },
         {
           handle: 'file',
@@ -464,10 +480,17 @@ const config: ProvisionConfig = {
                   ],
                 },
                 {
+                  handle: 'address',
+                  type: 'STRING',
+                  label: 'Business Address',
+                  description: 'Full business address (e.g., 123 Main St, Sydney NSW 2000)',
+                  required: true,
+                },
+                {
                   handle: 'file',
                   type: 'FILE',
                   label: 'Business Registration Document',
-                  description: 'Upload your business registration certificate (PDF, JPG, or PNG)',
+                  description: 'Upload your commercial register excerpt or equivalent (PDF, JPG, or PNG)',
                   required: true,
                   accept: '.pdf,.jpg,.jpeg,.png',
                 },
