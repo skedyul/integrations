@@ -141,11 +141,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
         )
       }
 
-      return {
-        output: {
+    return {
+      output: {
           status: newStatus,
           twilioStatus,
-          lastUpdated: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
           message: STATUS_MESSAGES[newStatus] || `Status: ${newStatus}`,
           rejectionReason: bundle.failureReason || undefined,
         },
@@ -160,7 +160,7 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           status: currentStatus || 'PENDING',
           lastUpdated: new Date().toISOString(),
           message: `Unable to fetch latest status from Twilio. Current status: ${currentStatus}`,
-        },
+      },
         billing: { credits: 0 },
       }
     }

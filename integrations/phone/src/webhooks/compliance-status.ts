@@ -1,22 +1,48 @@
-import type {
-  WebhookContext,
-  WebhookRequest,
-  WebhookResponse,
-  WebhookDefinition,
-} from 'skedyul'
+import { instance, type WebhookContext, type WebhookRequest, type WebhookResponse, type WebhookDefinition } from 'skedyul'
+
+/**
+ * Twilio compliance bundle status mapping.
+ * Maps Twilio status values to our internal status values.
+ */
+const TWILIO_STATUS_MAP: Record<string, string> = {
+  'twilio-approved': 'APPROVED',
+  'twilio-rejected': 'REJECTED',
+  'pending-review': 'PENDING_REVIEW',
+  'draft': 'PENDING',
+  'in-review': 'PENDING_REVIEW',
+}
+
+/**
+ * Parse the Twilio compliance callback body.
+ * Twilio sends URL-encoded form data, not JSON.
+ */
+function parseTwilioCallback(body: unknown): {
+  bundleSid: string | null
+  status: string | null
+  failureReason: string | null
+} {
+  if (!body || typeof body !== 'object') {
+    return { bundleSid: null, status: null, failureReason: null }
+  }
+
+  const data = body as Record<string, unknown>
+  return {
+    bundleSid: (data.BundleSid as string) ?? null,
+    status: (data.Status as string) ?? null,
+    failureReason: (data.FailureReason as string) ?? null,
+  }
+}
 
 /**
  * Handle Twilio compliance bundle status callback.
  *
- * TODO: Implement full Twilio compliance status callback handling.
- *
- * When a compliance bundle status changes in Twilio, this webhook is called.
- * The implementation should:
- * 1. Parse the BundleSid and Status from the request body
- * 2. Search for the compliance_record by bundle_sid across all installations
- * 3. Exchange for an installation-scoped token
- * 4. Update the compliance_record status (APPROVED/REJECTED)
- * 5. If approved, optionally trigger phone number provisioning
+ * This webhook is called by Twilio when a compliance bundle status changes.
+ * The platform pre-authenticates the request and injects context via headers:
+ * - context.appInstallationId: The installation this webhook belongs to
+ * - context.workplace: Workplace info
+ * - context.registration: Metadata passed when webhook.create() was called
+ *   - complianceRecordId: The ID of the compliance record to update
+ *   - businessName: The business name for logging
  *
  * Expected Twilio callback payload:
  * - BundleSid: The SID of the compliance bundle
@@ -29,37 +55,88 @@ async function handleComplianceStatusCallback(
 ): Promise<WebhookResponse> {
   console.log('[Compliance Webhook] Received status callback:', {
     body: request.body,
-    headers: request.headers,
+    registration: context.registration,
+    appInstallationId: context.appInstallationId,
   })
 
-  // TODO: Implement the following:
-  // 1. Parse bundle status from request body
-  // const { BundleSid, Status, FailureReason } = parseBody(request.body)
-  
-  // 2. Search for compliance_record by bundle_sid across all installations
-  // const searchResults = await instance.list('compliance_record', undefined, {
-  //   filter: { bundle_sid: BundleSid },
-  //   limit: 1,
-  // })
-  
-  // 3. Exchange for installation-scoped token
-  // const { token: scopedToken } = await tokenClient.exchange(appInstallationId)
-  
-  // 4. Update the compliance record status
-  // const statusMap = {
-  //   'twilio-approved': 'APPROVED',
-  //   'twilio-rejected': 'REJECTED',
-  // }
-  // await instance.update(recordId, {
-  //   status: statusMap[Status],
-  //   rejection_reason: FailureReason || null,
-  // }, ctx)
-  
-  // 5. If approved, optionally trigger phone number provisioning
+  // Parse Twilio callback data
+  const { bundleSid, status, failureReason } = parseTwilioCallback(request.body)
 
-  return {
-    status: 200,
-    body: { received: true, message: 'Compliance status webhook received (handler not fully implemented)' },
+  if (!bundleSid || !status) {
+    console.warn('[Compliance Webhook] Missing BundleSid or Status in callback')
+    return {
+      status: 400,
+      body: { error: 'Missing BundleSid or Status' },
+    }
+  }
+
+  // Get the compliance record ID from the webhook registration context
+  // This was passed when webhook.create() was called in submit-compliance-document
+  const complianceRecordId = context.registration?.complianceRecordId as string | undefined
+  const businessName = context.registration?.businessName as string | undefined
+
+  if (!complianceRecordId) {
+    console.warn('[Compliance Webhook] No complianceRecordId in registration context')
+    return {
+      status: 400,
+      body: { error: 'Missing complianceRecordId in webhook context' },
+    }
+  }
+
+  // Validate we have installation context (platform injects this)
+  if (!context.appInstallationId || !context.workplace) {
+    console.error('[Compliance Webhook] Missing platform context')
+    return {
+      status: 500,
+      body: { error: 'Missing platform context' },
+    }
+  }
+
+  // Build instance context for SDK calls
+  const instanceCtx = {
+    appInstallationId: context.appInstallationId,
+    workplace: context.workplace,
+  }
+
+  // Map Twilio status to our internal status
+  const internalStatus = TWILIO_STATUS_MAP[status] ?? status
+
+  console.log('[Compliance Webhook] Updating compliance record:', {
+    complianceRecordId,
+    bundleSid,
+    twilioStatus: status,
+    internalStatus,
+    failureReason,
+    businessName,
+  })
+
+  try {
+    // Update the compliance record with the new status
+    await instance.update(
+      complianceRecordId,
+      {
+        status: internalStatus,
+        rejection_reason: failureReason ?? null,
+      },
+      instanceCtx,
+    )
+
+    console.log('[Compliance Webhook] Successfully updated compliance record')
+
+    return {
+      status: 200,
+      body: {
+        received: true,
+        complianceRecordId,
+        status: internalStatus,
+      },
+    }
+  } catch (err) {
+    console.error('[Compliance Webhook] Failed to update compliance record:', err)
+    return {
+      status: 500,
+      body: { error: 'Failed to update compliance record' },
+    }
   }
 }
 

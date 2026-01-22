@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance } from 'skedyul'
+import skedyul, { type z as ZodType, instance, file, webhook } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -23,8 +23,8 @@ const SubmitComplianceDocumentInputSchema = z.object({
   business_name: z.string().describe('Legal name of the business'),
   /** Email for compliance notifications */
   business_email: z.string().email().describe('Email for Twilio compliance notifications'),
-  /** S3 file key of the uploaded document */
-  file: z.string().describe('S3 file key of the uploaded document'),
+  /** File ID of the uploaded document (fl_xxx) */
+  file: z.string().describe('File ID of the uploaded document'),
 })
 
 const SubmitComplianceDocumentOutputSchema = z.object({
@@ -47,7 +47,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
   inputs: SubmitComplianceDocumentInputSchema,
   outputSchema: SubmitComplianceDocumentOutputSchema,
   handler: async (input, context) => {
-    const { business_name, business_email, file: fileKey } = input
+    const { business_name, business_email, file: fileId } = input
     const { appInstallationId, workplace, env } = context
 
     // Validate required context fields
@@ -62,7 +62,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     }
 
     // Validate required input fields
-    if (!business_name || !business_email || !fileKey) {
+    if (!business_name || !business_email || !fileId) {
       return {
         output: {
           status: 'error',
@@ -92,7 +92,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         {
           business_name,
           business_email,
-          file: fileKey,
+          file: fileId, // Store only the file ID, not the S3 path
           status: 'PENDING',
         },
         instanceCtx,
@@ -130,7 +130,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     console.log('[Compliance] Starting Twilio compliance submission:', {
       business_name,
       business_email,
-      fileKey,
+      fileId,
       appInstallationId,
       complianceRecordId: complianceRecord.id,
     })
@@ -142,7 +142,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       {
         business_name,
         business_email,
-        file: fileKey,
+        file: fileId, // Store only the file ID, not the S3 path
         status: 'SUBMITTED',
         rejection_reason: null, // Clear previous rejection reason
       },
@@ -167,36 +167,44 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       console.log('[Compliance] Created End-User:', endUser.sid)
 
       // ─────────────────────────────────────────────────────────────────────────
-      // Step 2: Create Supporting Document
-      // Note: The actual file is stored in S3. Twilio's Supporting Documents API
-      // stores metadata about the document. For full file upload, you may need
-      // to use Twilio's document upload endpoint with the actual file bytes.
+      // Step 2: Get file URL and create Supporting Document
+      // The file is stored in S3 with app-scoped access. We get a temporary URL
+      // to pass to Twilio for document verification.
       // ─────────────────────────────────────────────────────────────────────────
+      console.log('[Compliance] Getting file URL for Twilio...')
+      const fileUrlResponse = await file.getUrl(fileId)
+      console.log('[Compliance] File URL obtained, expires at:', fileUrlResponse.expiresAt)
+
       console.log('[Compliance] Creating Twilio Supporting Document...')
       const supportingDoc = await createSupportingDocument(twilioClient, {
         friendlyName: 'Business Registration',
         type: 'business_registration',
         attributes: {
-          // Document metadata - in production, this might include the actual
-          // file URL or be uploaded separately via presigned URL
-          document_url: fileKey,
+          // Pass the temporary download URL to Twilio
+          document_url: fileUrlResponse.url,
         },
       })
       console.log('[Compliance] Created Supporting Document:', supportingDoc.sid)
 
       // ─────────────────────────────────────────────────────────────────────────
-      // Step 3: Create Regulatory Bundle
+      // Step 3: Create Regulatory Bundle with dynamic webhook callback
       // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Creating Twilio Regulatory Bundle...')
       
-      // Note: Status callback URL can be configured in Twilio console or via env variable
-      // For webhook-based status updates, configure the compliance_status webhook
-      const statusCallbackUrl = env.TWILIO_COMPLIANCE_CALLBACK_URL
+      // Create a dynamic webhook registration for Twilio status callbacks
+      // This webhook will be called by Twilio when the bundle status changes
+      console.log('[Compliance] Creating webhook registration for status callbacks...')
+      const webhookResult = await webhook.create('compliance_status', {
+        // Context passed to the webhook handler when called
+        complianceRecordId: complianceRecord.id,
+        businessName: business_name,
+      })
+      console.log('[Compliance] Created webhook:', webhookResult.url)
 
       const bundle = await createBundle(twilioClient, {
         friendlyName: `${business_name} Compliance Bundle`,
         email: business_email,
-        statusCallback: statusCallbackUrl,
+        statusCallback: webhookResult.url, // Use the dynamic webhook URL
         endUserType: 'business',
         // Note: isoCountry and regulationSid can be configured based on requirements
         // isoCountry: 'US',
