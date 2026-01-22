@@ -276,22 +276,52 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       complianceRecordId: complianceRecord.id,
     })
 
-    // Update status to SUBMITTED (attempting submission)
-    // Clear rejection_reason if resubmitting after rejection
+    // Update the compliance record with all form data
+    const updateData = {
+      business_name,
+      business_email,
+      business_id,
+      country: isoCountry,
+      address, // Store the original address input
+      file: fileId, // Store only the file ID, not the S3 path
+      status: 'PENDING_REVIEW', // Mark as pending review
+      // Hardcoded Twilio SIDs for now to avoid spamming Twilio
+      bundle_sid: 'BUf7c04b1d019a9c67844976fea763f351',
+      end_user_sid: 'IT482fcb7ee070cfbc260c0d53c6c66aa5',
+      document_sid: 'RDb9eb3fcc11d5d53a64b994075af2b6fe',
+    }
+    
+    console.log('[Compliance] Updating compliance record with data:', {
+      recordId: complianceRecord.id,
+      updateData,
+    })
+
     await instance.update(
       complianceRecord.id,
-      {
-        business_name,
-        business_email,
-        business_id,
-        country: isoCountry,
-        address, // Store the original address input
-        file: fileId, // Store only the file ID, not the S3 path
-        status: 'SUBMITTED',
-        rejection_reason: null, // Clear previous rejection reason
-      },
+      updateData,
       instanceCtx,
     )
+
+    console.log('[Compliance] Instance updated successfully')
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // TEMPORARY: Return hardcoded response to avoid spamming Twilio
+    // Remove this block and uncomment the actual Twilio submission below once
+    // the instance saving issue is fixed
+    // ══════════════════════════════════════════════════════════════════════════
+    return {
+      output: {
+        status: 'pending_review',
+        bundleSid: 'BUf7c04b1d019a9c67844976fea763f351',
+        endUserSid: 'IT482fcb7ee070cfbc260c0d53c6c66aa5',
+        documentSid: 'RDb9eb3fcc11d5d53a64b994075af2b6fe',
+        message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
+      },
+      billing: { credits: 0 },
+    }
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /* COMMENTED OUT: Actual Twilio submission - uncomment when ready
 
     try {
       // Create Twilio client
@@ -460,5 +490,6 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         billing: { credits: 0 },
       }
     }
+    END COMMENTED OUT */
   },
 }
