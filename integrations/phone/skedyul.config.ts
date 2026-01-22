@@ -3,14 +3,11 @@
  * =========================
  *
  * This is the main configuration file for your Skedyul app.
- * It defines metadata and imports modular configuration from the config/ folder.
  *
  * Structure:
- *   skedyul.config.ts     - App metadata + imports (this file)
- *   config/
- *     tools.config.ts     - Tool registry (callable functions)
- *     webhooks.config.ts  - Webhook handlers (incoming HTTP endpoints)
- *     provision.config.ts - Models, channels, workflows, pages, env vars
+ *   skedyul.config.ts      - App metadata + imports (this file)
+ *   src/registries.ts      - Tool and webhook registries
+ *   config/provision.config.ts - Models, channels, workflows, pages, env vars
  *
  * Dynamic imports are resolved at build/deploy time.
  * The compiled config is stored in the database for runtime use.
@@ -44,39 +41,22 @@ export default defineConfig({
   computeLayer: 'serverless',
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Modular Configuration Imports
+  // Registries (from src/registries.ts)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Tool registry - callable functions for pages, forms, workflows, API */
+  tools: import('./src/registries'),
+
+  /** Webhook registry - HTTP handlers for incoming requests */
+  webhooks: import('./src/registries'),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Provision Configuration
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * Tool Registry
-   * Maps tool names to handler functions that can be invoked by:
-   *   - Page actions (button clicks)
-   *   - Form submissions
-   *   - Workflow steps
-   *   - API calls
-   */
-  tools: import('./config/tools.config'),
-
-  /**
-   * Webhook Registry
-   * Maps webhook names to handler functions that process incoming HTTP requests.
-   * Webhooks can be registered at different levels:
-   *   - Provision: Auto-created when app is deployed (shared across all installs)
-   *   - Install:   Created during app installation (per-installation)
-   *   - Action:    Dynamically created by tool handlers (e.g., for callbacks)
-   */
-  webhooks: import('./config/webhooks.config'),
-
-  /**
-   * Provision Configuration
    * Resources automatically synced when the app version is deployed:
-   *   - env:           Environment variable schemas
-   *   - models:        Data models (INTERNAL or SHARED)
-   *   - relationships: Links between models
-   *   - channels:      Communication channels (SMS, email, etc.)
-   *   - workflows:     Automation templates
-   *   - pages:         UI screens for the app
-   *   - webhooks:      Provision-level webhook handlers to auto-register
+   *   - env, models, relationships, channels, workflows, pages, webhooks
    */
   provision: import('./config/provision.config'),
 })

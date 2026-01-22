@@ -1,6 +1,5 @@
 import { server } from 'skedyul'
-import { registry as toolRegistry } from '../../config/tools.config'
-import { registry as webhookRegistry } from '../../config/webhooks.config'
+import { toolRegistry, webhookRegistry } from '../registries'
 
 // Early startup log to help debug container issues
 console.log('[MCP Server] Starting...')
