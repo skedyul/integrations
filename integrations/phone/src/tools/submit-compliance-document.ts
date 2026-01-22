@@ -167,21 +167,33 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       console.log('[Compliance] Created End-User:', endUser.sid)
 
       // ─────────────────────────────────────────────────────────────────────────
-      // Step 2: Get file URL and create Supporting Document
-      // The file is stored in S3 with app-scoped access. We get a temporary URL
-      // to pass to Twilio for document verification.
+      // Step 2: Fetch file content and create Supporting Document
+      // Twilio requires actual file content for document uploads, not URLs.
+      // We fetch the file from S3 and pass the buffer to Twilio.
+      // @see https://www.twilio.com/docs/phone-numbers/regulatory/api/supporting-documents
       // ─────────────────────────────────────────────────────────────────────────
-      console.log('[Compliance] Getting file URL for Twilio...')
+      console.log('[Compliance] Getting file URL for download...')
       const fileUrlResponse = await file.getUrl(fileId)
       console.log('[Compliance] File URL obtained, expires at:', fileUrlResponse.expiresAt)
 
+      // Fetch the actual file content from S3
+      console.log('[Compliance] Downloading file content...')
+      const fileResponse = await fetch(fileUrlResponse.url)
+      if (!fileResponse.ok) {
+        throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`)
+      }
+      const fileBuffer = Buffer.from(await fileResponse.arrayBuffer())
+      console.log('[Compliance] Downloaded file, size:', fileBuffer.length, 'bytes')
+
       console.log('[Compliance] Creating Twilio Supporting Document...')
       const supportingDoc = await createSupportingDocument(twilioClient, {
-        friendlyName: 'Business Registration',
+        friendlyName: `${business_name} - Business Registration`,
         type: 'business_registration',
+        // Pass the actual file content to Twilio
+        file: fileBuffer,
+        // Attributes for business registration (metadata, not file URL)
         attributes: {
-          // Pass the temporary download URL to Twilio
-          document_url: fileUrlResponse.url,
+          business_name: business_name,
         },
       })
       console.log('[Compliance] Created Supporting Document:', supportingDoc.sid)

@@ -87,6 +87,10 @@ export type CreateSupportingDocumentParams = {
   friendlyName: string
   type: string
   attributes?: Record<string, string>
+  /** File content as Buffer for document uploads */
+  file?: Buffer
+  /** MIME type of the file (e.g., 'application/pdf', 'image/jpeg') */
+  mimeType?: string
 }
 
 /**
@@ -105,16 +109,38 @@ export const createEndUser = async (
 
 /**
  * Create a Supporting Document for regulatory compliance.
+ * 
+ * For document types that require proof (images/PDFs), pass the file content
+ * via the `file` parameter. Twilio will validate against the document type.
+ * 
+ * @see https://www.twilio.com/docs/phone-numbers/regulatory/api/supporting-documents
  */
 export const createSupportingDocument = async (
   client: ReturnType<typeof twilio>,
   params: CreateSupportingDocumentParams,
 ) => {
-  return client.numbers.v2.regulatoryCompliance.supportingDocuments.create({
+  // Build the create parameters
+  const createParams: {
+    friendlyName: string
+    type: string
+    attributes?: Record<string, string>
+    file?: Buffer
+  } = {
     friendlyName: params.friendlyName,
     type: params.type,
-    attributes: params.attributes,
-  })
+  }
+
+  // Only include attributes if provided and not empty
+  if (params.attributes && Object.keys(params.attributes).length > 0) {
+    createParams.attributes = params.attributes
+  }
+
+  // Include file if provided (for document uploads with proof)
+  if (params.file) {
+    createParams.file = params.file
+  }
+
+  return client.numbers.v2.regulatoryCompliance.supportingDocuments.create(createParams)
 }
 
 /**
