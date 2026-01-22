@@ -25,6 +25,8 @@ const SubmitComplianceDocumentInputSchema = z.object({
   business_email: z.string().email().describe('Email for Twilio compliance notifications'),
   /** Business registration or tax ID number */
   business_id: z.string().describe('Business registration or tax ID number (e.g., EIN, ABN, Company Number)'),
+  /** ISO 2-letter country code */
+  country: z.string().length(2).describe('ISO 2-letter country code (e.g., AU, US, GB)'),
   /** File ID of the uploaded document (fl_xxx) */
   file: z.string().describe('File ID of the uploaded document'),
 })
@@ -49,7 +51,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
   inputs: SubmitComplianceDocumentInputSchema,
   outputSchema: SubmitComplianceDocumentOutputSchema,
   handler: async (input, context) => {
-    const { business_name, business_email, business_id, file: fileId } = input
+    const { business_name, business_email, business_id, country, file: fileId } = input
     const { appInstallationId, workplace, env } = context
 
     // Validate required context fields
@@ -64,15 +66,18 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     }
 
     // Validate required input fields
-    if (!business_name || !business_email || !business_id || !fileId) {
+    if (!business_name || !business_email || !business_id || !country || !fileId) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required fields: business_name, business_email, business_id, and file are required',
+          message: 'Missing required fields: business_name, business_email, business_id, country, and file are required',
         },
         billing: { credits: 0 },
       }
     }
+
+    // Normalize country to uppercase ISO code
+    const isoCountry = country.toUpperCase()
 
     // Build the instance context for API calls
     const instanceCtx = {
@@ -95,6 +100,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           business_name,
           business_email,
           business_id,
+          country: isoCountry,
           file: fileId, // Store only the file ID, not the S3 path
           status: 'PENDING',
         },
@@ -134,6 +140,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       business_name,
       business_email,
       business_id,
+      country: isoCountry,
       fileId,
       appInstallationId,
       complianceRecordId: complianceRecord.id,
@@ -147,6 +154,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         business_name,
         business_email,
         business_id,
+        country: isoCountry,
         file: fileId, // Store only the file ID, not the S3 path
         status: 'SUBMITTED',
         rejection_reason: null, // Clear previous rejection reason
@@ -197,10 +205,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         type: 'business_registration',
         // Pass the actual file content to Twilio
         file: fileBuffer,
-        // Attributes for business registration (metadata, not file URL)
+        // Attributes for business registration per Twilio API
+        // @see https://www.twilio.com/docs/phone-numbers/regulatory/getting-started/create-new-bundle-public-rest-apis
         attributes: {
           business_name: business_name,
-          business_registration_number: business_id,
+          document_number: business_id,
         },
       })
       console.log('[Compliance] Created Supporting Document:', supportingDoc.sid)
@@ -225,7 +234,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         email: business_email,
         statusCallback: webhookResult.url, // Use the dynamic webhook URL
         endUserType: 'business',
-        isoCountry: 'AU',
+        isoCountry: isoCountry, // Use the country from user input
         numberType: 'mobile',
       })
       console.log('[Compliance] Created Bundle:', bundle.sid)

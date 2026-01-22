@@ -121,6 +121,21 @@ const config: ProvisionConfig = {
           owner: 'WORKPLACE',
         },
         {
+          handle: 'country',
+          label: 'Country',
+          type: 'STRING',
+          required: true,
+          system: false,
+          description: 'Country where the business is registered',
+          owner: 'WORKPLACE',
+          definition: {
+            limitChoices: 1,
+            options: [
+              { label: 'Australia', value: 'AU' },
+            ],
+          },
+        },
+        {
           handle: 'file',
           label: 'Evidence of Business Registration & Address',
           type: 'FILE',
@@ -437,6 +452,16 @@ const config: ProvisionConfig = {
                   label: 'Business ID Number',
                   description: 'Your business registration or tax ID number (e.g., EIN, ABN, Company Number)',
                   required: true,
+                },
+                {
+                  handle: 'country',
+                  type: 'STRING',
+                  label: 'Country',
+                  description: 'Country where your business is registered',
+                  required: true,
+                  options: [
+                    { label: 'Australia', value: 'AU' },
+                  ],
                 },
                 {
                   handle: 'file',
