@@ -23,6 +23,8 @@ const SubmitComplianceDocumentInputSchema = z.object({
   business_name: z.string().describe('Legal name of the business'),
   /** Email for compliance notifications */
   business_email: z.string().email().describe('Email for Twilio compliance notifications'),
+  /** Business registration or tax ID number */
+  business_id: z.string().describe('Business registration or tax ID number (e.g., EIN, ABN, Company Number)'),
   /** File ID of the uploaded document (fl_xxx) */
   file: z.string().describe('File ID of the uploaded document'),
 })
@@ -47,7 +49,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
   inputs: SubmitComplianceDocumentInputSchema,
   outputSchema: SubmitComplianceDocumentOutputSchema,
   handler: async (input, context) => {
-    const { business_name, business_email, file: fileId } = input
+    const { business_name, business_email, business_id, file: fileId } = input
     const { appInstallationId, workplace, env } = context
 
     // Validate required context fields
@@ -62,11 +64,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     }
 
     // Validate required input fields
-    if (!business_name || !business_email || !fileId) {
+    if (!business_name || !business_email || !business_id || !fileId) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required fields: business_name, business_email, and file are required',
+          message: 'Missing required fields: business_name, business_email, business_id, and file are required',
         },
         billing: { credits: 0 },
       }
@@ -92,6 +94,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         {
           business_name,
           business_email,
+          business_id,
           file: fileId, // Store only the file ID, not the S3 path
           status: 'PENDING',
         },
@@ -130,6 +133,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     console.log('[Compliance] Starting Twilio compliance submission:', {
       business_name,
       business_email,
+      business_id,
       fileId,
       appInstallationId,
       complianceRecordId: complianceRecord.id,
@@ -142,6 +146,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       {
         business_name,
         business_email,
+        business_id,
         file: fileId, // Store only the file ID, not the S3 path
         status: 'SUBMITTED',
         rejection_reason: null, // Clear previous rejection reason
@@ -162,6 +167,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         type: 'business',
         attributes: {
           business_name: business_name,
+          business_registration_number: business_id,
         },
       })
       console.log('[Compliance] Created End-User:', endUser.sid)
@@ -194,6 +200,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         // Attributes for business registration (metadata, not file URL)
         attributes: {
           business_name: business_name,
+          business_registration_number: business_id,
         },
       })
       console.log('[Compliance] Created Supporting Document:', supportingDoc.sid)

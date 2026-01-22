@@ -112,6 +112,15 @@ const config: ProvisionConfig = {
           owner: 'WORKPLACE',
         },
         {
+          handle: 'business_id',
+          label: 'Business ID Number',
+          type: 'STRING',
+          required: true,
+          system: false,
+          description: 'Business registration or tax ID number',
+          owner: 'WORKPLACE',
+        },
+        {
           handle: 'file',
           label: 'Evidence of Business Registration & Address',
           type: 'FILE',
@@ -420,6 +429,13 @@ const config: ProvisionConfig = {
                   type: 'STRING',
                   label: 'Business Email',
                   description: 'Email address for compliance notifications from Twilio',
+                  required: true,
+                },
+                {
+                  handle: 'business_id',
+                  type: 'STRING',
+                  label: 'Business ID Number',
+                  description: 'Your business registration or tax ID number (e.g., EIN, ABN, Company Number)',
                   required: true,
                 },
                 {
