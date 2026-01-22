@@ -1,5 +1,6 @@
 import { server } from 'skedyul'
-import { registry } from '../registry'
+import { registry as toolRegistry } from '../../config/tools.config'
+import { registry as webhookRegistry } from '../../config/webhooks.config'
 
 // Early startup log to help debug container issues
 console.log('[MCP Server] Starting...')
@@ -44,7 +45,8 @@ const skedyulServer = server.create(
       version: '1.0.0',
     },
   },
-  registry,
+  toolRegistry,
+  webhookRegistry,
 )
 
 // Export Lambda handler for serverless mode
