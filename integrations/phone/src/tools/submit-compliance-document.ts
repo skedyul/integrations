@@ -218,8 +218,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         email: business_email,
         statusCallback: webhookResult.url, // Use the dynamic webhook URL
         endUserType: 'business',
-        isoCountry: 'US',
-        numberType: 'local',
+        isoCountry: 'AU',
+        numberType: 'mobile',
       })
       console.log('[Compliance] Created Bundle:', bundle.sid)
 
