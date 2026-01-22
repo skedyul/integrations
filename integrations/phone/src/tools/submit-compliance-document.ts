@@ -292,13 +292,14 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 
     // Update the compliance record with all form data
     const updateData = {
-        business_name,
-        business_email,
+      business_name,
+      business_email,
       business_id,
       country: isoCountry,
       address, // Store the original address input
-        file: fileId, // Store only the file ID, not the S3 path
+      file: fileId, // Store only the file ID, not the S3 path
       status: 'PENDING_REVIEW', // Mark as pending review
+      rejection_reason: '', // Reset rejection reason on new submission
       // Hardcoded Twilio SIDs for now to avoid spamming Twilio
       bundle_sid: 'BUf7c04b1d019a9c67844976fea763f351',
       end_user_sid: 'IT482fcb7ee070cfbc260c0d53c6c66aa5',
