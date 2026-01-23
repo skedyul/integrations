@@ -572,13 +572,18 @@ const config: ProvisionConfig = {
                 },
               ],
               // Modal footer actions
+              // Note: label and isDisabled support Liquid templates for dynamic UI state
+              // Available context: compliance_records, phone_numbers, installation
               actions: [
                 {
                   handle: 'submit_new_phone_number',
-                  label: 'Register Phone Number',
+                  label:
+                    "{% if compliance_records[0].status == 'APPROVED' %}Register Phone Number{% else %}Compliance Required{% endif %}",
                   handler: 'submit_new_phone_number',
                   icon: 'Phone',
                   variant: 'primary',
+                  // Disable button if no approved compliance record
+                  isDisabled: "{{ compliance_records[0].status != 'APPROVED' }}",
                 },
               ],
             },
