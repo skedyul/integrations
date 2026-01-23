@@ -69,11 +69,13 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
 
     // 1. Fetch the compliance record and validate it's approved
     console.log('[PhoneNumber] Fetching compliance record:', complianceRecordId)
+    console.log('[PhoneNumber] Instance context:', JSON.stringify(instanceCtx, null, 2))
     let complianceRecord: { id: string; status?: string; business_name?: string; bundle_sid?: string } | null = null
 
     try {
       // instance.get takes (id, ctx) - no model handle needed since IDs are globally unique
       complianceRecord = await instance.get(complianceRecordId, instanceCtx)
+      console.log('[PhoneNumber] instance.get result:', JSON.stringify(complianceRecord, null, 2))
     } catch (err) {
       console.error('[PhoneNumber] Failed to fetch compliance record:', err)
       return {
@@ -86,10 +88,30 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     }
 
     if (!complianceRecord) {
+      // Fallback: Try to find the record by listing and filtering by ID
+      // This helps diagnose if the issue is mismatched appInstallationId
+      console.log('[PhoneNumber] Direct get returned null, trying list with filter...')
+      try {
+        const listResult = await instance.list('compliance_record', instanceCtx, {
+          filter: { id: complianceRecordId },
+          limit: 1,
+        })
+        console.log('[PhoneNumber] List result:', JSON.stringify(listResult, null, 2))
+        
+        if (listResult.data.length > 0) {
+          complianceRecord = listResult.data[0] as unknown as NonNullable<typeof complianceRecord>
+          console.log('[PhoneNumber] Found via list:', JSON.stringify(complianceRecord, null, 2))
+        }
+      } catch (listErr) {
+        console.error('[PhoneNumber] List fallback also failed:', listErr)
+      }
+    }
+
+    if (!complianceRecord) {
       return {
         output: {
           status: 'error',
-          message: 'Compliance record not found',
+          message: `Compliance record not found. Searched for id=${complianceRecordId} with appInstallationId=${appInstallationId}. The record may belong to a different installation.`,
         },
         billing: { credits: 0 },
       }
