@@ -502,38 +502,31 @@ const config: ProvisionConfig = {
               actions: [
                 {
                   handle: 'submit',
-                  label: `
-                    {%- if compliance_records.size == 0 -%}
-                      Submit for Review
-                    {%- else -%}
-                      {%- case compliance_records[0].status -%}
-                        {%- when 'PENDING' -%}Submit for Review
-                        {%- when 'SUBMITTED' -%}Pending Review
-                        {%- when 'PENDING_REVIEW' -%}Under Review
-                        {%- when 'APPROVED' -%}Approved
-                        {%- when 'REJECTED' -%}Resubmit
-                        {%- else -%}Submit for Review
-                      {%- endcase -%}
-                    {%- endif -%}
-                  `,
+                  // Label based on compliance status
+                  label: [
+                    "{%- if compliance_records.size == 0 -%}Submit for Review",
+                    "{%- elsif compliance_records[0].status == 'PENDING' -%}Submit for Review",
+                    "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Pending Review",
+                    "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Under Review",
+                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}Approved",
+                    "{%- elsif compliance_records[0].status == 'REJECTED' -%}Resubmit",
+                    "{%- else -%}Submit for Review",
+                    "{%- endif -%}",
+                  ].join(''),
                   handler: 'submit_compliance_document',
                   icon: 'Send',
                   variant: 'primary',
                   // Only enabled when PENDING, REJECTED, or no records yet
-                  isDisabled: `
-                    {%- if compliance_records.size == 0 -%}
-                      false
-                    {%- else -%}
-                      {%- case compliance_records[0].status -%}
-                        {%- when 'PENDING' -%}false
-                        {%- when 'REJECTED' -%}false
-                        {%- when 'SUBMITTED' -%}true
-                        {%- when 'PENDING_REVIEW' -%}true
-                        {%- when 'APPROVED' -%}true
-                        {%- else -%}false
-                      {%- endcase -%}
-                    {%- endif -%}
-                  `,
+                  isDisabled: [
+                    "{%- if compliance_records.size == 0 -%}false",
+                    "{%- elsif compliance_records[0].status == 'PENDING' -%}false",
+                    "{%- elsif compliance_records[0].status == 'REJECTED' -%}false",
+                    "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}true",
+                    "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}true",
+                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}true",
+                    "{%- else -%}false",
+                    "{%- endif -%}",
+                  ].join(''),
                 },
               ],
             },
@@ -556,16 +549,12 @@ const config: ProvisionConfig = {
       path: '/phone-numbers',
       // Only show in navigation when compliance is approved
       // Statuses: PENDING, SUBMITTED, PENDING_REVIEW, APPROVED, REJECTED
-      navigation: `
-        {%- if compliance_records.size == 0 -%}
-          false
-        {%- else -%}
-          {%- case compliance_records[0].status -%}
-            {%- when 'APPROVED' -%}true
-            {%- else -%}false
-          {%- endcase -%}
-        {%- endif -%}
-      `,
+      navigation: [
+        "{%- if compliance_records.size == 0 -%}false",
+        "{%- elsif compliance_records[0].status == 'APPROVED' -%}true",
+        "{%- else -%}false",
+        "{%- endif -%}",
+      ].join(''),
       blocks: [
         {
           type: 'form',
@@ -601,34 +590,27 @@ const config: ProvisionConfig = {
               actions: [
                 {
                   handle: 'submit_new_phone_number',
-                  label: `
-                    {%- if compliance_records.size == 0 -%}
-                      Compliance Required
-                    {%- else -%}
-                      {%- case compliance_records[0].status -%}
-                        {%- when 'APPROVED' -%}Register Phone Number
-                        {%- when 'PENDING' -%}Compliance Pending
-                        {%- when 'SUBMITTED' -%}Compliance Pending Review
-                        {%- when 'PENDING_REVIEW' -%}Compliance Under Review
-                        {%- when 'REJECTED' -%}Compliance Rejected
-                        {%- else -%}Compliance Required
-                      {%- endcase -%}
-                    {%- endif -%}
-                  `,
+                  // Label based on compliance status
+                  label: [
+                    "{%- if compliance_records.size == 0 -%}Compliance Required",
+                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}Register Phone Number",
+                    "{%- elsif compliance_records[0].status == 'PENDING' -%}Compliance Pending",
+                    "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Compliance Pending Review",
+                    "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Compliance Under Review",
+                    "{%- elsif compliance_records[0].status == 'REJECTED' -%}Compliance Rejected",
+                    "{%- else -%}Compliance Required",
+                    "{%- endif -%}",
+                  ].join(''),
                   handler: 'submit_new_phone_number',
                   icon: 'Phone',
                   variant: 'primary',
                   // Only enabled when compliance is approved
-                  isDisabled: `
-                    {%- if compliance_records.size == 0 -%}
-                      true
-                    {%- else -%}
-                      {%- case compliance_records[0].status -%}
-                        {%- when 'APPROVED' -%}false
-                        {%- else -%}true
-                      {%- endcase -%}
-                    {%- endif -%}
-                  `,
+                  isDisabled: [
+                    "{%- if compliance_records.size == 0 -%}true",
+                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}false",
+                    "{%- else -%}true",
+                    "{%- endif -%}",
+                  ].join(''),
                 },
               ],
             },
