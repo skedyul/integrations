@@ -543,38 +543,47 @@ const config: ProvisionConfig = {
       title: 'Phone Numbers',
       path: '/phone-numbers',
       navigation: true, // Show in sidebar
-      // Load phone numbers for this installation
-      filter: {
-        model: 'phone_number',
-        where: { appInstallationId: '$appInstallationId' },
-      },
       blocks: [
         {
-          type: 'spreadsheet',
-          title: 'All Phone Numbers',
+          type: 'form',
+          title: 'New Phone Number',
           fields: [
+            // FORM field type - opens modal with nested fields
             {
-              handle: 'phone',
-              type: 'STRING',
-              label: 'Phone Number',
-              description: 'The Twilio phone number',
-              source: {
-                model: 'phone_number',
-                field: 'phone',
+              handle: 'new_phone_number_form',
+              type: 'FORM',
+              label: 'New Phone Number',
+              description: 'Click to submit your business registration documents for Twilio compliance verification',
+              handler: 'submit_new_phone_number', // Tool to invoke on submit
+              // Modal header
+              header: {
+                title: 'New Phone Number',
+                description: 'Request a new phone number for your business.',
               },
-            },
-            {
-              handle: 'forwarding_phone_number',
-              type: 'STRING',
-              label: 'Forwarding Number',
-              description: 'Number to forward calls to',
-              source: {
-                model: 'phone_number',
-                field: 'forwarding_phone_number',
-              },
+              // Nested fields in the modal
+              fields: [
+                {
+                  handle: 'compliance_record',
+                  type: 'RELATIONSHIP',
+                  label: 'Compliance Record',
+                  description: 'Compliance record for the phone number',
+                  required: true,
+                  model: 'compliance_record', // Target internal model handle
+                },
+              ],
+              // Modal footer actions
+              actions: [
+                {
+                  handle: 'submit_new_phone_number',
+                  label: 'Register Phone Number',
+                  handler: 'submit_new_phone_number',
+                  icon: 'Phone',
+                  variant: 'primary',
+                },
+              ],
             },
           ],
-        },
+        }
       ],
     },
   ],
