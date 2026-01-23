@@ -224,3 +224,153 @@ export const fetchBundleStatus = async (
 ) => {
   return client.numbers.v2.regulatoryCompliance.bundles(bundleSid).fetch()
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phone Number Provisioning Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SearchAvailablePhoneNumbersParams = {
+  /** ISO 2-letter country code (e.g., 'AU', 'US') */
+  countryCode: string
+  /** Phone number type: 'local', 'mobile', or 'tollFree' */
+  numberType?: 'local' | 'mobile' | 'tollFree'
+  /** Filter for SMS-enabled numbers */
+  smsEnabled?: boolean
+  /** Filter for voice-enabled numbers */
+  voiceEnabled?: boolean
+  /** Filter for MMS-enabled numbers */
+  mmsEnabled?: boolean
+  /** Maximum number of results to return */
+  limit?: number
+}
+
+export type AvailablePhoneNumber = {
+  phoneNumber: string
+  friendlyName: string
+  locality: string | null
+  region: string | null
+  isoCountry: string
+  capabilities: {
+    voice: boolean
+    sms: boolean
+    mms: boolean
+  }
+}
+
+/**
+ * Search for available phone numbers in a specific country.
+ * 
+ * @see https://www.twilio.com/docs/phone-numbers/api/availablephonenumber-resource
+ */
+export const searchAvailablePhoneNumbers = async (
+  client: ReturnType<typeof twilio>,
+  params: SearchAvailablePhoneNumbersParams,
+): Promise<AvailablePhoneNumber[]> => {
+  const { countryCode, numberType = 'mobile', smsEnabled, voiceEnabled, mmsEnabled, limit = 10 } = params
+
+  // Build the filter options
+  const filterOptions: {
+    smsEnabled?: boolean
+    voiceEnabled?: boolean
+    mmsEnabled?: boolean
+    limit?: number
+  } = { limit }
+
+  if (smsEnabled !== undefined) filterOptions.smsEnabled = smsEnabled
+  if (voiceEnabled !== undefined) filterOptions.voiceEnabled = voiceEnabled
+  if (mmsEnabled !== undefined) filterOptions.mmsEnabled = mmsEnabled
+
+  // Select the appropriate subresource based on number type
+  let numbers: Array<{
+    phoneNumber: string
+    friendlyName: string
+    locality: string | null
+    region: string | null
+    isoCountry: string
+    capabilities: { voice: boolean; sms: boolean; mms: boolean }
+  }>
+
+  switch (numberType) {
+    case 'local':
+      numbers = await client.availablePhoneNumbers(countryCode).local.list(filterOptions)
+      break
+    case 'tollFree':
+      numbers = await client.availablePhoneNumbers(countryCode).tollFree.list(filterOptions)
+      break
+    case 'mobile':
+    default:
+      numbers = await client.availablePhoneNumbers(countryCode).mobile.list(filterOptions)
+      break
+  }
+
+  return numbers.map((n) => ({
+    phoneNumber: n.phoneNumber,
+    friendlyName: n.friendlyName,
+    locality: n.locality,
+    region: n.region,
+    isoCountry: n.isoCountry,
+    capabilities: {
+      voice: n.capabilities.voice,
+      sms: n.capabilities.sms,
+      mms: n.capabilities.mms,
+    },
+  }))
+}
+
+export type PurchasePhoneNumberParams = {
+  /** The phone number to purchase in E.164 format */
+  phoneNumber: string
+  /** Optional friendly name for the number */
+  friendlyName?: string
+  /** Optional webhook URL for incoming SMS */
+  smsUrl?: string
+  /** Optional webhook URL for incoming voice calls */
+  voiceUrl?: string
+}
+
+export type PurchasedPhoneNumber = {
+  sid: string
+  phoneNumber: string
+  friendlyName: string
+  capabilities: {
+    voice: boolean
+    sms: boolean
+    mms: boolean
+  }
+}
+
+/**
+ * Purchase a phone number from Twilio.
+ * 
+ * @see https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource
+ */
+export const purchasePhoneNumber = async (
+  client: ReturnType<typeof twilio>,
+  params: PurchasePhoneNumberParams,
+): Promise<PurchasedPhoneNumber> => {
+  const createParams: {
+    phoneNumber: string
+    friendlyName?: string
+    smsUrl?: string
+    voiceUrl?: string
+  } = {
+    phoneNumber: params.phoneNumber,
+  }
+
+  if (params.friendlyName) createParams.friendlyName = params.friendlyName
+  if (params.smsUrl) createParams.smsUrl = params.smsUrl
+  if (params.voiceUrl) createParams.voiceUrl = params.voiceUrl
+
+  const purchased = await client.incomingPhoneNumbers.create(createParams)
+
+  return {
+    sid: purchased.sid,
+    phoneNumber: purchased.phoneNumber,
+    friendlyName: purchased.friendlyName,
+    capabilities: {
+      voice: purchased.capabilities.voice,
+      sms: purchased.capabilities.sms,
+      mms: purchased.capabilities.mms,
+    },
+  }
+}

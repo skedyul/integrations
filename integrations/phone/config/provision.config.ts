@@ -583,6 +583,15 @@ const config: ProvisionConfig = {
               ],
             },
           ],
+        },
+        {
+          type: 'list',
+          title: 'Phone Numbers',
+          model: 'phone_number',
+          labelField: 'phone',
+          descriptionField: 'forwarding_phone_number',
+          icon: 'Phone',
+          emptyMessage: 'No phone numbers registered yet.',
         }
       ],
     },

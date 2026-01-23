@@ -31,6 +31,7 @@ import type { ToolRegistry, WebhookRegistry } from 'skedyul'
 import { sendSmsRegistry } from './tools/send-sms'
 import { submitComplianceDocumentRegistry } from './tools/submit-compliance-document'
 import { checkComplianceStatusRegistry } from './tools/check-compliance-status'
+import { submitNewPhoneNumberRegistry } from './tools/submit-new-phone-number'
 
 /**
  * Tool Registry
@@ -46,6 +47,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Check the current status of a compliance submission. */
   check_compliance_status: checkComplianceStatusRegistry,
+
+  /** Search for and purchase an Australian mobile phone number from Twilio. */
+  submit_new_phone_number: submitNewPhoneNumberRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
