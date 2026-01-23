@@ -502,13 +502,13 @@ const config: ProvisionConfig = {
                 {
                   handle: 'submit',
                   label:
-                    "{% if compliance_records[0].status == 'PENDING' %}Submit for Review{% elsif compliance_records[0].status == 'SUBMITTED' %}Pending Review{% else %}{{ compliance_records[0].status | capitalize }}{% endif %}",
+                    "{% if compliance_records.size == 0 %}Submit for Review{% elsif compliance_records[0].status == 'PENDING' %}Submit for Review{% elsif compliance_records[0].status == 'SUBMITTED' %}Pending Review{% elsif compliance_records[0].status == 'REJECTED' %}Resubmit{% elsif compliance_records[0].status == 'APPROVED' %}Approved{% else %}Submit for Review{% endif %}",
                   handler: 'submit_compliance_document',
                   icon: 'Send',
                   variant: 'primary',
-                  // Disable after submission (only allow when PENDING or REJECTED)
+                  // Disable after submission (only allow when PENDING, REJECTED, or no records yet)
                   isDisabled:
-                    "{{ compliance_records[0].status != 'PENDING' and compliance_records[0].status != 'REJECTED' }}",
+                    "{% if compliance_records.size == 0 %}false{% elsif compliance_records[0].status == 'PENDING' or compliance_records[0].status == 'REJECTED' %}false{% else %}true{% endif %}",
                 },
               ],
             },
@@ -529,8 +529,9 @@ const config: ProvisionConfig = {
       type: 'LIST', // Shows multiple records
       title: 'Phone Numbers',
       path: '/phone-numbers',
-      // Only show in navigation when compliance is approved
-      navigation: "{{ compliance_records[0].status == 'APPROVED' }}",
+      // Only show in navigation when compliance is approved (false if no records)
+      navigation:
+        "{% if compliance_records.size > 0 and compliance_records[0].status == 'APPROVED' %}true{% else %}false{% endif %}",
       blocks: [
         {
           type: 'form',
@@ -566,12 +567,13 @@ const config: ProvisionConfig = {
                 {
                   handle: 'submit_new_phone_number',
                   label:
-                    "{% if compliance_records[0].status == 'APPROVED' %}Register Phone Number{% else %}Compliance Required{% endif %}",
+                    "{% if compliance_records.size == 0 or compliance_records[0].status != 'APPROVED' %}Compliance Required{% else %}Register Phone Number{% endif %}",
                   handler: 'submit_new_phone_number',
                   icon: 'Phone',
                   variant: 'primary',
                   // Disable button if no approved compliance record
-                  isDisabled: "{{ compliance_records[0].status != 'APPROVED' }}",
+                  isDisabled:
+                    "{% if compliance_records.size == 0 or compliance_records[0].status != 'APPROVED' %}true{% else %}false{% endif %}",
                 },
               ],
             },
