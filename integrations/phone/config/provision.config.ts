@@ -496,40 +496,27 @@ const config: ProvisionConfig = {
                 },
               ],
               // Modal footer actions
+              // Note: label and isDisabled support Liquid templates for dynamic UI state
+              // Available context: compliance_records, phone_numbers, installation
               actions: [
                 {
                   handle: 'submit',
-                  label: 'Submit for Review',
+                  label:
+                    "{% if compliance_records[0].status == 'PENDING' %}Submit for Review{% elsif compliance_records[0].status == 'SUBMITTED' %}Pending Review{% else %}{{ compliance_records[0].status | capitalize }}{% endif %}",
                   handler: 'submit_compliance_document',
                   icon: 'Send',
                   variant: 'primary',
+                  // Disable after submission (only allow when PENDING or REJECTED)
+                  isDisabled:
+                    "{{ compliance_records[0].status != 'PENDING' and compliance_records[0].status != 'REJECTED' }}",
                 },
               ],
-            },
-            // Read-only status display (populated from model)
-            {
-              handle: 'status',
-              type: 'STRING',
-              label: 'Compliance Status',
-              description: 'Current status of your compliance submission',
-              source: {
-                model: 'compliance_record',
-                field: 'status',
-              },
             },
           ],
         },
       ],
       // Page-level action buttons
-      actions: [
-        {
-          handle: 'check_status',
-          label: 'Refresh Status',
-          handler: 'check_compliance_status',
-          icon: 'RefreshCw',
-          variant: 'secondary',
-        },
-      ],
+      actions: [],
     },
 
     // ───────────────────────────────────────────────────────────────────────
@@ -542,7 +529,8 @@ const config: ProvisionConfig = {
       type: 'LIST', // Shows multiple records
       title: 'Phone Numbers',
       path: '/phone-numbers',
-      navigation: true, // Show in sidebar
+      // Only show in navigation when compliance is approved
+      navigation: "{{ compliance_records[0].status == 'APPROVED' }}",
       blocks: [
         {
           type: 'form',
