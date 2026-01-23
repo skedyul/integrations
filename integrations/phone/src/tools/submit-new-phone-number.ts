@@ -72,7 +72,8 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     let complianceRecord: { id: string; status?: string; business_name?: string; bundle_sid?: string } | null = null
 
     try {
-      complianceRecord = await instance.get('compliance_record', complianceRecordId, instanceCtx)
+      // instance.get takes (id, ctx) - no model handle needed since IDs are globally unique
+      complianceRecord = await instance.get(complianceRecordId, instanceCtx)
     } catch (err) {
       console.error('[PhoneNumber] Failed to fetch compliance record:', err)
       return {
