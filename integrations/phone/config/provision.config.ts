@@ -657,7 +657,7 @@ const config: ProvisionConfig = {
                 row: 0,
                 col: 0,
                 props: {
-                  label: 'Buy a New Phone Number',
+                  label: 'Phone Number',
                   description: [
                     "{%- if compliance_record == blank -%}",
                     "Submit compliance documents before purchasing a phone number",
@@ -704,11 +704,24 @@ const config: ProvisionConfig = {
                         variant: 'default',
                       },
                     },
+                    // Hidden field to pass the compliance_record instance ID
+                    {
+                      component: 'Input',
+                      id: 'compliance_record',
+                      row: 1,
+                      col: 0,
+                      props: {
+                        type: 'hidden',
+                        value: '{{ compliance_record.id }}',
+                      },
+                    },
                   ],
                   layout: {
                     type: 'form',
                     rows: [
                       { columns: [{ field: 'compliance_record_info', colSpan: 12 }] },
+                      // Hidden field doesn't need layout, but including for completeness
+                      { columns: [{ field: 'compliance_record', colSpan: 0 }] },
                     ],
                   },
                   // Modal footer actions with Liquid templates
