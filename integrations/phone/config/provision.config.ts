@@ -233,7 +233,7 @@ const config: ProvisionConfig = {
       namePlural: 'Phone Numbers',
       scope: 'INTERNAL',
       labelTemplate: '{{ phone }}',
-      description: 'Twilio phone numbers for SMS/voice communication',
+      description: 'Phone numbers for SMS/voice communication',
       // Dependency: requires approved compliance record
       requires: [
         {
@@ -250,7 +250,7 @@ const config: ProvisionConfig = {
           required: true,
           unique: true,
           system: true,
-          description: 'The Twilio phone number (E.164 format)',
+          description: 'The Phone number (E.164 format)',
           owner: 'APP', // Provisioned by app from Twilio
         },
         {
@@ -435,10 +435,6 @@ const config: ProvisionConfig = {
         {
           type: 'card',
           restructurable: false,
-          header: {
-            title: 'Business Registration',
-            description: 'Submit your business registration documents for Twilio compliance verification.',
-          },
           form: {
             formVersion: 'v2',
             id: 'compliance-form',
@@ -450,7 +446,7 @@ const config: ProvisionConfig = {
                 col: 0,
                 props: {
                   label: 'Submit Compliance Documents',
-                  description: 'Click to submit your business registration documents for Twilio compliance verification',
+                  description: 'Click to submit your business registration documents for compliance verification',
                   mode: 'field',
                   button: {
                     label: [
@@ -481,7 +477,7 @@ const config: ProvisionConfig = {
                 modalForm: {
                   header: {
                     title: 'Business Registration',
-                    description: 'Provide your business details and upload supporting documents for Twilio regulatory compliance.',
+                    description: 'Provide your business details and upload supporting documents for regulatory compliance.',
                   },
                   handler: 'submit_compliance_document',
                   fields: [
@@ -492,7 +488,8 @@ const config: ProvisionConfig = {
                       col: 0,
                       props: {
                         label: 'Business Name',
-                        placeholder: 'Legal name of your business',
+                        placeholder: 'ACME Pty Ltd',
+                        helpText: 'The Legal name of your business.',
                         required: true,
                       },
                     },
@@ -504,6 +501,7 @@ const config: ProvisionConfig = {
                       props: {
                         label: 'Business ID Number',
                         placeholder: 'Tax ID (e.g., EIN, ABN)',
+                        helpText: 'The Business ID number is used to verify your business. eg. EIN, ABN, Company Number',
                         required: true,
                       },
                     },
@@ -514,7 +512,8 @@ const config: ProvisionConfig = {
                       col: 0,
                       props: {
                         label: 'Business Email',
-                        placeholder: 'Email address for compliance notifications from Twilio',
+                        helpText: 'The Email address we\'ll notify you of the compliance status.',
+                        placeholder: 'Email address for compliance notifications',
                         type: 'email',
                         required: true,
                       },
@@ -527,6 +526,7 @@ const config: ProvisionConfig = {
                       props: {
                         label: 'Country',
                         placeholder: 'Select country',
+                        helpText: 'The Country where your business is registered.',
                         items: [
                           { label: 'Australia', value: 'AU' },
                         ],
@@ -540,6 +540,7 @@ const config: ProvisionConfig = {
                       props: {
                         label: 'Business Address',
                         placeholder: 'Full address (e.g., 123 Main St, Sydney)',
+                        helpText: 'The Full business address (will be parsed automatically).',
                         required: true,
                       },
                     },
