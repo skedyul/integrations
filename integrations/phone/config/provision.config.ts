@@ -694,11 +694,11 @@ const config: ProvisionConfig = {
                       row: 0,
                       col: 0,
                       props: {
-                        title: '{{ compliance_record.business_name }}',
+                        title: 'Compliance',
                         description: [
+                          '{{ compliance_record.business_name }} • ',
                           'ABN: {{ compliance_record.business_id }} • ',
                           '{{ compliance_record.address }}, {{ compliance_record.country }}',
-                          ' — This compliance record will be used for your new phone number.',
                         ].join(''),
                         icon: 'Building2',
                         variant: 'default',
