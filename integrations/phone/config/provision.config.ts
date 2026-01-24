@@ -447,7 +447,7 @@ const config: ProvisionConfig = {
                 props: {
                   label: [
                     "{%- if compliance_record.bundle_sid != blank -%}",
-                    "{{ compliance_record.bundle_sid | truncate: 16, '...' }}",
+                    "Submission: {{ compliance_record.bundle_sid | truncate: 16, '...' }}",
                     "{%- else -%}",
                     "Submit Compliance Documents",
                     "{%- endif -%}",
@@ -713,16 +713,7 @@ const config: ProvisionConfig = {
                   actions: [
                     {
                       handle: 'submit_new_phone_number',
-                      label: [
-                        "{%- if compliance_record == blank -%}Compliance Required",
-                        "{%- elsif compliance_record.status == 'APPROVED' -%}Register Phone Number",
-                        "{%- elsif compliance_record.status == 'PENDING' -%}Compliance Pending",
-                        "{%- elsif compliance_record.status == 'SUBMITTED' -%}Compliance Pending Review",
-                        "{%- elsif compliance_record.status == 'PENDING_REVIEW' -%}Compliance Under Review",
-                        "{%- elsif compliance_record.status == 'REJECTED' -%}Compliance Rejected",
-                        "{%- else -%}Compliance Required",
-                        "{%- endif -%}",
-                      ].join(''),
+                      label: "Purchase Phone Number",
                       handler: 'submit_new_phone_number',
                       icon: 'Phone',
                       variant: 'primary',
