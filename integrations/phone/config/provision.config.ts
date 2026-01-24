@@ -609,12 +609,17 @@ const config: ProvisionConfig = {
       type: 'LIST',
       title: 'Phone Numbers',
       path: '/phone-numbers',
-      navigation: [
-        "{%- if compliance_record == blank -%}false",
-        "{%- elsif compliance_record.status == 'APPROVED' -%}true",
-        "{%- else -%}false",
-        "{%- endif -%}",
-      ].join(''),
+      navigation: true,
+      context: {
+        compliance_record: {
+          model: 'compliance_record',
+          mode: 'first',
+        },
+        phone_numbers: {
+          model: 'phone_number',
+          mode: 'many',
+        },
+      },
       blocks: [
         {
           type: 'card',
