@@ -523,7 +523,7 @@ const config: ProvisionConfig = {
                       },
                     },
                     {
-                      component: 'ImageSetting',
+                      component: 'FileSetting',
                       id: 'file',
                       row: 5,
                       col: 0,
@@ -531,6 +531,12 @@ const config: ProvisionConfig = {
                         label: 'Business Registration Document',
                         description: 'Upload your commercial register excerpt or equivalent (PDF, JPG, or PNG)',
                         accept: '.pdf,.jpg,.jpeg,.png',
+                        required: true,
+                        button: {
+                          label: 'Upload Document',
+                          variant: 'outline',
+                          size: 'sm',
+                        },
                       },
                     },
                   ],
