@@ -445,8 +445,30 @@ const config: ProvisionConfig = {
                 row: 0,
                 col: 0,
                 props: {
-                  label: 'Submit Compliance Documents',
-                  description: 'Click to submit your business registration documents for compliance verification',
+                  label: [
+                    "{%- if compliance_record.bundle_sid != blank -%}",
+                    "{{ compliance_record.bundle_sid | truncate: 16, '...' }}",
+                    "{%- else -%}",
+                    "Submit Compliance Documents",
+                    "{%- endif -%}",
+                  ].join(''),
+                  description: [
+                    "{%- if compliance_record == blank -%}",
+                    "Click to submit your business registration documents for compliance verification",
+                    "{%- elsif compliance_record.status == 'REJECTED' -%}",
+                    "Rejected: {{ compliance_record.reject_reason | default: 'No reason provided' }}",
+                    "{%- elsif compliance_record.status == 'PENDING' -%}",
+                    "Your compliance documents are pending submission",
+                    "{%- elsif compliance_record.status == 'SUBMITTED' -%}",
+                    "Your documents have been submitted and are awaiting review",
+                    "{%- elsif compliance_record.status == 'PENDING_REVIEW' -%}",
+                    "Your documents are currently under review",
+                    "{%- elsif compliance_record.status == 'APPROVED' -%}",
+                    "Your compliance documents have been approved",
+                    "{%- else -%}",
+                    "Click to submit your business registration documents for compliance verification",
+                    "{%- endif -%}",
+                  ].join(''),
                   mode: 'field',
                   button: {
                     label: [
@@ -625,10 +647,6 @@ const config: ProvisionConfig = {
         {
           type: 'card',
           restructurable: false,
-          header: {
-            title: 'New Phone Number',
-            description: 'Request a new phone number for your business.',
-          },
           form: {
             formVersion: 'v2',
             id: 'new-phone-number-form',
@@ -639,11 +657,11 @@ const config: ProvisionConfig = {
                 row: 0,
                 col: 0,
                 props: {
-                  label: 'New Phone Number',
-                  description: 'Click to request a new phone number for your business',
+                  label: 'Phone Number',
+                  description: 'Click to purchase a new phone number for your business',
                   mode: 'field',
                   button: {
-                    label: 'Request Phone Number',
+                    label: 'Purchase New Number',
                     variant: 'outline',
                     size: 'sm',
                   },
@@ -704,23 +722,29 @@ const config: ProvisionConfig = {
                   ],
                 },
               },
+              // Phone numbers list as a field in the same card
+              {
+                component: 'List',
+                id: 'phone_numbers_list',
+                row: 1,
+                col: 0,
+                props: {
+                  emptyMessage: 'No phone numbers registered yet.',
+                },
+                model: 'phone_number',
+                labelField: 'phone',
+                descriptionField: 'forwarding_phone_number',
+                icon: 'Phone',
+              },
             ],
             layout: {
               type: 'form',
               rows: [
                 { columns: [{ field: 'new_phone_number_form', colSpan: 12 }] },
+                { columns: [{ field: 'phone_numbers_list', colSpan: 12 }] },
               ],
             },
           },
-        },
-        {
-          type: 'list',
-          title: 'Phone Numbers',
-          model: 'phone_number',
-          labelField: 'phone',
-          descriptionField: 'forwarding_phone_number',
-          icon: 'Phone',
-          emptyMessage: 'No phone numbers registered yet.',
         },
       ],
     },
