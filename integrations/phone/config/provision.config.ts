@@ -422,12 +422,14 @@ const config: ProvisionConfig = {
     {
       handle: 'compliance_submission',
       type: 'INSTANCE',
-      title: 'Compliance Submission',
+      title: 'Compliance',
       path: '/compliance',
       navigation: true,
-      filter: {
-        model: 'compliance_record',
-        where: { appInstallationId: '$appInstallationId' },
+      context: {
+        compliance_record: {
+          model: 'compliance_record',
+          mode: 'first',
+        },
       },
       blocks: [
         {
@@ -451,9 +453,28 @@ const config: ProvisionConfig = {
                   description: 'Click to submit your business registration documents for Twilio compliance verification',
                   mode: 'field',
                   button: {
-                    label: 'Open Form',
+                    label: [
+                      "{%- if compliance_records.size == 0 -%}Submit Documents",
+                      "{%- elsif compliance_records[0].status == 'PENDING' -%}Submit Documents",
+                      "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Pending Review",
+                      "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Under Review",
+                      "{%- elsif compliance_records[0].status == 'APPROVED' -%}Approved",
+                      "{%- elsif compliance_records[0].status == 'REJECTED' -%}Resubmit",
+                      "{%- else -%}Submit Documents",
+                      "{%- endif -%}",
+                    ].join(''),
                     variant: 'outline',
                     size: 'sm',
+                    leftIcon: [
+                      "{%- if compliance_records.size == 0 -%}FileText",
+                      "{%- elsif compliance_records[0].status == 'PENDING' -%}FileText",
+                      "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Clock",
+                      "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Clock",
+                      "{%- elsif compliance_records[0].status == 'APPROVED' -%}Check",
+                      "{%- elsif compliance_records[0].status == 'REJECTED' -%}X",
+                      "{%- else -%}FileText",
+                      "{%- endif -%}",
+                    ].join(''),
                   },
                 },
                 // Nested modal form (handled by skedyul-web)
@@ -477,6 +498,17 @@ const config: ProvisionConfig = {
                     },
                     {
                       component: 'Input',
+                      id: 'business_id',
+                      row: 0,
+                      col: 1,
+                      props: {
+                        label: 'Business ID Number',
+                        placeholder: 'Tax ID (e.g., EIN, ABN)',
+                        required: true,
+                      },
+                    },
+                    {
+                      component: 'Input',
                       id: 'business_email',
                       row: 1,
                       col: 0,
@@ -488,20 +520,9 @@ const config: ProvisionConfig = {
                       },
                     },
                     {
-                      component: 'Input',
-                      id: 'business_id',
-                      row: 2,
-                      col: 0,
-                      props: {
-                        label: 'Business ID Number',
-                        placeholder: 'Your business registration or tax ID number (e.g., EIN, ABN)',
-                        required: true,
-                      },
-                    },
-                    {
                       component: 'Select',
                       id: 'country',
-                      row: 3,
+                      row: 2,
                       col: 0,
                       props: {
                         label: 'Country',
@@ -514,18 +535,18 @@ const config: ProvisionConfig = {
                     {
                       component: 'Input',
                       id: 'address',
-                      row: 4,
-                      col: 0,
+                      row: 2,
+                      col: 1,
                       props: {
                         label: 'Business Address',
-                        placeholder: 'Full business address (e.g., 123 Main St, Sydney NSW 2000)',
+                        placeholder: 'Full address (e.g., 123 Main St, Sydney)',
                         required: true,
                       },
                     },
                     {
                       component: 'FileSetting',
                       id: 'file',
-                      row: 5,
+                      row: 3,
                       col: 0,
                       props: {
                         label: 'Business Registration Document',
@@ -543,11 +564,9 @@ const config: ProvisionConfig = {
                   layout: {
                     type: 'form',
                     rows: [
-                      { columns: [{ field: 'business_name', colSpan: 12 }] },
+                      { columns: [{ field: 'business_name', colSpan: 6 }, { field: 'business_id', colSpan: 6 }] },
                       { columns: [{ field: 'business_email', colSpan: 12 }] },
-                      { columns: [{ field: 'business_id', colSpan: 12 }] },
-                      { columns: [{ field: 'country', colSpan: 12 }] },
-                      { columns: [{ field: 'address', colSpan: 12 }] },
+                      { columns: [{ field: 'country', colSpan: 6 }, { field: 'address', colSpan: 6 }] },
                       { columns: [{ field: 'file', colSpan: 12 }] },
                     ],
                   },
@@ -556,28 +575,13 @@ const config: ProvisionConfig = {
                     {
                       handle: 'submit',
                       label: [
-                        "{%- if compliance_records.size == 0 -%}Submit for Review",
-                        "{%- elsif compliance_records[0].status == 'PENDING' -%}Submit for Review",
-                        "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Pending Review",
-                        "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Under Review",
-                        "{%- elsif compliance_records[0].status == 'APPROVED' -%}Approved",
-                        "{%- elsif compliance_records[0].status == 'REJECTED' -%}Resubmit",
-                        "{%- else -%}Submit for Review",
+                        "{%- if compliance_records.size == 0 -%}Submit",
+                        "{%- else -%}Resubmit",
                         "{%- endif -%}",
                       ].join(''),
                       handler: 'submit_compliance_document',
                       icon: 'Send',
                       variant: 'primary',
-                      isDisabled: [
-                        "{%- if compliance_records.size == 0 -%}false",
-                        "{%- elsif compliance_records[0].status == 'PENDING' -%}false",
-                        "{%- elsif compliance_records[0].status == 'REJECTED' -%}false",
-                        "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}true",
-                        "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}true",
-                        "{%- elsif compliance_records[0].status == 'APPROVED' -%}true",
-                        "{%- else -%}false",
-                        "{%- endif -%}",
-                      ].join(''),
                     },
                   ],
                 },
