@@ -410,7 +410,8 @@ const config: ProvisionConfig = {
   // ─────────────────────────────────────────────────────────────────────────
   //
   // UI screens displayed in the installed app.
-  // Pages are composed of blocks (form, spreadsheet, etc.) containing fields.
+  // Pages use CardV2 + FormV2 structure for consistent rendering.
+  // Blocks with type: 'card' use the new FormV2 component-based structure.
   //
   pages: [
     // ───────────────────────────────────────────────────────────────────────
@@ -420,120 +421,171 @@ const config: ProvisionConfig = {
     //
     {
       handle: 'compliance_submission',
-      type: 'INSTANCE', // Shows single record
+      type: 'INSTANCE',
       title: 'Compliance Submission',
       path: '/compliance',
-      navigation: true, // Show in sidebar
-      // Auto-load the compliance record for this installation
+      navigation: true,
       filter: {
         model: 'compliance_record',
         where: { appInstallationId: '$appInstallationId' },
       },
       blocks: [
         {
-          type: 'form',
-          title: 'Business Registration',
-          fields: [
-            // FORM field type - opens modal with nested fields
-            {
-              handle: 'compliance_form',
-              type: 'FORM',
-              label: 'Submit Compliance Documents',
-              description: 'Click to submit your business registration documents for Twilio compliance verification',
-              handler: 'submit_compliance_document', // Tool to invoke on submit
-              // Modal header
-              header: {
-                title: 'Business Registration',
-                description: 'Provide your business details and upload supporting documents for Twilio regulatory compliance.',
-              },
-              // Nested fields in the modal
-              fields: [
-                {
-                  handle: 'business_name',
-                  type: 'STRING',
-                  label: 'Business Name',
-                  description: 'Legal name of your business',
-                  required: true,
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Business Registration',
+            description: 'Submit your business registration documents for Twilio compliance verification.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'compliance-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'compliance_form',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Submit Compliance Documents',
+                  description: 'Click to submit your business registration documents for Twilio compliance verification',
+                  mode: 'field',
+                  button: {
+                    label: 'Open Form',
+                    variant: 'outline',
+                    size: 'sm',
+                  },
                 },
-                {
-                  handle: 'business_email',
-                  type: 'STRING',
-                  label: 'Business Email',
-                  description: 'Email address for compliance notifications from Twilio',
-                  required: true,
-                },
-                {
-                  handle: 'business_id',
-                  type: 'STRING',
-                  label: 'Business ID Number',
-                  description: 'Your business registration or tax ID number (e.g., EIN, ABN, Company Number)',
-                  required: true,
-                },
-                {
-                  handle: 'country',
-                  type: 'STRING',
-                  label: 'Country',
-                  description: 'Country where your business is registered',
-                  required: true,
-                  options: [
-                    { label: 'Australia', value: 'AU' },
+                // Nested modal form (handled by skedyul-web)
+                modalForm: {
+                  header: {
+                    title: 'Business Registration',
+                    description: 'Provide your business details and upload supporting documents for Twilio regulatory compliance.',
+                  },
+                  handler: 'submit_compliance_document',
+                  fields: [
+                    {
+                      component: 'Input',
+                      id: 'business_name',
+                      row: 0,
+                      col: 0,
+                      props: {
+                        label: 'Business Name',
+                        placeholder: 'Legal name of your business',
+                        required: true,
+                      },
+                    },
+                    {
+                      component: 'Input',
+                      id: 'business_email',
+                      row: 1,
+                      col: 0,
+                      props: {
+                        label: 'Business Email',
+                        placeholder: 'Email address for compliance notifications from Twilio',
+                        type: 'email',
+                        required: true,
+                      },
+                    },
+                    {
+                      component: 'Input',
+                      id: 'business_id',
+                      row: 2,
+                      col: 0,
+                      props: {
+                        label: 'Business ID Number',
+                        placeholder: 'Your business registration or tax ID number (e.g., EIN, ABN)',
+                        required: true,
+                      },
+                    },
+                    {
+                      component: 'Select',
+                      id: 'country',
+                      row: 3,
+                      col: 0,
+                      props: {
+                        label: 'Country',
+                        placeholder: 'Select country',
+                        items: [
+                          { label: 'Australia', value: 'AU' },
+                        ],
+                      },
+                    },
+                    {
+                      component: 'Input',
+                      id: 'address',
+                      row: 4,
+                      col: 0,
+                      props: {
+                        label: 'Business Address',
+                        placeholder: 'Full business address (e.g., 123 Main St, Sydney NSW 2000)',
+                        required: true,
+                      },
+                    },
+                    {
+                      component: 'ImageSetting',
+                      id: 'file',
+                      row: 5,
+                      col: 0,
+                      props: {
+                        label: 'Business Registration Document',
+                        description: 'Upload your commercial register excerpt or equivalent (PDF, JPG, or PNG)',
+                        accept: '.pdf,.jpg,.jpeg,.png',
+                      },
+                    },
+                  ],
+                  layout: {
+                    type: 'form',
+                    rows: [
+                      { columns: [{ field: 'business_name', colSpan: 12 }] },
+                      { columns: [{ field: 'business_email', colSpan: 12 }] },
+                      { columns: [{ field: 'business_id', colSpan: 12 }] },
+                      { columns: [{ field: 'country', colSpan: 12 }] },
+                      { columns: [{ field: 'address', colSpan: 12 }] },
+                      { columns: [{ field: 'file', colSpan: 12 }] },
+                    ],
+                  },
+                  // Modal footer actions with Liquid templates
+                  actions: [
+                    {
+                      handle: 'submit',
+                      label: [
+                        "{%- if compliance_records.size == 0 -%}Submit for Review",
+                        "{%- elsif compliance_records[0].status == 'PENDING' -%}Submit for Review",
+                        "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Pending Review",
+                        "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Under Review",
+                        "{%- elsif compliance_records[0].status == 'APPROVED' -%}Approved",
+                        "{%- elsif compliance_records[0].status == 'REJECTED' -%}Resubmit",
+                        "{%- else -%}Submit for Review",
+                        "{%- endif -%}",
+                      ].join(''),
+                      handler: 'submit_compliance_document',
+                      icon: 'Send',
+                      variant: 'primary',
+                      isDisabled: [
+                        "{%- if compliance_records.size == 0 -%}false",
+                        "{%- elsif compliance_records[0].status == 'PENDING' -%}false",
+                        "{%- elsif compliance_records[0].status == 'REJECTED' -%}false",
+                        "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}true",
+                        "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}true",
+                        "{%- elsif compliance_records[0].status == 'APPROVED' -%}true",
+                        "{%- else -%}false",
+                        "{%- endif -%}",
+                      ].join(''),
+                    },
                   ],
                 },
-                {
-                  handle: 'address',
-                  type: 'STRING',
-                  label: 'Business Address',
-                  description: 'Full business address (e.g., 123 Main St, Sydney NSW 2000)',
-                  required: true,
-                },
-                {
-                  handle: 'file',
-                  type: 'FILE',
-                  label: 'Business Registration Document',
-                  description: 'Upload your commercial register excerpt or equivalent (PDF, JPG, or PNG)',
-                  required: true,
-                  accept: '.pdf,.jpg,.jpeg,.png',
-                },
-              ],
-              // Modal footer actions
-              // Note: label and isDisabled support Liquid templates for dynamic UI state
-              // Available context: compliance_records, phone_numbers, installation
-              // Statuses: PENDING, SUBMITTED, PENDING_REVIEW, APPROVED, REJECTED
-              actions: [
-                {
-                  handle: 'submit',
-                  // Label based on compliance status
-                  label: [
-                    "{%- if compliance_records.size == 0 -%}Submit for Review",
-                    "{%- elsif compliance_records[0].status == 'PENDING' -%}Submit for Review",
-                    "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Pending Review",
-                    "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Under Review",
-                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}Approved",
-                    "{%- elsif compliance_records[0].status == 'REJECTED' -%}Resubmit",
-                    "{%- else -%}Submit for Review",
-                    "{%- endif -%}",
-                  ].join(''),
-                  handler: 'submit_compliance_document',
-                  icon: 'Send',
-                  variant: 'primary',
-                  // Only enabled when PENDING, REJECTED, or no records yet
-                  isDisabled: [
-                    "{%- if compliance_records.size == 0 -%}false",
-                    "{%- elsif compliance_records[0].status == 'PENDING' -%}false",
-                    "{%- elsif compliance_records[0].status == 'REJECTED' -%}false",
-                    "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}true",
-                    "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}true",
-                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}true",
-                    "{%- else -%}false",
-                    "{%- endif -%}",
-                  ].join(''),
-                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'compliance_form', colSpan: 12 }] },
               ],
             },
-          ],
+          },
         },
       ],
-      // Page-level action buttons
       actions: [],
     },
 
@@ -544,11 +596,9 @@ const config: ProvisionConfig = {
     //
     {
       handle: 'phone_numbers_list',
-      type: 'LIST', // Shows multiple records
+      type: 'LIST',
       title: 'Phone Numbers',
       path: '/phone-numbers',
-      // Only show in navigation when compliance is approved
-      // Statuses: PENDING, SUBMITTED, PENDING_REVIEW, APPROVED, REJECTED
       navigation: [
         "{%- if compliance_records.size == 0 -%}false",
         "{%- elsif compliance_records[0].status == 'APPROVED' -%}true",
@@ -557,64 +607,95 @@ const config: ProvisionConfig = {
       ].join(''),
       blocks: [
         {
-          type: 'form',
-          title: 'New Phone Number',
-          fields: [
-            // FORM field type - opens modal with nested fields
-            {
-              handle: 'new_phone_number_form',
-              type: 'FORM',
-              label: 'New Phone Number',
-              description: 'Click to submit your business registration documents for Twilio compliance verification',
-              handler: 'submit_new_phone_number', // Tool to invoke on submit
-              // Modal header
-              header: {
-                title: 'New Phone Number',
-                description: 'Request a new phone number for your business.',
-              },
-              // Nested fields in the modal
-              fields: [
-                {
-                  handle: 'compliance_record',
-                  type: 'RELATIONSHIP',
-                  label: 'Compliance Record',
-                  description: 'Compliance record for the phone number',
-                  required: true,
-                  model: 'compliance_record', // Target internal model handle
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'New Phone Number',
+            description: 'Request a new phone number for your business.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'new-phone-number-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'new_phone_number_form',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'New Phone Number',
+                  description: 'Click to request a new phone number for your business',
+                  mode: 'field',
+                  button: {
+                    label: 'Request Phone Number',
+                    variant: 'outline',
+                    size: 'sm',
+                  },
                 },
-              ],
-              // Modal footer actions
-              // Note: label and isDisabled support Liquid templates for dynamic UI state
-              // Available context: compliance_records, phone_numbers, installation
-              // Statuses: PENDING, SUBMITTED, PENDING_REVIEW, APPROVED, REJECTED
-              actions: [
-                {
-                  handle: 'submit_new_phone_number',
-                  // Label based on compliance status
-                  label: [
-                    "{%- if compliance_records.size == 0 -%}Compliance Required",
-                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}Register Phone Number",
-                    "{%- elsif compliance_records[0].status == 'PENDING' -%}Compliance Pending",
-                    "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Compliance Pending Review",
-                    "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Compliance Under Review",
-                    "{%- elsif compliance_records[0].status == 'REJECTED' -%}Compliance Rejected",
-                    "{%- else -%}Compliance Required",
-                    "{%- endif -%}",
-                  ].join(''),
+                // Nested modal form (handled by skedyul-web)
+                modalForm: {
+                  header: {
+                    title: 'New Phone Number',
+                    description: 'Request a new phone number for your business.',
+                  },
                   handler: 'submit_new_phone_number',
-                  icon: 'Phone',
-                  variant: 'primary',
-                  // Only enabled when compliance is approved
-                  isDisabled: [
-                    "{%- if compliance_records.size == 0 -%}true",
-                    "{%- elsif compliance_records[0].status == 'APPROVED' -%}false",
-                    "{%- else -%}true",
-                    "{%- endif -%}",
-                  ].join(''),
+                  fields: [
+                    {
+                      component: 'Select',
+                      id: 'compliance_record',
+                      row: 0,
+                      col: 0,
+                      props: {
+                        label: 'Compliance Record',
+                        placeholder: 'Select compliance record',
+                      },
+                      // Relationship extension for dynamic data loading
+                      relationship: {
+                        model: 'compliance_record',
+                      },
+                    },
+                  ],
+                  layout: {
+                    type: 'form',
+                    rows: [
+                      { columns: [{ field: 'compliance_record', colSpan: 12 }] },
+                    ],
+                  },
+                  // Modal footer actions with Liquid templates
+                  actions: [
+                    {
+                      handle: 'submit_new_phone_number',
+                      label: [
+                        "{%- if compliance_records.size == 0 -%}Compliance Required",
+                        "{%- elsif compliance_records[0].status == 'APPROVED' -%}Register Phone Number",
+                        "{%- elsif compliance_records[0].status == 'PENDING' -%}Compliance Pending",
+                        "{%- elsif compliance_records[0].status == 'SUBMITTED' -%}Compliance Pending Review",
+                        "{%- elsif compliance_records[0].status == 'PENDING_REVIEW' -%}Compliance Under Review",
+                        "{%- elsif compliance_records[0].status == 'REJECTED' -%}Compliance Rejected",
+                        "{%- else -%}Compliance Required",
+                        "{%- endif -%}",
+                      ].join(''),
+                      handler: 'submit_new_phone_number',
+                      icon: 'Phone',
+                      variant: 'primary',
+                      isDisabled: [
+                        "{%- if compliance_records.size == 0 -%}true",
+                        "{%- elsif compliance_records[0].status == 'APPROVED' -%}false",
+                        "{%- else -%}true",
+                        "{%- endif -%}",
+                      ].join(''),
+                    },
+                  ],
                 },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'new_phone_number_form', colSpan: 12 }] },
               ],
             },
-          ],
+          },
         },
         {
           type: 'list',
@@ -624,7 +705,7 @@ const config: ProvisionConfig = {
           descriptionField: 'forwarding_phone_number',
           icon: 'Phone',
           emptyMessage: 'No phone numbers registered yet.',
-        }
+        },
       ],
     },
   ],
