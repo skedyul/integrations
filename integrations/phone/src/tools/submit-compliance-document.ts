@@ -304,6 +304,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       bundle_sid: 'BUf7c04b1d019a9c67844976fea763f351',
       end_user_sid: 'IT482fcb7ee070cfbc260c0d53c6c66aa5',
       document_sid: 'RDb9eb3fcc11d5d53a64b994075af2b6fe',
+      address_sid: 'AD1234567890abcdef1234567890abcdef', // Required for AU phone purchases
     }
     
     console.log('[Compliance] Updating compliance record with data:', {
@@ -464,6 +465,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           bundle_sid: bundle.sid,
           end_user_sid: endUser.sid,
           document_sid: supportingDoc.sid,
+          address_sid: twilioAddress.sid, // Required for AU phone purchases
           status: 'PENDING_REVIEW',
         },
         instanceCtx,
@@ -475,6 +477,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         endUserSid: endUser.sid,
         documentSid: supportingDoc.sid,
       })
+
+      // Note: addressSid is stored in the compliance record for phone number purchases
 
       return {
         output: {

@@ -70,7 +70,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     // 1. Fetch the compliance record and validate it's approved
     console.log('[PhoneNumber] Fetching compliance record:', complianceRecordId)
     console.log('[PhoneNumber] Instance context:', JSON.stringify(instanceCtx, null, 2))
-    let complianceRecord: { id: string; status?: string; business_name?: string; bundle_sid?: string } | null = null
+    let complianceRecord: { id: string; status?: string; business_name?: string; bundle_sid?: string; address_sid?: string } | null = null
 
     try {
       // instance.get takes (id, ctx) - no model handle needed since IDs are globally unique
@@ -182,8 +182,34 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     const selectedNumber = availableNumbers[0]
     console.log('[PhoneNumber] Found available number:', selectedNumber.phoneNumber)
 
-    // 5. Purchase the phone number
+    // 5. Validate we have the required Twilio SIDs for AU phone numbers
+    const bundleSid = complianceRecord.bundle_sid
+    const addressSid = complianceRecord.address_sid
+
+    if (!bundleSid) {
+      return {
+        output: {
+          status: 'error',
+          message: 'Compliance record is missing bundle_sid. Please resubmit your compliance documents.',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    if (!addressSid) {
+      return {
+        output: {
+          status: 'error',
+          message: 'Compliance record is missing address_sid. Please resubmit your compliance documents.',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    // 6. Purchase the phone number with compliance bundle and address
     console.log('[PhoneNumber] Purchasing phone number:', selectedNumber.phoneNumber)
+    console.log('[PhoneNumber] Using bundleSid:', bundleSid)
+    console.log('[PhoneNumber] Using addressSid:', addressSid)
     let purchasedNumber: Awaited<ReturnType<typeof purchasePhoneNumber>>
 
     try {
@@ -191,6 +217,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       purchasedNumber = await purchasePhoneNumber(twilioClient, {
         phoneNumber: selectedNumber.phoneNumber,
         friendlyName: `Skedyul - ${businessName}`,
+        // Required for AU and other regulated countries
+        bundleSid,
+        addressSid,
       })
     } catch (err) {
       console.error('[PhoneNumber] Failed to purchase phone number:', err)

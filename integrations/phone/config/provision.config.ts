@@ -210,6 +210,15 @@ const config: ProvisionConfig = {
           owner: 'APP',
         },
         {
+          handle: 'address_sid',
+          label: 'Address SID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'Twilio Address SID (required for AU phone number purchases)',
+          owner: 'APP',
+        },
+        {
           handle: 'rejection_reason',
           label: 'Rejection Reason',
           type: 'STRING',

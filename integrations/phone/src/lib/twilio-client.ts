@@ -326,6 +326,10 @@ export type PurchasePhoneNumberParams = {
   smsUrl?: string
   /** Optional webhook URL for incoming voice calls */
   voiceUrl?: string
+  /** Twilio Address SID (required for AU and other regulated countries) */
+  addressSid?: string
+  /** Twilio Regulatory Bundle SID (required for AU and other regulated countries) */
+  bundleSid?: string
 }
 
 export type PurchasedPhoneNumber = {
@@ -342,6 +346,10 @@ export type PurchasedPhoneNumber = {
 /**
  * Purchase a phone number from Twilio.
  * 
+ * For regulated countries (like Australia), you must provide:
+ * - addressSid: Twilio Address SID for the business
+ * - bundleSid: Approved Regulatory Bundle SID
+ * 
  * @see https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource
  */
 export const purchasePhoneNumber = async (
@@ -353,6 +361,8 @@ export const purchasePhoneNumber = async (
     friendlyName?: string
     smsUrl?: string
     voiceUrl?: string
+    addressSid?: string
+    bundleSid?: string
   } = {
     phoneNumber: params.phoneNumber,
   }
@@ -360,6 +370,8 @@ export const purchasePhoneNumber = async (
   if (params.friendlyName) createParams.friendlyName = params.friendlyName
   if (params.smsUrl) createParams.smsUrl = params.smsUrl
   if (params.voiceUrl) createParams.voiceUrl = params.voiceUrl
+  if (params.addressSid) createParams.addressSid = params.addressSid
+  if (params.bundleSid) createParams.bundleSid = params.bundleSid
 
   const purchased = await client.incomingPhoneNumbers.create(createParams)
 
