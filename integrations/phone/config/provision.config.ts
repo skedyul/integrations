@@ -689,24 +689,26 @@ const config: ProvisionConfig = {
                   handler: 'submit_new_phone_number',
                   fields: [
                     {
-                      component: 'Select',
-                      id: 'compliance_record',
+                      component: 'Alert',
+                      id: 'compliance_record_info',
                       row: 0,
                       col: 0,
                       props: {
-                        label: 'Compliance Record',
-                        placeholder: 'Select compliance record',
-                      },
-                      // Relationship extension for dynamic data loading
-                      relationship: {
-                        model: 'compliance_record',
+                        title: '{{ compliance_record.business_name }}',
+                        description: [
+                          'ABN: {{ compliance_record.business_id }} • ',
+                          '{{ compliance_record.address }}, {{ compliance_record.country }}',
+                          ' — This compliance record will be used for your new phone number.',
+                        ].join(''),
+                        icon: 'Building2',
+                        variant: 'default',
                       },
                     },
                   ],
                   layout: {
                     type: 'form',
                     rows: [
-                      { columns: [{ field: 'compliance_record', colSpan: 12 }] },
+                      { columns: [{ field: 'compliance_record_info', colSpan: 12 }] },
                     ],
                   },
                   // Modal footer actions with Liquid templates
