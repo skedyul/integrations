@@ -657,7 +657,7 @@ const config: ProvisionConfig = {
                 row: 0,
                 col: 0,
                 props: {
-                  label: 'Phone Number',
+                  label: 'Buy a New Phone Number',
                   description: [
                     "{%- if compliance_record == blank -%}",
                     "Submit compliance documents before purchasing a phone number",
