@@ -658,12 +658,26 @@ const config: ProvisionConfig = {
                 col: 0,
                 props: {
                   label: 'Phone Number',
-                  description: 'Click to purchase a new phone number for your business',
+                  description: [
+                    "{%- if compliance_record == blank -%}",
+                    "Submit compliance documents before purchasing a phone number",
+                    "{%- elsif compliance_record.status != 'APPROVED' -%}",
+                    "Compliance must be approved before purchasing a phone number",
+                    "{%- else -%}",
+                    "Click to purchase a new phone number for your business",
+                    "{%- endif -%}",
+                  ].join(''),
                   mode: 'field',
                   button: {
                     label: 'Purchase New Number',
                     variant: 'outline',
                     size: 'sm',
+                    isDisabled: [
+                      "{%- if compliance_record == blank -%}true",
+                      "{%- elsif compliance_record.status == 'APPROVED' -%}false",
+                      "{%- else -%}true",
+                      "{%- endif -%}",
+                    ].join(''),
                   },
                 },
                 // Nested modal form (handled by skedyul-web)
