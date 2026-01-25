@@ -6,15 +6,17 @@ const { z } = skedyul
 /**
  * Input schema for the remove_phone_number form submit handler.
  * This handler is called when a user confirms removal of a phone number.
- * Accepts either phone_number_id or instance_id (automatically passed from modal context).
+ * Accepts phone_number_id, instance_id, or phone_id (from path params).
  */
 const RemovePhoneNumberInputSchema = z.object({
   /** Instance ID of the phone number to remove (from hidden field) */
   phone_number_id: z.string().optional().describe('Instance ID of the phone number to remove'),
   /** Instance ID passed automatically from modal context */
   instance_id: z.string().optional().describe('Instance ID from modal context'),
-}).refine((data) => data.phone_number_id || data.instance_id, {
-  message: 'Either phone_number_id or instance_id must be provided',
+  /** Instance ID from path params (e.g., /phone-numbers/[phone_id]/overview) */
+  phone_id: z.string().optional().describe('Instance ID from path params'),
+}).refine((data) => data.phone_number_id || data.instance_id || data.phone_id, {
+  message: 'Either phone_number_id, instance_id, or phone_id must be provided',
 })
 
 const RemovePhoneNumberOutputSchema = z.object({
@@ -34,8 +36,8 @@ export const removePhoneNumberRegistry: ToolDefinition<
   inputs: RemovePhoneNumberInputSchema,
   outputSchema: RemovePhoneNumberOutputSchema,
   handler: async (input, context) => {
-    // Accept either phone_number_id (from hidden field) or instance_id (from modal context)
-    const phoneNumberId = input.phone_number_id || input.instance_id
+    // Accept phone_number_id (from hidden field), instance_id (from modal context), or phone_id (from path params)
+    const phoneNumberId = input.phone_number_id || input.instance_id || input.phone_id
     const { appInstallationId, workplace } = context
 
     // Validate required context fields
@@ -49,12 +51,12 @@ export const removePhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // Validate phone number ID is provided (from either source)
+    // Validate phone number ID is provided (from any source)
     if (!phoneNumberId) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required field: phone_number_id or instance_id',
+          message: 'Missing required field: phone_number_id, instance_id, or phone_id',
         },
         billing: { credits: 0 },
       }
