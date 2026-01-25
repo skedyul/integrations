@@ -415,6 +415,27 @@ const config: ProvisionConfig = {
   ],
 
   // ─────────────────────────────────────────────────────────────────────────
+  // Navigation
+  // ─────────────────────────────────────────────────────────────────────────
+  //
+  // Base navigation configuration for all pages.
+  // Individual pages can override this with their own navigation object.
+  //
+  navigation: {
+    sidebar: {
+      sections: [
+        {
+          title: 'Resources',
+          items: [
+            { label: 'Compliance', href: '/compliance', icon: 'Shield' },
+            { label: 'Phone Numbers', href: '/phone-numbers', icon: 'Phone' },
+          ],
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
   // Pages
   // ─────────────────────────────────────────────────────────────────────────
   //
@@ -429,7 +450,6 @@ const config: ProvisionConfig = {
     // Single-instance page for submitting compliance documents.
     //
     {
-      handle: 'compliance_submission',
       type: 'INSTANCE',
       title: 'Compliance',
       path: '/compliance',
@@ -637,7 +657,6 @@ const config: ProvisionConfig = {
     // List view of all provisioned phone numbers.
     //
     {
-      handle: 'phone_numbers_list',
       type: 'LIST',
       title: 'Phone Numbers',
       path: '/phone-numbers',
@@ -771,6 +790,7 @@ const config: ProvisionConfig = {
                     label: '{{ item.phone }}',
                     description: '{{ item.forwarding_phone_number }}',
                     leftIcon: 'Phone',
+                    href: '/phone-numbers/{{ item.id }}',
                   },
                 },
                 props: {
@@ -784,6 +804,97 @@ const config: ProvisionConfig = {
               rows: [
                 { columns: [{ field: 'new_phone_number_form', colSpan: 12 }] },
                 { columns: [{ field: 'phone_numbers_list', colSpan: 12 }] },
+              ],
+            },
+          },
+        },
+      ],
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Phone Number Detail Page
+    // ───────────────────────────────────────────────────────────────────────
+    // Detail view for a single phone number. Accessed via /phone-numbers/[id].
+    // This page has a navigation override to show instance-specific sidebar.
+    //
+    {
+      type: 'INSTANCE',
+      title: 'Phone Number',
+      path: '/phone-numbers/[id]',
+      // Navigation override: shows instance-specific navigation when on this page
+      navigation: {
+        sidebar: {
+          sections: [
+            {
+              title: '{{ phone_number.phone }}',
+              items: [
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.id }}', icon: 'Phone' },
+              ],
+            },
+            {
+              title: 'Resources',
+              items: [
+                { label: 'Back to Phone Numbers', href: '/phone-numbers', icon: 'ArrowLeft' },
+              ],
+            },
+          ],
+        },
+        breadcrumb: {
+          items: [
+            { label: 'Phone Numbers', href: '/phone-numbers' },
+            { label: '{{ phone_number.phone }}' },
+          ],
+        },
+      },
+      context: {
+        phone_number: {
+          model: 'phone_number',
+          mode: 'first',
+          filters: {
+            id: '{{ path_params.id }}',
+          },
+        },
+      },
+      blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Phone Number Details',
+            description: 'View and manage this phone number.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'phone-number-detail-form',
+            fields: [
+              {
+                component: 'Input',
+                id: 'phone',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Phone Number',
+                  value: '{{ phone_number.phone }}',
+                  disabled: true,
+                },
+              },
+              {
+                component: 'Input',
+                id: 'forwarding_phone_number',
+                row: 1,
+                col: 0,
+                props: {
+                  label: 'Forwarding Number',
+                  value: '{{ phone_number.forwarding_phone_number }}',
+                  placeholder: 'Enter forwarding number',
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'phone', colSpan: 12 }] },
+                { columns: [{ field: 'forwarding_phone_number', colSpan: 12 }] },
               ],
             },
           },
