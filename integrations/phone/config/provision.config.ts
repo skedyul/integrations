@@ -816,7 +816,7 @@ const config: ProvisionConfig = {
                 row: 1,
                 col: 0,
                 // Iterate over phone_numbers from page context (mode: 'many')
-                iterable: 'phone_numbers',
+                iterable: '{{ phone_numbers }}',
                 // Template for each item - {{ item.xyz }} resolves to each phone number's fields
                 itemTemplate: {
                   component: 'ActionTile',
