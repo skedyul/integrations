@@ -820,7 +820,7 @@ const config: ProvisionConfig = {
     {
       type: 'INSTANCE',
       title: 'Phone Number',
-      path: '/phone-numbers/[id]',
+      path: '/phone-numbers/[phone_id]',
       // Navigation override: shows instance-specific navigation when on this page
       navigation: {
         sidebar: {
@@ -828,7 +828,7 @@ const config: ProvisionConfig = {
             {
               title: '{{ phone_number.phone }}',
               items: [
-                { label: 'Overview', href: '/phone-numbers/{{ path_params.id }}', icon: 'Phone' },
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
               ],
             },
             {
@@ -851,7 +851,7 @@ const config: ProvisionConfig = {
           model: 'phone_number',
           mode: 'first',
           filters: {
-            id: '{{ path_params.id }}',
+            id: { eq: '{{ path_params.phone_id }}' },
           },
         },
       },
