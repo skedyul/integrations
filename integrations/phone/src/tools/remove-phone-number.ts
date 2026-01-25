@@ -6,7 +6,7 @@ const { z } = skedyul
 /**
  * Input schema for the remove_phone_number form submit handler.
  * This handler is called when a user confirms removal of a phone number.
- * Accepts phone_number_id, instance_id, or phone_id (from path params).
+ * Accepts phone_number_id, instance_id, or phone_id (from input or context.params).
  */
 const RemovePhoneNumberInputSchema = z.object({
   /** Instance ID of the phone number to remove (from hidden field) */
@@ -15,9 +15,8 @@ const RemovePhoneNumberInputSchema = z.object({
   instance_id: z.string().optional().describe('Instance ID from modal context'),
   /** Instance ID from path params (e.g., /phone-numbers/[phone_id]/overview) */
   phone_id: z.string().optional().describe('Instance ID from path params'),
-}).refine((data) => data.phone_number_id || data.instance_id || data.phone_id, {
-  message: 'Either phone_number_id, instance_id, or phone_id must be provided',
 })
+// Note: We don't use .refine() here because phone_id can also come from context.params
 
 const RemovePhoneNumberOutputSchema = z.object({
   status: z.string().describe('Removal status'),
@@ -36,8 +35,9 @@ export const removePhoneNumberRegistry: ToolDefinition<
   inputs: RemovePhoneNumberInputSchema,
   outputSchema: RemovePhoneNumberOutputSchema,
   handler: async (input, context) => {
-    // Accept phone_number_id (from hidden field), instance_id (from modal context), or phone_id (from path params)
-    const phoneNumberId = input.phone_number_id || input.instance_id || input.phone_id
+    // Accept phone_number_id (from hidden field), instance_id (from modal context), 
+    // phone_id (from input), or phone_id from context.params (path params)
+    const phoneNumberId = input.phone_number_id || input.instance_id || input.phone_id || context.params?.phone_id
     const { appInstallationId, workplace } = context
 
     // Validate required context fields
@@ -111,7 +111,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
 
     // 2. Find the CommunicationChannel by identifierValue (phone number)
     console.log('[RemovePhoneNumber] Looking for CommunicationChannel with identifierValue:', phoneValue)
-    let channels: Array<{ id: string; identifierValue: string }> = []
+    let channels: Array<{ id: string }> = []
 
     try {
       channels = await communicationChannel.list({
