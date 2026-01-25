@@ -741,11 +741,38 @@ const config: ProvisionConfig = {
                         variant: 'default',
                       },
                     },
+                    // Name input for the phone number
+                    {
+                      component: 'Input',
+                      id: 'name',
+                      row: 1,
+                      col: 0,
+                      props: {
+                        label: 'Phone Name',
+                        placeholder: 'e.g., Sales Line, Support Number',
+                        helpText: 'A friendly name to identify this phone number',
+                        required: false,
+                      },
+                    },
+                    // Model select using system.models Liquid injection
+                    {
+                      component: 'Select',
+                      id: 'linked_model',
+                      row: 2,
+                      col: 0,
+                      props: {
+                        label: 'Link to Model',
+                        placeholder: 'Select a model',
+                        helpText: 'Contacts will be linked to records in this model',
+                        items: '{{ system.models }}',
+                        required: true,
+                      },
+                    },
                     // Hidden field to pass the compliance_record instance ID
                     {
                       component: 'Input',
                       id: 'compliance_record',
-                      row: 1,
+                      row: 3,
                       col: 0,
                       props: {
                         type: 'hidden',
@@ -757,6 +784,8 @@ const config: ProvisionConfig = {
                     type: 'form',
                     rows: [
                       { columns: [{ field: 'compliance_record_info', colSpan: 12 }] },
+                      { columns: [{ field: 'name', colSpan: 12 }] },
+                      { columns: [{ field: 'linked_model', colSpan: 12 }] },
                       // Hidden field doesn't need layout, but including for completeness
                       { columns: [{ field: 'compliance_record', colSpan: 0 }] },
                     ],
@@ -874,17 +903,6 @@ const config: ProvisionConfig = {
             fields: [
               {
                 component: 'Input',
-                id: 'phone',
-                row: 0,
-                col: 0,
-                props: {
-                  label: 'Phone Number',
-                  value: '{{ phone_number.phone }}',
-                  disabled: true,
-                },
-              },
-              {
-                component: 'Input',
                 id: 'name',
                 row: 1,
                 col: 0,
@@ -892,6 +910,17 @@ const config: ProvisionConfig = {
                   label: 'Name',
                   value: '{{ phone_number.name }}',
                   placeholder: 'Enter a friendly name for this number',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'phone',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Phone Number',
+                  value: '{{ phone_number.phone }}',
+                  disabled: true,
                 },
               },
             ],
