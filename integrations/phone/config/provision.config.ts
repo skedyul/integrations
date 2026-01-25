@@ -263,6 +263,15 @@ const config: ProvisionConfig = {
           owner: 'APP', // Provisioned by app from Twilio
         },
         {
+          handle: 'name',
+          label: 'Name',
+          type: 'STRING',
+          required: false,
+          system: false,
+          description: 'A friendly name for this phone number',
+          owner: 'WORKPLACE', // User can set a custom name
+        },
+        {
           handle: 'forwarding_phone_number',
           label: 'Forwarding Phone Number',
           type: 'STRING',
@@ -829,14 +838,10 @@ const config: ProvisionConfig = {
               title: '{{ phone_number.phone }}',
               items: [
                 { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
+                { label: 'Messaging', href: '/phone-numbers/{{ path_params.phone_id }}/messaging', icon: 'MessageSquare' },
+                { label: 'Voice', href: '/phone-numbers/{{ path_params.phone_id }}/voice', icon: 'PhoneCall' },
               ],
-            },
-            {
-              title: 'Resources',
-              items: [
-                { label: 'Back to Phone Numbers', href: '/phone-numbers', icon: 'ArrowLeft' },
-              ],
-            },
+            }
           ],
         },
         breadcrumb: {
@@ -880,13 +885,13 @@ const config: ProvisionConfig = {
               },
               {
                 component: 'Input',
-                id: 'forwarding_phone_number',
+                id: 'name',
                 row: 1,
                 col: 0,
                 props: {
-                  label: 'Forwarding Number',
-                  value: '{{ phone_number.forwarding_phone_number }}',
-                  placeholder: 'Enter forwarding number',
+                  label: 'Name',
+                  value: '{{ phone_number.name }}',
+                  placeholder: 'Enter a friendly name for this number',
                 },
               },
             ],
@@ -894,6 +899,140 @@ const config: ProvisionConfig = {
               type: 'form',
               rows: [
                 { columns: [{ field: 'phone', colSpan: 12 }] },
+                { columns: [{ field: 'name', colSpan: 12 }] },
+              ],
+            },
+          },
+        },
+      ],
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Messaging Settings Page
+    // ───────────────────────────────────────────────────────────────────────
+    // Messaging configuration for this phone number.
+    //
+    {
+      type: 'INSTANCE',
+      title: 'Messaging',
+      path: '/phone-numbers/[phone_id]/messaging',
+      navigation: {
+        sidebar: {
+          sections: [
+            {
+              title: '{{ phone_number.phone }}',
+              items: [
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
+                { label: 'Messaging', href: '/phone-numbers/{{ path_params.phone_id }}/messaging', icon: 'MessageSquare' },
+                { label: 'Voice', href: '/phone-numbers/{{ path_params.phone_id }}/voice', icon: 'PhoneCall' },
+              ],
+            }
+          ],
+        },
+        breadcrumb: {
+          items: [
+            { label: 'Phone Numbers', href: '/phone-numbers' },
+            { label: '{{ phone_number.phone }}', href: '/phone-numbers/{{ path_params.phone_id }}' },
+            { label: 'Messaging' },
+          ],
+        },
+      },
+      context: {
+        phone_number: {
+          model: 'phone_number',
+          mode: 'first',
+          filters: {
+            id: { eq: '{{ path_params.phone_id }}' },
+          },
+        },
+      },
+      blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Messaging Settings',
+            description: 'Configure messaging settings for this phone number.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'messaging-settings-form',
+            fields: [],
+            layout: {
+              type: 'form',
+              rows: [],
+            },
+          },
+        },
+      ],
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Voice Settings Page
+    // ───────────────────────────────────────────────────────────────────────
+    // Voice/call forwarding configuration for this phone number.
+    //
+    {
+      type: 'INSTANCE',
+      title: 'Voice',
+      path: '/phone-numbers/[phone_id]/voice',
+      navigation: {
+        sidebar: {
+          sections: [
+            {
+              title: '{{ phone_number.phone }}',
+              items: [
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
+                { label: 'Messaging', href: '/phone-numbers/{{ path_params.phone_id }}/messaging', icon: 'MessageSquare' },
+                { label: 'Voice', href: '/phone-numbers/{{ path_params.phone_id }}/voice', icon: 'PhoneCall' },
+              ],
+            }
+          ],
+        },
+        breadcrumb: {
+          items: [
+            { label: 'Phone Numbers', href: '/phone-numbers' },
+            { label: '{{ phone_number.phone }}', href: '/phone-numbers/{{ path_params.phone_id }}' },
+            { label: 'Voice' },
+          ],
+        },
+      },
+      context: {
+        phone_number: {
+          model: 'phone_number',
+          mode: 'first',
+          filters: {
+            id: { eq: '{{ path_params.phone_id }}' },
+          },
+        },
+      },
+      blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Voice Settings',
+            description: 'Configure call forwarding for this phone number.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'voice-settings-form',
+            fields: [
+              {
+                component: 'Input',
+                id: 'forwarding_phone_number',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Call Forwarding Number',
+                  value: '{{ phone_number.forwarding_phone_number }}',
+                  placeholder: 'Enter the number to forward calls to',
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
                 { columns: [{ field: 'forwarding_phone_number', colSpan: 12 }] },
               ],
             },
