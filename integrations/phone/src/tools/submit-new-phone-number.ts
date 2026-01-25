@@ -130,6 +130,22 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       }
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // TEMPORARY: Hardcoded Twilio response to avoid spamming Twilio API
+    // Remove this block and uncomment the actual Twilio calls below when ready
+    // ══════════════════════════════════════════════════════════════════════════
+    console.log('[PhoneNumber] Using hardcoded Twilio response (test mode)')
+    const purchasedNumber = {
+      sid: 'PN9a5882f95d0f57b86fea2972c7c6fc01',
+      phoneNumber: '+61468092925',
+      friendlyName: `Skedyul - ${complianceRecord.business_name ?? 'Test Business'}`,
+      capabilities: { voice: true, sms: true, mms: true },
+    }
+    console.log('[PhoneNumber] Hardcoded purchased number:', JSON.stringify(purchasedNumber, null, 2))
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /* COMMENTED OUT: Actual Twilio API calls - uncomment when ready
+    
     // 3. Create Twilio client
     let twilioClient: ReturnType<typeof createTwilioClient>
     try {
@@ -233,22 +249,43 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     }
 
     console.log('[PhoneNumber] Purchased number:', JSON.stringify(purchasedNumber, null, 2))
+    END COMMENTED OUT */
 
-    // 6. Create phone_number instance and link to compliance record
+    // 7. Create phone_number instance and link to compliance record
     console.log('[PhoneNumber] Creating phone_number instance...')
+    
+    // Prepare the data for instance creation
+    const phoneNumberData = {
+      phone: purchasedNumber.phoneNumber,
+      // Link to the compliance record via the relationship field
+      compliance_record: complianceRecordId,
+    }
+    
+    console.log('[PhoneNumber] Instance data to create:', JSON.stringify(phoneNumberData, null, 2))
+    console.log('[PhoneNumber] Instance context:', JSON.stringify(instanceCtx, null, 2))
 
     try {
       const phoneNumberInstance = await instance.create(
         'phone_number',
-        {
-          phone: purchasedNumber.phoneNumber,
-          // Link to the compliance record via the relationship field
-          compliance_record: complianceRecordId,
-        },
+        phoneNumberData,
         instanceCtx,
       )
 
-      console.log('[PhoneNumber] Created phone_number instance:', JSON.stringify(phoneNumberInstance, null, 2))
+      console.log('[PhoneNumber] Created phone_number instance result:', JSON.stringify(phoneNumberInstance, null, 2))
+      console.log('[PhoneNumber] Instance ID:', phoneNumberInstance?.id)
+      console.log('[PhoneNumber] Instance phone field:', (phoneNumberInstance as Record<string, unknown>)?.phone)
+
+      // Verify the instance was created with the correct data
+      if (!phoneNumberInstance?.id) {
+        console.error('[PhoneNumber] Instance creation returned without ID')
+        return {
+          output: {
+            status: 'error',
+            message: 'Failed to create phone number record - no instance ID returned',
+          },
+          billing: { credits: 0 },
+        }
+      }
 
       return {
         output: {
@@ -261,6 +298,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       }
     } catch (err) {
       console.error('[PhoneNumber] Failed to create phone_number instance:', err)
+      console.error('[PhoneNumber] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2))
 
       // Note: The phone number was already purchased from Twilio.
       // In a production system, you might want to release it or retry the database operation.
