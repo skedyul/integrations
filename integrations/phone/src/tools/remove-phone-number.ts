@@ -1,0 +1,168 @@
+import skedyul, { type z as ZodType, instance, communicationChannel } from 'skedyul'
+import type { ToolDefinition } from 'skedyul'
+
+const { z } = skedyul
+
+/**
+ * Input schema for the remove_phone_number form submit handler.
+ * This handler is called when a user confirms removal of a phone number.
+ */
+const RemovePhoneNumberInputSchema = z.object({
+  /** Instance ID of the phone number to remove */
+  phone_number_id: z.string().describe('Instance ID of the phone number to remove'),
+})
+
+const RemovePhoneNumberOutputSchema = z.object({
+  status: z.string().describe('Removal status'),
+  message: z.string().optional().describe('Status message'),
+})
+
+type RemovePhoneNumberInput = ZodType.infer<typeof RemovePhoneNumberInputSchema>
+type RemovePhoneNumberOutput = ZodType.infer<typeof RemovePhoneNumberOutputSchema>
+
+export const removePhoneNumberRegistry: ToolDefinition<
+  RemovePhoneNumberInput,
+  RemovePhoneNumberOutput
+> = {
+  name: 'remove_phone_number',
+  description: 'Removes a phone number from the account, deleting its SMS channel and subscriptions',
+  inputs: RemovePhoneNumberInputSchema,
+  outputSchema: RemovePhoneNumberOutputSchema,
+  handler: async (input, context) => {
+    const { phone_number_id } = input
+    const { appInstallationId, workplace } = context
+
+    // Validate required context fields
+    if (!appInstallationId || !workplace) {
+      return {
+        output: {
+          status: 'error',
+          message: 'Missing required context: appInstallationId or workplace',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    // Validate phone_number_id is provided
+    if (!phone_number_id) {
+      return {
+        output: {
+          status: 'error',
+          message: 'Missing required field: phone_number_id',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    // Build the instance context for API calls
+    const instanceCtx = {
+      appInstallationId,
+      workplace,
+    }
+
+    // 1. Fetch the phone_number instance to get the phone value
+    console.log('[RemovePhoneNumber] Fetching phone_number instance:', phone_number_id)
+    let phoneNumberInstance: { id: string; phone?: string } | null = null
+
+    try {
+      phoneNumberInstance = await instance.get(phone_number_id, instanceCtx)
+      console.log('[RemovePhoneNumber] instance.get result:', JSON.stringify(phoneNumberInstance, null, 2))
+    } catch (err) {
+      console.error('[RemovePhoneNumber] Failed to fetch phone_number instance:', err)
+      return {
+        output: {
+          status: 'error',
+          message: `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    if (!phoneNumberInstance) {
+      return {
+        output: {
+          status: 'error',
+          message: `Phone number not found: ${phone_number_id}`,
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    const phoneValue = phoneNumberInstance.phone
+    if (!phoneValue) {
+      return {
+        output: {
+          status: 'error',
+          message: 'Phone number instance is missing the phone field',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    console.log('[RemovePhoneNumber] Phone value:', phoneValue)
+
+    // 2. Find the CommunicationChannel by identifierValue (phone number)
+    console.log('[RemovePhoneNumber] Looking for CommunicationChannel with identifierValue:', phoneValue)
+    let channels: Array<{ id: string; identifierValue: string }> = []
+
+    try {
+      channels = await communicationChannel.list({
+        filter: { identifierValue: phoneValue },
+        limit: 1,
+      })
+      console.log('[RemovePhoneNumber] Found channels:', JSON.stringify(channels, null, 2))
+    } catch (err) {
+      console.error('[RemovePhoneNumber] Failed to list communication channels:', err)
+      // Continue even if we can't find the channel - still delete the instance
+    }
+
+    // 3. Delete the CommunicationChannel if found (cascades subscriptions, preserves messages)
+    if (channels.length > 0) {
+      const channel = channels[0]
+      console.log('[RemovePhoneNumber] Deleting CommunicationChannel:', channel.id)
+
+      try {
+        await communicationChannel.remove(channel.id)
+        console.log('[RemovePhoneNumber] Successfully deleted CommunicationChannel')
+      } catch (err) {
+        console.error('[RemovePhoneNumber] Failed to delete CommunicationChannel:', err)
+        return {
+          output: {
+            status: 'error',
+            message: `Failed to delete communication channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          },
+          billing: { credits: 0 },
+        }
+      }
+    } else {
+      console.log('[RemovePhoneNumber] No CommunicationChannel found for this phone number')
+    }
+
+    // 4. Delete the phone_number instance
+    console.log('[RemovePhoneNumber] Deleting phone_number instance:', phone_number_id)
+
+    try {
+      await instance.delete(phone_number_id, instanceCtx)
+      console.log('[RemovePhoneNumber] Successfully deleted phone_number instance')
+    } catch (err) {
+      console.error('[RemovePhoneNumber] Failed to delete phone_number instance:', err)
+      return {
+        output: {
+          status: 'error',
+          message: `Failed to delete phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    // Note: Twilio phone number is NOT released - retained for potential transfer
+
+    return {
+      output: {
+        status: 'success',
+        message: `Successfully removed phone number ${phoneValue}`,
+      },
+      billing: { credits: 0 },
+    }
+  },
+}

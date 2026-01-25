@@ -32,6 +32,7 @@ import { sendSmsRegistry } from './tools/send-sms'
 import { submitComplianceDocumentRegistry } from './tools/submit-compliance-document'
 import { checkComplianceStatusRegistry } from './tools/check-compliance-status'
 import { submitNewPhoneNumberRegistry } from './tools/submit-new-phone-number'
+import { removePhoneNumberRegistry } from './tools/remove-phone-number'
 
 /**
  * Tool Registry
@@ -50,6 +51,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Search for and purchase an Australian mobile phone number from Twilio. */
   submit_new_phone_number: submitNewPhoneNumberRegistry,
+
+  /** Remove a phone number from the account, deleting its SMS channel. */
+  remove_phone_number: removePhoneNumberRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

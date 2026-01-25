@@ -828,7 +828,7 @@ const config: ProvisionConfig = {
                     label: '{{ item.phone }}',
                     description: '{{ item.forwarding_phone_number }}',
                     leftIcon: 'Phone',
-                    href: '/phone-numbers/{{ item.id }}',
+                    href: '/phone-numbers/{{ item.id }}/overview',
                   },
                 },
                 props: {
@@ -858,7 +858,7 @@ const config: ProvisionConfig = {
     {
       type: 'INSTANCE',
       title: 'Phone Number',
-      path: '/phone-numbers/[phone_id]',
+      path: '/phone-numbers/[phone_id]/overview',
       // Navigation override: shows instance-specific navigation when on this page
       navigation: {
         sidebar: {
@@ -866,7 +866,7 @@ const config: ProvisionConfig = {
             {
               title: '{{ phone_number.phone }}',
               items: [
-                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}/overview', icon: 'Phone' },
                 { label: 'Messaging', href: '/phone-numbers/{{ path_params.phone_id }}/messaging', icon: 'MessageSquare' },
                 { label: 'Voice', href: '/phone-numbers/{{ path_params.phone_id }}/voice', icon: 'PhoneCall' },
               ],
@@ -933,6 +933,96 @@ const config: ProvisionConfig = {
             },
           },
         },
+        // Danger Zone card for destructive actions
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Danger Zone',
+            description: 'Irreversible actions for this phone number.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'danger-zone-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'remove_phone_number',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Remove Phone Number',
+                  description: 'Permanently remove this phone number from your account.',
+                  mode: 'setting',
+                  button: {
+                    label: 'Remove',
+                    variant: 'destructive',
+                  },
+                },
+                modalForm: {
+                  header: {
+                    title: 'Remove Phone Number',
+                    description: 'This action cannot be undone.',
+                  },
+                  handler: 'remove_phone_number',
+                  fields: [
+                    {
+                      component: 'Alert',
+                      id: 'warning',
+                      row: 0,
+                      col: 0,
+                      props: {
+                        title: 'Are you sure?',
+                        description: [
+                          'Removing {{ phone_number.phone }} will:',
+                          '',
+                          '• Delete the SMS channel and all subscriptions',
+                          '• Disconnect contacts from this channel',
+                          '',
+                          'Message history will be preserved. The Twilio number will be retained for potential transfer.',
+                        ].join('\n'),
+                        variant: 'destructive',
+                        icon: 'AlertTriangle',
+                      },
+                    },
+                    {
+                      component: 'Input',
+                      id: 'phone_number_id',
+                      row: 1,
+                      col: 0,
+                      props: {
+                        type: 'hidden',
+                        value: '{{ phone_number.id }}',
+                      },
+                    },
+                  ],
+                  layout: {
+                    type: 'form',
+                    rows: [
+                      { columns: [{ field: 'warning', colSpan: 12 }] },
+                      { columns: [{ field: 'phone_number_id', colSpan: 0 }] },
+                    ],
+                  },
+                  actions: [
+                    {
+                      handle: 'remove_phone_number',
+                      label: 'Remove Phone Number',
+                      handler: 'remove_phone_number',
+                      icon: 'Trash2',
+                      variant: 'destructive',
+                    },
+                  ],
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'remove_phone_number', colSpan: 12 }] },
+              ],
+            },
+          },
+        },
       ],
     },
 
@@ -951,7 +1041,7 @@ const config: ProvisionConfig = {
             {
               title: '{{ phone_number.phone }}',
               items: [
-                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}/overview', icon: 'Phone' },
                 { label: 'Messaging', href: '/phone-numbers/{{ path_params.phone_id }}/messaging', icon: 'MessageSquare' },
                 { label: 'Voice', href: '/phone-numbers/{{ path_params.phone_id }}/voice', icon: 'PhoneCall' },
               ],
@@ -1011,7 +1101,7 @@ const config: ProvisionConfig = {
             {
               title: '{{ phone_number.phone }}',
               items: [
-                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}', icon: 'Phone' },
+                { label: 'Overview', href: '/phone-numbers/{{ path_params.phone_id }}/overview', icon: 'Phone' },
                 { label: 'Messaging', href: '/phone-numbers/{{ path_params.phone_id }}/messaging', icon: 'MessageSquare' },
                 { label: 'Voice', href: '/phone-numbers/{{ path_params.phone_id }}/voice', icon: 'PhoneCall' },
               ],
