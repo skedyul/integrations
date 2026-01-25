@@ -6,10 +6,15 @@ const { z } = skedyul
 /**
  * Input schema for the remove_phone_number form submit handler.
  * This handler is called when a user confirms removal of a phone number.
+ * Accepts either phone_number_id or instance_id (automatically passed from modal context).
  */
 const RemovePhoneNumberInputSchema = z.object({
-  /** Instance ID of the phone number to remove */
-  phone_number_id: z.string().describe('Instance ID of the phone number to remove'),
+  /** Instance ID of the phone number to remove (from hidden field) */
+  phone_number_id: z.string().optional().describe('Instance ID of the phone number to remove'),
+  /** Instance ID passed automatically from modal context */
+  instance_id: z.string().optional().describe('Instance ID from modal context'),
+}).refine((data) => data.phone_number_id || data.instance_id, {
+  message: 'Either phone_number_id or instance_id must be provided',
 })
 
 const RemovePhoneNumberOutputSchema = z.object({
@@ -29,7 +34,8 @@ export const removePhoneNumberRegistry: ToolDefinition<
   inputs: RemovePhoneNumberInputSchema,
   outputSchema: RemovePhoneNumberOutputSchema,
   handler: async (input, context) => {
-    const { phone_number_id } = input
+    // Accept either phone_number_id (from hidden field) or instance_id (from modal context)
+    const phoneNumberId = input.phone_number_id || input.instance_id
     const { appInstallationId, workplace } = context
 
     // Validate required context fields
@@ -43,12 +49,12 @@ export const removePhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // Validate phone_number_id is provided
-    if (!phone_number_id) {
+    // Validate phone number ID is provided (from either source)
+    if (!phoneNumberId) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required field: phone_number_id',
+          message: 'Missing required field: phone_number_id or instance_id',
         },
         billing: { credits: 0 },
       }
@@ -61,11 +67,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
     }
 
     // 1. Fetch the phone_number instance to get the phone value
-    console.log('[RemovePhoneNumber] Fetching phone_number instance:', phone_number_id)
+    console.log('[RemovePhoneNumber] Fetching phone_number instance:', phoneNumberId)
     let phoneNumberInstance: { id: string; phone?: string } | null = null
 
     try {
-      phoneNumberInstance = await instance.get(phone_number_id, instanceCtx)
+      phoneNumberInstance = await instance.get(phoneNumberId, instanceCtx)
       console.log('[RemovePhoneNumber] instance.get result:', JSON.stringify(phoneNumberInstance, null, 2))
     } catch (err) {
       console.error('[RemovePhoneNumber] Failed to fetch phone_number instance:', err)
@@ -82,7 +88,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
       return {
         output: {
           status: 'error',
-          message: `Phone number not found: ${phone_number_id}`,
+          message: `Phone number not found: ${phoneNumberId}`,
         },
         billing: { credits: 0 },
       }
@@ -139,10 +145,10 @@ export const removePhoneNumberRegistry: ToolDefinition<
     }
 
     // 4. Delete the phone_number instance
-    console.log('[RemovePhoneNumber] Deleting phone_number instance:', phone_number_id)
+    console.log('[RemovePhoneNumber] Deleting phone_number instance:', phoneNumberId)
 
     try {
-      await instance.delete(phone_number_id, instanceCtx)
+      await instance.delete(phoneNumberId, instanceCtx)
       console.log('[RemovePhoneNumber] Successfully deleted phone_number instance')
     } catch (err) {
       console.error('[RemovePhoneNumber] Failed to delete phone_number instance:', err)
