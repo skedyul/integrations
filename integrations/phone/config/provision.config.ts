@@ -752,18 +752,31 @@ const config: ProvisionConfig = {
                 },
               },
               // Phone numbers list as a field in the same card
+              // Uses iterable + itemTemplate for server-side pre-rendering
               {
                 component: 'List',
                 id: 'phone_numbers_list',
                 row: 1,
                 col: 0,
+                // Iterate over phone_numbers from page context (mode: 'many')
+                iterable: 'phone_numbers',
+                // Template for each item - {{ item.xyz }} resolves to each phone number's fields
+                itemTemplate: {
+                  component: 'ActionTile',
+                  span: 12,
+                  mdSpan: 12,
+                  lgSpan: 12,
+                  props: {
+                    id: '{{ item.id }}',
+                    label: '{{ item.phone }}',
+                    description: '{{ item.forwarding_phone_number }}',
+                    leftIcon: 'Phone',
+                  },
+                },
                 props: {
+                  title: 'Phone Numbers',
                   emptyMessage: 'No phone numbers registered yet.',
                 },
-                model: 'phone_number',
-                labelField: 'phone',
-                descriptionField: 'forwarding_phone_number',
-                icon: 'Phone',
               },
             ],
             layout: {
