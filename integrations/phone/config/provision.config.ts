@@ -258,7 +258,7 @@ const config: ProvisionConfig = {
           definitionHandle: 'phone', // Uses phone number validation/formatting
           required: true,
           unique: true,
-          system: true,
+          system: false, // Changed from true - system fields are skipped by createInstanceFlow
           description: 'The Phone number (E.164 format)',
           owner: 'APP', // Provisioned by app from Twilio
         },
