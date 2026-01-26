@@ -754,17 +754,21 @@ const config: ProvisionConfig = {
                         required: false,
                       },
                     },
-                    // Model select using system.models Liquid injection
+                    // Model select using iterable pattern for system.models
                     {
                       component: 'Select',
                       id: 'linked_model',
                       row: 2,
                       col: 0,
+                      iterable: '{{ system.models }}',
+                      itemTemplate: {
+                        value: '{{ item.value }}',
+                        label: '{{ item.label }}',
+                      },
                       props: {
                         label: 'Link to Model',
                         placeholder: 'Select a model',
                         helpText: 'Contacts will be linked to records in this model',
-                        items: '{{ system.models | json }}',
                         required: true,
                       },
                     },
