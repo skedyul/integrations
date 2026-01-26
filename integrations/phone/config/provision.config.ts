@@ -444,6 +444,7 @@ const config: ProvisionConfig = {
           items: [
             { label: 'Compliance', href: '/compliance', icon: 'Shield' },
             { label: 'Phone Numbers', href: '/phone-numbers', icon: 'Phone' },
+            { label: 'Contacts', href: '/contacts', icon: 'Users' },
           ],
         },
       ],
@@ -853,6 +854,124 @@ const config: ProvisionConfig = {
               rows: [
                 { columns: [{ field: 'new_phone_number_form', colSpan: 12 }] },
                 { columns: [{ field: 'phone_numbers_list', colSpan: 12 }] },
+              ],
+            },
+          },
+        },
+      ],
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Contacts Page
+    // ───────────────────────────────────────────────────────────────────────
+    // List view of contact model associations.
+    // Allows linking the shared contact model to workspace models.
+    //
+    {
+      type: 'LIST',
+      title: 'Contacts',
+      path: '/contacts',
+      navigation: true,
+      context: {
+        contact_associations: {
+          model: 'contact',
+          mode: 'many',
+        },
+      },
+      blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          form: {
+            formVersion: 'v2',
+            id: 'contact-associations-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'new_contact_association',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Contact Associations',
+                  description: 'Link contacts to models in your workspace to enable communication channels.',
+                  mode: 'field',
+                  button: {
+                    label: 'Add Model Association',
+                    variant: 'outline',
+                    size: 'sm',
+                  },
+                },
+                modalForm: {
+                  header: {
+                    title: 'Add Contact Association',
+                    description: 'Select a model to associate contacts with for communication.',
+                  },
+                  handler: 'create_contact_association',
+                  fields: [
+                    {
+                      component: 'Select',
+                      id: 'linked_model',
+                      row: 0,
+                      col: 0,
+                      iterable: '{{ system.models }}',
+                      itemTemplate: {
+                        value: '{{ item.value }}',
+                        label: '{{ item.label }}',
+                      },
+                      props: {
+                        label: 'Model',
+                        placeholder: 'Select a model',
+                        helpText: 'Contacts will be linked to records in this model for sending messages.',
+                        required: true,
+                      },
+                    },
+                  ],
+                  layout: {
+                    type: 'form',
+                    rows: [
+                      { columns: [{ field: 'linked_model', colSpan: 12 }] },
+                    ],
+                  },
+                  actions: [
+                    {
+                      handle: 'create_contact_association',
+                      label: 'Create Association',
+                      handler: 'create_contact_association',
+                      icon: 'Plus',
+                      variant: 'primary',
+                    },
+                  ],
+                },
+              },
+              {
+                component: 'List',
+                id: 'contact_associations_list',
+                row: 1,
+                col: 0,
+                iterable: '{{ contact_associations }}',
+                itemTemplate: {
+                  component: 'ActionTile',
+                  span: 12,
+                  mdSpan: 12,
+                  lgSpan: 12,
+                  props: {
+                    id: '{{ item.id }}',
+                    label: '{{ item.phone }}',
+                    description: '{{ item.opt_in }}',
+                    leftIcon: 'Users',
+                  },
+                },
+                props: {
+                  title: 'Contact Associations',
+                  emptyMessage: 'No contact associations configured yet.',
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'new_contact_association', colSpan: 12 }] },
+                { columns: [{ field: 'contact_associations_list', colSpan: 12 }] },
               ],
             },
           },
