@@ -434,7 +434,7 @@ const config: ProvisionConfig = {
     sidebar: {
       sections: [
         {
-          title: 'Resources',
+          // No section title - items appear directly in sidebar
           items: [
             { label: 'Compliance', href: '/compliance', icon: 'Shield' },
             { label: 'Phone Numbers', href: '/phone-numbers', icon: 'Phone' },
@@ -462,6 +462,7 @@ const config: ProvisionConfig = {
       type: 'INSTANCE',
       title: 'Compliance',
       path: '/compliance',
+      default: true, // This is the landing page for the app installation
       navigation: true,
       context: {
         compliance_record: {
