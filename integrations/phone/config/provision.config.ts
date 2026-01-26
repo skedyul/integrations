@@ -764,7 +764,7 @@ const config: ProvisionConfig = {
                         label: 'Link to Model',
                         placeholder: 'Select a model',
                         helpText: 'Contacts will be linked to records in this model',
-                        items: '{{ system.models }}',
+                        items: '{{ system.models | json }}',
                         required: true,
                       },
                     },
