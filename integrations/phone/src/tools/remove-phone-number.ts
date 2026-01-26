@@ -165,6 +165,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
         message: `Successfully removed phone number ${phoneValue}`,
       },
       billing: { credits: 0 },
+      redirectUrl: `/phone_numbers`,
     }
   },
 }
