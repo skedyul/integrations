@@ -864,8 +864,8 @@ const config: ProvisionConfig = {
     // ───────────────────────────────────────────────────────────────────────
     // Contacts Page
     // ───────────────────────────────────────────────────────────────────────
-    // List view of contact model associations.
-    // Allows linking the shared contact model to workspace models.
+    // List view of contact association links.
+    // Allows linking communication channels to workspace models for contact association.
     //
     {
       type: 'LIST',
@@ -873,7 +873,9 @@ const config: ProvisionConfig = {
       path: '/contacts',
       navigation: true,
       context: {
-        contact_associations: {
+        contact_association_links: {
+          // This will be loaded from ContactAssociationLink model
+          // scoped to the current channel context
           model: 'contact',
           mode: 'many',
         },
@@ -884,29 +886,29 @@ const config: ProvisionConfig = {
           restructurable: false,
           form: {
             formVersion: 'v2',
-            id: 'contact-associations-form',
+            id: 'contact-association-links-form',
             fields: [
               {
                 component: 'FieldSetting',
-                id: 'new_contact_association',
+                id: 'new_contact_association_link',
                 row: 0,
                 col: 0,
                 props: {
-                  label: 'Contact Associations',
-                  description: 'Link contacts to models in your workspace to enable communication channels.',
+                  label: 'Contact Association Links',
+                  description: 'Link models to this channel to enable contact association when communicating.',
                   mode: 'field',
                   button: {
-                    label: 'Add Model Association',
+                    label: 'Add Model Link',
                     variant: 'outline',
                     size: 'sm',
                   },
                 },
                 modalForm: {
                   header: {
-                    title: 'Add Contact Association',
-                    description: 'Select a model to associate contacts with for communication.',
+                    title: 'Add Contact Association Link',
+                    description: 'Select a model and identifier field to associate contacts with.',
                   },
-                  handler: 'create_contact_association',
+                  handler: 'create_contact_association_link',
                   fields: [
                     {
                       component: 'Select',
@@ -925,18 +927,37 @@ const config: ProvisionConfig = {
                         required: true,
                       },
                     },
+                    {
+                      component: 'Select',
+                      id: 'identifier_field',
+                      row: 1,
+                      col: 0,
+                      // Fields are filtered by the selected model - uses phone definition
+                      iterable: '{{ system.fields | where: "modelId", linked_model | where: "definition.handle", "phone" }}',
+                      itemTemplate: {
+                        value: '{{ item.id }}',
+                        label: '{{ item.label }}',
+                      },
+                      props: {
+                        label: 'Identifier Field',
+                        placeholder: 'Select a phone field',
+                        helpText: 'The field containing the phone number to use as the contact identifier.',
+                        required: true,
+                      },
+                    },
                   ],
                   layout: {
                     type: 'form',
                     rows: [
                       { columns: [{ field: 'linked_model', colSpan: 12 }] },
+                      { columns: [{ field: 'identifier_field', colSpan: 12 }] },
                     ],
                   },
                   actions: [
                     {
-                      handle: 'create_contact_association',
-                      label: 'Create Association',
-                      handler: 'create_contact_association',
+                      handle: 'create_contact_association_link',
+                      label: 'Create Link',
+                      handler: 'create_contact_association_link',
                       icon: 'Plus',
                       variant: 'primary',
                     },
@@ -945,10 +966,10 @@ const config: ProvisionConfig = {
               },
               {
                 component: 'List',
-                id: 'contact_associations_list',
+                id: 'contact_association_links_list',
                 row: 1,
                 col: 0,
-                iterable: '{{ contact_associations }}',
+                iterable: '{{ contact_association_links }}',
                 itemTemplate: {
                   component: 'ActionTile',
                   span: 12,
@@ -956,22 +977,22 @@ const config: ProvisionConfig = {
                   lgSpan: 12,
                   props: {
                     id: '{{ item.id }}',
-                    label: '{{ item.phone }}',
-                    description: '{{ item.opt_in }}',
+                    label: '{{ item.model.name }}',
+                    description: 'Identifier: {{ item.identifierField.label }}',
                     leftIcon: 'Users',
                   },
                 },
                 props: {
-                  title: 'Contact Associations',
-                  emptyMessage: 'No contact associations configured yet.',
+                  title: 'Linked Models',
+                  emptyMessage: 'No models linked yet. Add a model link to enable contact association.',
                 },
               },
             ],
             layout: {
               type: 'form',
               rows: [
-                { columns: [{ field: 'new_contact_association', colSpan: 12 }] },
-                { columns: [{ field: 'contact_associations_list', colSpan: 12 }] },
+                { columns: [{ field: 'new_contact_association_link', colSpan: 12 }] },
+                { columns: [{ field: 'contact_association_links_list', colSpan: 12 }] },
               ],
             },
           },

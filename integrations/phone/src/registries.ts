@@ -33,6 +33,7 @@ import { submitComplianceDocumentRegistry } from './tools/submit-compliance-docu
 import { checkComplianceStatusRegistry } from './tools/check-compliance-status'
 import { submitNewPhoneNumberRegistry } from './tools/submit-new-phone-number'
 import { removePhoneNumberRegistry } from './tools/remove-phone-number'
+import { createContactAssociationLinkRegistry } from './tools/create-contact-association-link'
 
 /**
  * Tool Registry
@@ -54,6 +55,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Remove a phone number from the account, deleting its SMS channel. */
   remove_phone_number: removePhoneNumberRegistry,
+
+  /** Create a contact association link between a channel and a model. */
+  create_contact_association_link: createContactAssociationLinkRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
