@@ -368,18 +368,24 @@ const config: ProvisionConfig = {
   //
   channels: [
     {
-      handle: 'sms',
-      name: 'SMS',
-      icon: 'MessageSquare',
-      tools: {
-        send_message: 'send_sms', // References tool from tools.config.ts
+      handle: 'phone',
+      name: 'Phone',
+      icon: 'Phone',
+      capabilities: {
+        messaging: {
+          name: 'SMS',
+          icon: 'MessageSquare',
+          receive: 'receive-sms',
+          send: 'send-sms',
+        },
+        voice: {
+          name: 'Voice',
+          icon: 'Phone',
+          receive: 'receive-call',
+          send: 'make-call',
+        },
       },
-      // Model dependencies for this channel
-      requires: [
-        { model: 'phone_number' }, // INTERNAL - app provisions
-        { model: 'contact', fields: ['phone'] }, // SHARED - user maps phone field
-      ],
-    },
+    }
   ],
 
   // ─────────────────────────────────────────────────────────────────────────

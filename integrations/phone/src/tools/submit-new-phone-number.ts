@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, resource } from 'skedyul'
+import skedyul, { type z as ZodType, instance, communicationChannel } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -295,20 +295,23 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         }
       }
 
-      // 8. Link the SHARED 'contact' model to user's selected model
-      // This creates an AppResourceInstance linking the app's contact model to the user's model
-      console.log('[PhoneNumber] Linking SHARED contact model to user model:', linked_model)
+      // 8. Create communication channel and link the SHARED 'contact' model to user's selected model
+      // This creates the channel and the AppResourceInstance in a single operation
+      console.log('[PhoneNumber] Creating communication channel with model link:', linked_model)
       try {
-        const linkResult = await resource.link({
-          handle: 'contact', // SHARED model handle from provision config
-          targetModelId: linked_model, // User's selected model
-          // Note: channelId will be set when the communication channel is created
+        const channel = await communicationChannel.create('phone', {
+          name: name ?? `Phone ${purchasedNumber.phoneNumber}`,
+          identifierValue: purchasedNumber.phoneNumber,
+          link: {
+            handle: 'contact', // SHARED model handle from provision config
+            targetModelId: linked_model, // User's selected model
+          },
         })
-        console.log('[PhoneNumber] Resource link result:', JSON.stringify(linkResult, null, 2))
-      } catch (linkErr) {
-        console.error('[PhoneNumber] Failed to link contact model:', linkErr)
-        // Continue even if linking fails - the phone number was already created
-        // The user can reconfigure the model link later in settings
+        console.log('[PhoneNumber] Channel created:', JSON.stringify(channel, null, 2))
+      } catch (channelErr) {
+        console.error('[PhoneNumber] Failed to create communication channel:', channelErr)
+        // Continue even if channel creation fails - the phone number was already created
+        // The user can create the channel later in settings
       }
 
       return {
