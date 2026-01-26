@@ -206,14 +206,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       }
     }
 
-    // Build the instance context for API calls
-    const instanceCtx = {
-      appInstallationId,
-      workplace,
-    }
-
     // 1. Get or create the compliance record for this installation
-    const { data: records } = await instance.list('compliance_record', instanceCtx, {
+    const { data: records } = await instance.list('compliance_record', {
       page: 1,
       limit: 1,
     })
@@ -242,7 +236,6 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           file: fileId, // Store only the file ID, not the S3 path
           status: 'PENDING',
         },
-        instanceCtx,
       )
       console.log('[Compliance] Created new record:', JSON.stringify(complianceRecord, null, 2))
     } else {
@@ -314,9 +307,9 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 
     try {
       const updatedInstance = await instance.update(
+        'compliance_record',
         complianceRecord.id,
         updateData,
-        instanceCtx,
       )
       console.log('[Compliance] Instance updated successfully:', JSON.stringify(updatedInstance, null, 2))
     } catch (updateError) {
@@ -460,6 +453,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       // Step 7: Update compliance_record with Twilio resource SIDs
       // ─────────────────────────────────────────────────────────────────────────
       await instance.update(
+        'compliance_record',
         complianceRecord.id,
         {
           bundle_sid: bundle.sid,
@@ -468,7 +462,6 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           address_sid: twilioAddress.sid, // Required for AU phone purchases
           status: 'PENDING_REVIEW',
         },
-        instanceCtx,
       )
 
       console.log('[Compliance] Compliance submission complete:', {
@@ -497,12 +490,12 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 
       // Revert status back to PENDING on error
       await instance.update(
+        'compliance_record',
         complianceRecord.id,
         {
           status: 'PENDING',
           rejection_reason: err instanceof Error ? err.message : 'Unknown error during submission',
         },
-        instanceCtx,
       )
 
       return {

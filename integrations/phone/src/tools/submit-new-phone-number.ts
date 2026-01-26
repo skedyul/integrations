@@ -76,20 +76,12 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // Build the instance context for API calls
-    const instanceCtx = {
-      appInstallationId,
-      workplace,
-    }
-
     // 1. Fetch the compliance record and validate it's approved
     console.log('[PhoneNumber] Fetching compliance record:', complianceRecordId)
-    console.log('[PhoneNumber] Instance context:', JSON.stringify(instanceCtx, null, 2))
     let complianceRecord: { id: string; status?: string; business_name?: string; bundle_sid?: string; address_sid?: string } | null = null
 
     try {
-      // instance.get takes (id, ctx) - no model handle needed since IDs are globally unique
-      complianceRecord = await instance.get(complianceRecordId, instanceCtx)
+      complianceRecord = await instance.get('compliance_record', complianceRecordId)
       console.log('[PhoneNumber] instance.get result:', JSON.stringify(complianceRecord, null, 2))
     } catch (err) {
       console.error('[PhoneNumber] Failed to fetch compliance record:', err)
@@ -107,7 +99,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       // This helps diagnose if the issue is mismatched appInstallationId
       console.log('[PhoneNumber] Direct get returned null, trying list with filter...')
       try {
-        const listResult = await instance.list('compliance_record', instanceCtx, {
+        const listResult = await instance.list('compliance_record', {
           filter: { id: complianceRecordId },
           limit: 1,
         })
@@ -279,13 +271,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     }
     
     console.log('[PhoneNumber] Instance data to create:', JSON.stringify(phoneNumberData, null, 2))
-    console.log('[PhoneNumber] Instance context:', JSON.stringify(instanceCtx, null, 2))
 
     try {
       const phoneNumberInstance = await instance.create(
         'phone_number',
         phoneNumberData,
-        instanceCtx,
       )
 
       console.log('[PhoneNumber] Created phone_number instance result:', JSON.stringify(phoneNumberInstance, null, 2))
@@ -312,7 +302,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           handle: 'contact', // SHARED model handle from provision config
           targetModelId: linked_model, // User's selected model
           // Note: channelId will be set when the communication channel is created
-        }, instanceCtx)
+        })
         console.log('[PhoneNumber] Resource link result:', JSON.stringify(linkResult, null, 2))
       } catch (linkErr) {
         console.error('[PhoneNumber] Failed to link contact model:', linkErr)

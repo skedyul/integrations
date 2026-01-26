@@ -64,14 +64,8 @@ export const checkComplianceStatusRegistry: ToolDefinition<
       }
     }
 
-    // Build the instance context for API calls
-    const instanceCtx = {
-      appInstallationId,
-      workplace,
-    }
-
     // 1. Get the compliance record for this installation
-    const { data: records } = await instance.list('compliance_record', instanceCtx, {
+    const { data: records } = await instance.list('compliance_record', {
       page: 1,
       limit: 1,
     })
@@ -132,12 +126,12 @@ export const checkComplianceStatusRegistry: ToolDefinition<
         })
 
         await instance.update(
+          'compliance_record',
           complianceRecord.id,
           {
             status: newStatus,
             rejection_reason: bundle.failureReason || null,
           },
-          instanceCtx,
         )
       }
 

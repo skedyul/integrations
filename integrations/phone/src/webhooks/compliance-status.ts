@@ -92,12 +92,6 @@ async function handleComplianceStatusCallback(
     }
   }
 
-  // Build instance context for SDK calls
-  const instanceCtx = {
-    appInstallationId: context.appInstallationId,
-    workplace: context.workplace,
-  }
-
   // Map Twilio status to our internal status
   const internalStatus = TWILIO_STATUS_MAP[status] ?? status
 
@@ -113,12 +107,12 @@ async function handleComplianceStatusCallback(
   try {
     // Update the compliance record with the new status
     await instance.update(
+      'compliance_record',
       complianceRecordId,
       {
         status: internalStatus,
         rejection_reason: failureReason ?? null,
       },
-      instanceCtx,
     )
 
     console.log('[Compliance Webhook] Successfully updated compliance record')

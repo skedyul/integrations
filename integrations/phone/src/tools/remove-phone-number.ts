@@ -62,18 +62,12 @@ export const removePhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // Build the instance context for API calls
-    const instanceCtx = {
-      appInstallationId,
-      workplace,
-    }
-
     // 1. Fetch the phone_number instance to get the phone value
     console.log('[RemovePhoneNumber] Fetching phone_number instance:', phoneNumberId)
     let phoneNumberInstance: { id: string; phone?: string } | null = null
 
     try {
-      phoneNumberInstance = await instance.get(phoneNumberId, instanceCtx)
+      phoneNumberInstance = await instance.get('phone_number', phoneNumberId)
       console.log('[RemovePhoneNumber] instance.get result:', JSON.stringify(phoneNumberInstance, null, 2))
     } catch (err) {
       console.error('[RemovePhoneNumber] Failed to fetch phone_number instance:', err)
@@ -150,7 +144,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
     console.log('[RemovePhoneNumber] Deleting phone_number instance:', phoneNumberId)
 
     try {
-      await instance.delete(phoneNumberId, instanceCtx)
+      await instance.delete('phone_number', phoneNumberId)
       console.log('[RemovePhoneNumber] Successfully deleted phone_number instance')
     } catch (err) {
       console.error('[RemovePhoneNumber] Failed to delete phone_number instance:', err)
