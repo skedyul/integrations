@@ -372,7 +372,13 @@ const config: ProvisionConfig = {
       name: 'Phone',
       icon: 'Phone',
       // Field definition type for filtering identifier fields (e.g., 'phone', 'email')
-      identifierType: 'phone',
+      identifierField: {
+        handle: 'phone',
+        label: 'Phone',
+        definition: {
+          handle: 'phone'
+        }
+      },
       capabilities: {
         messaging: {
           name: 'SMS',
