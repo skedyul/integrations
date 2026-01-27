@@ -17,8 +17,6 @@ const SubmitNewPhoneNumberInputSchema = z.object({
   compliance_record: z.string().describe('Instance ID of the compliance record'),
   /** Friendly name for the phone number */
   name: z.string().optional().describe('Friendly name for the phone number'),
-  /** User model ID to link for communication */
-  linked_model: z.string().describe('User model ID to link for communication'),
 })
 
 const SubmitNewPhoneNumberOutputSchema = z.object({
@@ -41,7 +39,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
   inputs: SubmitNewPhoneNumberInputSchema,
   outputSchema: SubmitNewPhoneNumberOutputSchema,
   handler: async (input, context) => {
-    const { compliance_record: complianceRecordId, name, linked_model } = input
+    const { compliance_record: complianceRecordId, name } = input
     const { appInstallationId, workplace, env } = context
 
     // Validate required context fields
@@ -61,17 +59,6 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         output: {
           status: 'error',
           message: 'Missing required field: compliance_record',
-        },
-        billing: { credits: 0 },
-      }
-    }
-
-    // Validate linked_model is provided
-    if (!linked_model) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required field: linked_model. Please select a model to link contacts to.',
         },
         billing: { credits: 0 },
       }
@@ -295,17 +282,12 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         }
       }
 
-      // 8. Create communication channel and link the SHARED 'contact' model to user's selected model
-      // This creates the channel and the AppResourceInstance in a single operation
-      console.log('[PhoneNumber] Creating communication channel with model link:', linked_model)
+      // 8. Create communication channel (model links are configured separately on the Contacts page)
+      console.log('[PhoneNumber] Creating communication channel...')
       try {
         const channel = await communicationChannel.create('phone', {
           name: name ?? `Phone ${purchasedNumber.phoneNumber}`,
           identifierValue: purchasedNumber.phoneNumber,
-          link: {
-            handle: 'contact', // SHARED model handle from provision config
-            targetModelId: linked_model, // User's selected model
-          },
         })
         console.log('[PhoneNumber] Channel created:', JSON.stringify(channel, null, 2))
       } catch (channelErr) {

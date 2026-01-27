@@ -56,7 +56,11 @@ export const toolRegistry: ToolRegistry = {
   /** Remove a phone number from the account, deleting its SMS channel. */
   remove_phone_number: removePhoneNumberRegistry,
 
-  /** Create a contact association link between a channel and a model. */
+  /**
+   * Create a contact association link between a channel and a model.
+   * @deprecated Use the system-provided contact association link flow instead.
+   * This is kept for backwards compatibility and will be removed in a future version.
+   */
   create_contact_association_link: createContactAssociationLinkRegistry,
 }
 

@@ -371,6 +371,8 @@ const config: ProvisionConfig = {
       handle: 'phone',
       name: 'Phone',
       icon: 'Phone',
+      // Field definition type for filtering identifier fields (e.g., 'phone', 'email')
+      identifierType: 'phone',
       capabilities: {
         messaging: {
           name: 'SMS',
@@ -762,29 +764,11 @@ const config: ProvisionConfig = {
                         required: false,
                       },
                     },
-                    // Model select using iterable pattern for system.models
-                    {
-                      component: 'Select',
-                      id: 'linked_model',
-                      row: 2,
-                      col: 0,
-                      iterable: '{{ system.models }}',
-                      itemTemplate: {
-                        value: '{{ item.value }}',
-                        label: '{{ item.label }}',
-                      },
-                      props: {
-                        label: 'Link to Model',
-                        placeholder: 'Select a model',
-                        helpText: 'Contacts will be linked to records in this model',
-                        required: true,
-                      },
-                    },
                     // Hidden field to pass the compliance_record instance ID
                     {
                       component: 'Input',
                       id: 'compliance_record',
-                      row: 3,
+                      row: 2,
                       col: 0,
                       props: {
                         type: 'hidden',
@@ -797,7 +781,6 @@ const config: ProvisionConfig = {
                     rows: [
                       { columns: [{ field: 'compliance_record_info', colSpan: 12 }] },
                       { columns: [{ field: 'name', colSpan: 12 }] },
-                      { columns: [{ field: 'linked_model', colSpan: 12 }] },
                       // Hidden field doesn't need layout, but including for completeness
                       { columns: [{ field: 'compliance_record', colSpan: 0 }] },
                     ],
@@ -862,143 +845,10 @@ const config: ProvisionConfig = {
     },
 
     // ───────────────────────────────────────────────────────────────────────
-    // Contacts Page
+    // NOTE: Contacts Page has been removed - it's now auto-injected by the
+    // core system for any app with channels defined. The page is rendered
+    // from apps/web/src/app/[subdomain]/settings/apps/[appHandle]/install/[installId]/contacts/
     // ───────────────────────────────────────────────────────────────────────
-    // List view of contact association links.
-    // Allows linking communication channels to workspace models for contact association.
-    //
-    {
-      type: 'LIST',
-      title: 'Contacts',
-      path: '/contacts',
-      navigation: true,
-      context: {
-        contact_association_links: {
-          // This will be loaded from ContactAssociationLink model
-          // scoped to the current channel context
-          model: 'contact',
-          mode: 'many',
-        },
-      },
-      blocks: [
-        {
-          type: 'card',
-          restructurable: false,
-          form: {
-            formVersion: 'v2',
-            id: 'contact-association-links-form',
-            fields: [
-              {
-                component: 'FieldSetting',
-                id: 'new_contact_association_link',
-                row: 0,
-                col: 0,
-                props: {
-                  label: 'Contact Association Links',
-                  description: 'Link models to this channel to enable contact association when communicating.',
-                  mode: 'field',
-                  button: {
-                    label: 'Add Model Link',
-                    variant: 'outline',
-                    size: 'sm',
-                  },
-                },
-                modalForm: {
-                  header: {
-                    title: 'Add Contact Association Link',
-                    description: 'Select a model and identifier field to associate contacts with.',
-                  },
-                  handler: 'create_contact_association_link',
-                  fields: [
-                    {
-                      component: 'Select',
-                      id: 'linked_model',
-                      row: 0,
-                      col: 0,
-                      iterable: '{{ system.models }}',
-                      itemTemplate: {
-                        value: '{{ item.value }}',
-                        label: '{{ item.label }}',
-                      },
-                      props: {
-                        label: 'Model',
-                        placeholder: 'Select a model',
-                        helpText: 'Contacts will be linked to records in this model for sending messages.',
-                        required: true,
-                      },
-                    },
-                    {
-                      component: 'Select',
-                      id: 'identifier_field',
-                      row: 1,
-                      col: 0,
-                      // Fields are filtered by the selected model - uses phone definition
-                      iterable: '{{ system.fields | where: "modelId", linked_model | where: "definition.handle", "phone" }}',
-                      itemTemplate: {
-                        value: '{{ item.id }}',
-                        label: '{{ item.label }}',
-                      },
-                      props: {
-                        label: 'Identifier Field',
-                        placeholder: 'Select a phone field',
-                        helpText: 'The field containing the phone number to use as the contact identifier.',
-                        required: true,
-                      },
-                    },
-                  ],
-                  layout: {
-                    type: 'form',
-                    rows: [
-                      { columns: [{ field: 'linked_model', colSpan: 12 }] },
-                      { columns: [{ field: 'identifier_field', colSpan: 12 }] },
-                    ],
-                  },
-                  actions: [
-                    {
-                      handle: 'create_contact_association_link',
-                      label: 'Create Link',
-                      handler: 'create_contact_association_link',
-                      icon: 'Plus',
-                      variant: 'primary',
-                    },
-                  ],
-                },
-              },
-              {
-                component: 'List',
-                id: 'contact_association_links_list',
-                row: 1,
-                col: 0,
-                iterable: '{{ contact_association_links }}',
-                itemTemplate: {
-                  component: 'ActionTile',
-                  span: 12,
-                  mdSpan: 12,
-                  lgSpan: 12,
-                  props: {
-                    id: '{{ item.id }}',
-                    label: '{{ item.model.name }}',
-                    description: 'Identifier: {{ item.identifierField.label }}',
-                    leftIcon: 'Users',
-                  },
-                },
-                props: {
-                  title: 'Linked Models',
-                  emptyMessage: 'No models linked yet. Add a model link to enable contact association.',
-                },
-              },
-            ],
-            layout: {
-              type: 'form',
-              rows: [
-                { columns: [{ field: 'new_contact_association_link', colSpan: 12 }] },
-                { columns: [{ field: 'contact_association_links_list', colSpan: 12 }] },
-              ],
-            },
-          },
-        },
-      ],
-    },
 
     // ───────────────────────────────────────────────────────────────────────
     // Phone Number Detail Page
