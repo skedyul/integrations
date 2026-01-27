@@ -24,7 +24,6 @@ const SubmitNewPhoneNumberOutputSchema = z.object({
   phoneNumber: z.string().optional().describe('The purchased phone number in E.164 format'),
   phoneNumberSid: z.string().optional().describe('Twilio phone number SID'),
   message: z.string().optional().describe('Status message'),
-  redirectUrl: z.string().optional().describe('Optional URL for client navigation after success'),
 })
 
 type SubmitNewPhoneNumberInput = ZodType.infer<typeof SubmitNewPhoneNumberInputSchema>
@@ -302,9 +301,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           phoneNumber: purchasedNumber.phoneNumber,
           phoneNumberSid: purchasedNumber.sid,
           message: `Successfully purchased phone number ${purchasedNumber.phoneNumber}`,
-          redirectUrl: `/phone_numbers/${phoneNumberInstance.id}/overview`,
         },
         billing: { credits: 1 },
+        effect: {
+          redirect: `/phone_numbers/${phoneNumberInstance.id}/overview`,
+        },
       }
     } catch (err) {
       console.error('[PhoneNumber] Failed to create phone_number instance:', err)
