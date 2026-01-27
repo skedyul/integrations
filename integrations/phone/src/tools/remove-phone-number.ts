@@ -166,7 +166,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
       },
       billing: { credits: 0 },
       effect: {
-        redirect: `/phone_numbers`,
+        redirect: `/phone-numbers`,
       },
     }
   },

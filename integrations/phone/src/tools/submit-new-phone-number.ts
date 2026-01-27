@@ -304,7 +304,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         },
         billing: { credits: 1 },
         effect: {
-          redirect: `/phone_numbers/${phoneNumberInstance.id}/overview`,
+          redirect: `/phone-numbers/${phoneNumberInstance.id}/overview`,
         },
       }
     } catch (err) {
