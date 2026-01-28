@@ -282,54 +282,7 @@ const config: ProvisionConfig = {
           owner: 'WORKPLACE', // User configures this
         },
       ],
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // Contact (SHARED)
-    // ───────────────────────────────────────────────────────────────────────
-    // User maps to their existing contact/customer model during installation.
-    // App adds system fields for SMS functionality.
-    //
-    {
-      handle: 'contact',
-      name: 'Contact',
-      namePlural: 'Contacts',
-      scope: 'SHARED',
-      fields: [
-        // User maps their existing phone field
-        {
-          handle: 'phone',
-          label: 'Phone Number',
-          definitionHandle: 'phone',
-          required: true,
-          system: false,
-          unique: false,
-          visibility: { data: true, list: true, filters: true },
-          owner: 'WORKPLACE',
-        },
-        // App-managed opt-in status for SMS
-        {
-          handle: 'opt_in',
-          label: 'Opt In',
-          definitionHandle: 'system/opt_in',
-          required: false,
-          system: true,
-          defaultValue: { value: ['OPT_IN'] },
-          visibility: { data: false, list: true, filters: true },
-          owner: 'BOTH', // App can update, user can view/edit
-        },
-        // App-managed last contacted timestamp
-        {
-          handle: 'last_contacted_at',
-          label: 'Last Contacted At',
-          definitionHandle: 'system/last_contacted_at',
-          required: false,
-          system: true,
-          visibility: { data: false, list: true, filters: true },
-          owner: 'APP', // Auto-updated when messages are sent
-        },
-      ],
-    },
+    }
   ],
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -489,7 +442,6 @@ const config: ProvisionConfig = {
           items: [
             { label: 'Compliance', href: '/compliance', icon: 'Shield' },
             { label: 'Phone Numbers', href: '/phone-numbers', icon: 'Phone' },
-            { label: 'Contacts', href: '/contacts', icon: 'Users' },
           ],
         },
       ],
@@ -975,6 +927,15 @@ const config: ProvisionConfig = {
                 { columns: [{ field: 'name', colSpan: 12 }] },
               ],
             },
+            actions: [
+              {
+                handle: 'save_phone_details',
+                label: 'Save',
+                handler: 'update_phone_details',
+                icon: 'Save',
+                variant: 'primary',
+              },
+            ],
           },
         },
         // Danger Zone card for destructive actions
