@@ -35,6 +35,7 @@ import { submitNewPhoneNumberRegistry } from './tools/submit-new-phone-number'
 import { removePhoneNumberRegistry } from './tools/remove-phone-number'
 import { createContactAssociationLinkRegistry } from './tools/create-contact-association-link'
 import { updatePhoneDetailsRegistry } from './tools/update-phone-details'
+import { updateForwardingNumberRegistry } from './tools/update-forwarding-number'
 
 /**
  * Tool Registry
@@ -59,6 +60,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Update phone number details (name) in both the phone_number model and communication channel. */
   update_phone_details: updatePhoneDetailsRegistry,
+
+  /** Update the forwarding_phone_number for a phone number instance. */
+  update_forwarding_number: updateForwardingNumberRegistry,
 
   /**
    * Create a contact association link between a channel and a model.

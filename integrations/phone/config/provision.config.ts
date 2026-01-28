@@ -1159,6 +1159,15 @@ const config: ProvisionConfig = {
                 { columns: [{ field: 'forwarding_phone_number', colSpan: 12 }] },
               ],
             },
+            actions: [
+              {
+                handle: 'save_forwarding_number',
+                label: 'Save',
+                handler: 'update_forwarding_number',
+                icon: 'Save',
+                variant: 'primary',
+              },
+            ],
           },
         },
       ],
