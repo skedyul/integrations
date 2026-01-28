@@ -932,7 +932,6 @@ const config: ProvisionConfig = {
                 handle: 'save_phone_details',
                 label: 'Save',
                 handler: 'update_phone_details',
-                icon: 'Save',
                 variant: 'primary',
               },
             ],
