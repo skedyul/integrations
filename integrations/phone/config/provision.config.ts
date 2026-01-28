@@ -371,6 +371,9 @@ const config: ProvisionConfig = {
       handle: 'phone',
       name: 'Phone',
       icon: 'Phone',
+
+      identifier: "phone",
+      
       // Field definition type for filtering identifier fields (e.g., 'phone', 'email')
       fields: [
         {
@@ -379,7 +382,6 @@ const config: ProvisionConfig = {
           definition: {
             handle: 'phone'
           },
-          identifier: true,
           visibility: {
             data: true,
             list: true,
@@ -406,20 +408,20 @@ const config: ProvisionConfig = {
           required: false,
           visibility: { data: false, list: true, filters: true },
           permissions: { read: true, write: false },
-        },
+        }
       ],
       capabilities: {
         messaging: {
           name: 'SMS',
           icon: 'MessageSquare',
-          receive: 'receive-sms',
-          send: 'send-sms',
+          receive: 'receive_sms',
+          send: 'send_sms',
         },
         voice: {
           name: 'Voice',
           icon: 'Phone',
-          receive: 'receive-call',
-          send: 'make-call',
+          receive: 'receive_call',
+          send: 'make_call',
         },
       },
     }
