@@ -372,13 +372,42 @@ const config: ProvisionConfig = {
       name: 'Phone',
       icon: 'Phone',
       // Field definition type for filtering identifier fields (e.g., 'phone', 'email')
-      identifierField: {
-        handle: 'phone',
-        label: 'Phone',
-        definition: {
-          handle: 'phone'
-        }
-      },
+      fields: [
+        {
+          handle: 'phone',
+          label: 'Phone',
+          definition: {
+            handle: 'phone'
+          },
+          identifier: true,
+          visibility: {
+            data: true,
+            list: true,
+            filters: true,
+          },
+        },
+        {
+          handle: 'opt_in',
+          label: 'Opt In',
+          definition: {
+            handle: 'system/opt_in'
+          },
+          required: false,
+          defaultValue: { value: ['OPT_IN'] },
+          visibility: { data: true, list: true, filters: true },
+          permissions: { read: true, write: true },
+        },
+        {
+          handle: 'last_contacted_at',
+          label: 'Last Contacted At',
+          definition: {
+            handle: 'system/last_contacted_at'
+          },
+          required: false,
+          visibility: { data: false, list: true, filters: true },
+          permissions: { read: true, write: false },
+        },
+      ],
       capabilities: {
         messaging: {
           name: 'SMS',
