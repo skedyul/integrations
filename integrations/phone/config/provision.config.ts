@@ -372,9 +372,15 @@ const config: ProvisionConfig = {
       name: 'Phone',
       icon: 'Phone',
 
-      identifier: "phone",
-      
-      // Field definition type for filtering identifier fields (e.g., 'phone', 'email')
+      identifierField: {
+        handle: 'phone',
+        label: 'Phone',
+        definition: {
+          handle: 'phone',
+        },
+      },
+
+      // Identifier field definition for filtering identifier fields (e.g., 'phone', 'email')
       fields: [
         {
           handle: 'phone',
