@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, communicationChannel } from 'skedyul'
+import skedyul, { type z as ZodType, instance, communicationChannel, webhook } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -136,6 +136,32 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       capabilities: { voice: true, sms: true, mms: true },
     }
     console.log('[PhoneNumber] Hardcoded purchased number:', JSON.stringify(purchasedNumber, null, 2))
+
+    // Register webhook for receiving SMS and attach to Twilio phone number
+    console.log('[PhoneNumber] Registering receive_sms webhook...')
+    let smsWebhookUrl: string | null = null
+    try {
+      const webhookResult = await webhook.create('receive_sms', {
+        phoneNumber: purchasedNumber.phoneNumber,
+        phoneNumberSid: purchasedNumber.sid,
+      })
+      smsWebhookUrl = webhookResult.url
+      console.log('[PhoneNumber] Webhook registered:', JSON.stringify(webhookResult, null, 2))
+
+      // Update Twilio phone number with the SMS webhook URL
+      // Note: Using hardcoded phone number SID - assumes the number exists in Twilio
+      console.log('[PhoneNumber] Updating Twilio phone number with SMS webhook URL...')
+      const twilioClient = createTwilioClient(env)
+      await twilioClient.incomingPhoneNumbers(purchasedNumber.sid).update({
+        smsUrl: smsWebhookUrl,
+        smsMethod: 'POST',
+      })
+      console.log('[PhoneNumber] Twilio phone number updated with SMS webhook URL')
+    } catch (webhookErr) {
+      console.error('[PhoneNumber] Failed to register webhook or update Twilio:', webhookErr)
+      // Continue even if webhook registration fails - the phone number was already created
+      // The webhook can be configured later via communication channel lifecycle hooks
+    }
     // ══════════════════════════════════════════════════════════════════════════
 
     /* COMMENTED OUT: Actual Twilio API calls - uncomment when ready
@@ -243,6 +269,31 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     }
 
     console.log('[PhoneNumber] Purchased number:', JSON.stringify(purchasedNumber, null, 2))
+
+    // Register webhook for receiving SMS and attach to Twilio phone number
+    console.log('[PhoneNumber] Registering receive_sms webhook...')
+    let smsWebhookUrl: string | null = null
+    try {
+      const webhookResult = await webhook.create('receive_sms', {
+        phoneNumber: purchasedNumber.phoneNumber,
+        phoneNumberSid: purchasedNumber.sid,
+      })
+      smsWebhookUrl = webhookResult.url
+      console.log('[PhoneNumber] Webhook registered:', JSON.stringify(webhookResult, null, 2))
+
+      // Update Twilio phone number with the SMS webhook URL
+      console.log('[PhoneNumber] Updating Twilio phone number with SMS webhook URL...')
+      await twilioClient.incomingPhoneNumbers(purchasedNumber.sid).update({
+        smsUrl: smsWebhookUrl,
+        smsMethod: 'POST',
+      })
+      console.log('[PhoneNumber] Twilio phone number updated with SMS webhook URL')
+    } catch (webhookErr) {
+      console.error('[PhoneNumber] Failed to register webhook or update Twilio:', webhookErr)
+      // Continue even if webhook registration fails - the phone number was already created
+      // The webhook can be configured later via communication channel lifecycle hooks
+    }
+
     END COMMENTED OUT */
 
     // 7. Create phone_number instance and link to compliance record
