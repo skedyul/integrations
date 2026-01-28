@@ -168,9 +168,8 @@ async function handleReceiveSms(
     }
   }
 
-  // Use X-Skedyul-Webhook-Url header if present (set by platform for accurate signature validation)
-  // Otherwise fall back to request.url (which may be constructed from internal request headers)
-  let webhookUrl = getHeaderValue(headers, 'x-skedyul-webhook-url') ?? request.url
+  // Use request.url directly - the envelope format passes the original URL
+  let webhookUrl = request.url
   if (!webhookUrl) {
     return {
       status: 400,
@@ -297,7 +296,8 @@ async function handleReceiveSmsWithTokenExchange(
   }
 
   // Use X-Skedyul-Webhook-Url header if present (set by platform for accurate signature validation)
-  let webhookUrl = getHeaderValue(headers, 'x-skedyul-webhook-url') ?? request.url
+  // Use request.url directly - the envelope format passes the original URL
+  let webhookUrl = request.url
   if (!webhookUrl) {
     return { status: 400, body: { error: 'Missing webhook URL' } }
   }
