@@ -14,6 +14,7 @@
  */
 
 import { defineConfig } from 'skedyul'
+import pkg from './package.json'
 
 export default defineConfig({
   // ─────────────────────────────────────────────────────────────────────────
@@ -23,8 +24,8 @@ export default defineConfig({
   /** Display name shown in the app marketplace and settings */
   name: 'Email',
 
-  /** Semantic version - increment on each release */
-  version: '1.0.0',
+  /** Semantic version - loaded from package.json */
+  version: pkg.version,
 
   /** Short description for the app listing */
   description: 'Send and receive emails with your skedyul.app address',

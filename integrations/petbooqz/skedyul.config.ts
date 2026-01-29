@@ -1,9 +1,10 @@
 import { defineConfig } from 'skedyul'
+import pkg from './package.json'
 
 export default defineConfig({
   // App metadata
   name: 'Petbooqz',
-  version: '1.0.0',
+  version: pkg.version,
   description: 'Petbooqz veterinary practice management integration.',
 
   // Runtime configuration

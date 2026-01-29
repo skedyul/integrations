@@ -14,6 +14,7 @@
  */
 
 import { defineConfig } from 'skedyul'
+import pkg from './package.json'
 
 export default defineConfig({
   // ─────────────────────────────────────────────────────────────────────────
@@ -23,8 +24,8 @@ export default defineConfig({
   /** Display name shown in the app marketplace and settings */
   name: 'Phone',
 
-  /** Semantic version - increment on each release */
-  version: '1.0.0',
+  /** Semantic version - loaded from package.json, not to be used as an identifier, just helpful for debugging */
+  version: pkg.version,
 
   /** Short description for the app listing */
   description: 'SMS and voice communication via Twilio',
