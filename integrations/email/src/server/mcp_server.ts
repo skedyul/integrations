@@ -1,5 +1,6 @@
 import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
+import pkg from '../../package.json'
 
 // Early startup log to help debug container issues
 console.log('[MCP Server] Starting Email app...')
@@ -47,7 +48,7 @@ const skedyulServer = server.create(
     computeLayer,
     metadata: {
       name: 'Email',
-      version: '1.0.0',
+      version: pkg.version,
     },
   },
   toolRegistry,

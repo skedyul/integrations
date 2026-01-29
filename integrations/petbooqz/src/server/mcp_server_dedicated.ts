@@ -1,13 +1,14 @@
 import { server } from 'skedyul'
 import type { DedicatedServerInstance } from 'skedyul'
 import { registry } from '../registry'
+import pkg from '../../package.json'
 
 const skedyulServer = server.create(
   {
     computeLayer: 'dedicated',
     metadata: {
       name: 'Petbooqz',
-      version: '1.0.0',
+      version: pkg.version,
     },
   },
   registry,
