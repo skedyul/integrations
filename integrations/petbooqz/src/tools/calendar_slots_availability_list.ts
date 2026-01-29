@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ToolDefinition } from 'skedyul'
-import { createClientFromEnv } from '../lib/api-client'
+import { createClientFromEnv } from '../lib/api_client'
 
 export interface AvailableSlot {
   calendar: string
@@ -55,4 +55,3 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   }
   },
 }
-

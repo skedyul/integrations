@@ -126,4 +126,3 @@ export class PetbooqzApiClient {
     return this.request<T>(url, { method: 'DELETE' })
   }
 }
-

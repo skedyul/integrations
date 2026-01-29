@@ -1,6 +1,6 @@
 import skedyul, { type z as ZodType, instance, webhook } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
-import { createTwilioClient } from '../lib/twilio-client'
+import { createTwilioClient } from '../lib/twilio_client'
 
 const { z } = skedyul
 

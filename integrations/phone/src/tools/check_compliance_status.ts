@@ -5,7 +5,7 @@ import {
   fetchBundleStatus,
   mapTwilioStatusToInternal,
   type TwilioBundleStatus,
-} from '../lib/twilio-client'
+} from '../lib/twilio_client'
 
 const { z } = skedyul
 

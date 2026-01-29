@@ -28,14 +28,14 @@ import type { ToolRegistry, WebhookRegistry } from 'skedyul'
 // Tool Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { sendSmsRegistry } from './tools/send-sms'
-import { submitComplianceDocumentRegistry } from './tools/submit-compliance-document'
-import { checkComplianceStatusRegistry } from './tools/check-compliance-status'
-import { submitNewPhoneNumberRegistry } from './tools/submit-new-phone-number'
-import { removePhoneNumberRegistry } from './tools/remove-phone-number'
-import { createContactAssociationLinkRegistry } from './tools/create-contact-association-link'
-import { updatePhoneDetailsRegistry } from './tools/update-phone-details'
-import { updateForwardingNumberRegistry } from './tools/update-forwarding-number'
+import { sendSmsRegistry } from './tools/send_sms'
+import { submitComplianceDocumentRegistry } from './tools/submit_compliance_document'
+import { checkComplianceStatusRegistry } from './tools/check_compliance_status'
+import { submitNewPhoneNumberRegistry } from './tools/submit_new_phone_number'
+import { removePhoneNumberRegistry } from './tools/remove_phone_number'
+import { createContactAssociationLinkRegistry } from './tools/create_contact_association_link'
+import { updatePhoneDetailsRegistry } from './tools/update_phone_details'
+import { updateForwardingNumberRegistry } from './tools/update_forwarding_number'
 
 /**
  * Tool Registry
@@ -76,9 +76,9 @@ export const toolRegistry: ToolRegistry = {
 // Webhook Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { receiveSmsRegistry, receiveSmsV2Registry } from './webhooks/receive-sms'
-import { complianceStatusRegistry } from './webhooks/compliance-status'
-import { receiveCallRegistry } from './webhooks/receive-call'
+import { receiveSmsRegistry, receiveSmsV2Registry } from './webhooks/receive_sms'
+import { complianceStatusRegistry } from './webhooks/compliance_status'
+import { receiveCallRegistry } from './webhooks/receive_call'
 
 /**
  * Webhook Registry

@@ -2,7 +2,7 @@ import skedyul, { type z as ZodType } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
-import { createTwilioClient } from '../lib/twilio-client'
+import { createTwilioClient } from '../lib/twilio_client'
 
 /**
  * Input schema for sending SMS messages.

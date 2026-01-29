@@ -23,5 +23,3 @@ void (async () => {
     console.error('Failed to start Petbooqz dedicated MCP server', error)
   }
 })()
-
-

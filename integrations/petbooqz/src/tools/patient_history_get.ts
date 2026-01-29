@@ -25,4 +25,3 @@ export const patientHistoryGetRegistry: ToolDefinition<
   }
   },
 }
-

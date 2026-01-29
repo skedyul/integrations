@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig({
-  entry: ['src/server/mcp-server.ts'],
+  entry: ['src/server/mcp_server.ts'],
   format: ['esm'],
   target: 'node22',
   outDir: 'dist/server',

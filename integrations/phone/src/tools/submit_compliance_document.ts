@@ -8,7 +8,7 @@ import {
   createBundle,
   assignItemToBundle,
   submitBundleForReview,
-} from '../lib/twilio-client'
+} from '../lib/twilio_client'
 
 const { z } = skedyul
 

@@ -1,15 +1,16 @@
 {
-  "name": "@skedyul-integrations/phone",
-  "version": "1.1.25",
+  "name": "@skedyul-integrations/email",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
-  "main": "./src/registry.ts",
+  "main": "./src/registries.ts",
   "scripts": {
     "build": "tsup"
   },
   "dependencies": {
     "skedyul": "latest",
-    "twilio": "^5.0.0"
+    "mailgun.js": "^10.2.3",
+    "form-data": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

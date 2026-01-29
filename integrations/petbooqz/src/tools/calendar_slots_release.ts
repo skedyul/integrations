@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ToolDefinition } from 'skedyul'
-import { createClientFromEnv } from '../lib/api-client'
+import { createClientFromEnv } from '../lib/api_client'
 
 const CalendarSlotsReleaseInputSchema = z.object({
   calendar_id: z.string(),
@@ -39,4 +39,3 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
   }
   },
 }
-

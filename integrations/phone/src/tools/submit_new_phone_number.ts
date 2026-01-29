@@ -4,7 +4,7 @@ import {
   createTwilioClient,
   searchAvailablePhoneNumbers,
   purchasePhoneNumber,
-} from '../lib/twilio-client'
+} from '../lib/twilio_client'
 
 const { z } = skedyul
 

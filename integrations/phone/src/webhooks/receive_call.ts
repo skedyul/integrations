@@ -80,21 +80,10 @@ async function handleReceiveCall(
   }
 
   // For GET requests, Twilio signature is validated against the full URL (with query params)
-  // with an empty params object. We need to reconstruct the full URL if query params are separate.
-  // For POST, it's validated against the URL + body params.
-  let signatureUrl = webhookUrl
-  let signatureParams: Record<string, string>
-
-  if (isGetRequest) {
-    // For GET, reconstruct URL with query params if they're not already in the URL
-    if (Object.keys(paramsObject).length > 0 && !webhookUrl.includes('?')) {
-      const queryString = new URLSearchParams(paramsObject).toString()
-      signatureUrl = `${webhookUrl}?${queryString}`
-    }
-    signatureParams = {} // Empty for GET - all data is in URL
-  } else {
-    signatureParams = paramsObject
-  }
+  // with an empty params object. The route.ts now includes the original query string in request.url.
+  // For POST, it's validated against the base URL + body params.
+  const signatureUrl = webhookUrl
+  const signatureParams = isGetRequest ? {} : paramsObject
 
   const isValid = twilio.validateRequest(
     twilioAuthToken,
@@ -107,7 +96,8 @@ async function handleReceiveCall(
     console.log('[receiveCall] Invalid Twilio signature', {
       method,
       signatureUrl,
-      hasParams: Object.keys(signatureParams).length > 0,
+      hasQueryInUrl: signatureUrl.includes('?'),
+      signatureParamsCount: Object.keys(signatureParams).length,
     })
     return {
       status: 403,
