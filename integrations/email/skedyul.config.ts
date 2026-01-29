@@ -59,4 +59,15 @@ export default defineConfig({
    *   - env, models, relationships, channels, workflows, pages, webhooks
    */
   provision: import('./config/provision.config'),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Install Configuration
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Install/uninstall lifecycle hooks (tool names from registry):
+   *   - onInstall: Creates {subdomain}@skedyul.app email address
+   *   - onUninstall: Removes the email address
+   */
+  install: import('./config/install.config'),
 })

@@ -30,6 +30,8 @@ import type { ToolRegistry, WebhookRegistry } from 'skedyul'
 
 import { sendEmailRegistry } from './tools/send_email'
 import { updateEmailAddressRegistry } from './tools/update_email_address'
+import { installRegistry } from './tools/install'
+import { uninstallRegistry } from './tools/uninstall'
 
 /**
  * Tool Registry
@@ -42,6 +44,12 @@ export const toolRegistry: ToolRegistry = {
 
   /** Update email address display name. */
   update_email_address: updateEmailAddressRegistry,
+
+  /** Install hook - creates {subdomain}@skedyul.app email address. */
+  install: installRegistry,
+
+  /** Uninstall hook - removes {subdomain}@skedyul.app email address. */
+  uninstall: uninstallRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
