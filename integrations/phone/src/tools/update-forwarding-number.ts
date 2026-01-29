@@ -105,13 +105,25 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       const phoneNumberSid = phoneNumbers[0].sid
 
       if (forwardingValue) {
-        // Create/get webhook URL for receive_call
-        const { url: voiceUrl } = await webhook.create('receive_call')
+        // Check if a webhook registration already exists for receive_call
+        const { webhooks: existingWebhooks } = await webhook.list({ name: 'receive_call' })
+        
+        let voiceUrl: string
+        if (existingWebhooks.length > 0) {
+          // Reuse existing registration
+          voiceUrl = existingWebhooks[0].url
+          console.log('[UpdateForwardingNumber] Reusing existing webhook registration:', voiceUrl)
+        } else {
+          // Create new webhook registration
+          const result = await webhook.create('receive_call')
+          voiceUrl = result.url
+          console.log('[UpdateForwardingNumber] Created new webhook registration:', voiceUrl)
+        }
 
         // Configure Twilio to point to our webhook
         await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
           voiceUrl,
-          voiceMethod: 'POST',
+          voiceMethod: 'GET', // Use GET since Twilio sends data as query params
         })
 
         console.log('[UpdateForwardingNumber] Configured Twilio voiceUrl:', voiceUrl)
