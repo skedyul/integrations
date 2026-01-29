@@ -8,7 +8,8 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-COPY package.json pnpm-lock.yaml tsconfig.json tsup.config.ts ./
+# Note: pnpm-lock.yaml may not exist for monorepo packages - use wildcard pattern
+COPY package.json pnpm-lock.yam* tsconfig.json tsup.config.ts ./
 COPY src ./src
 COPY config ./config
 COPY skedyul.config.ts ./
