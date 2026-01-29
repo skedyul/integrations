@@ -78,6 +78,7 @@ export const toolRegistry: ToolRegistry = {
 
 import { receiveSmsRegistry, receiveSmsV2Registry } from './webhooks/receive-sms'
 import { complianceStatusRegistry } from './webhooks/compliance-status'
+import { receiveCallRegistry } from './webhooks/receive-call'
 
 /**
  * Webhook Registry
@@ -90,6 +91,9 @@ export const webhookRegistry: WebhookRegistry = {
 
   /** Alternative SMS receiver with enhanced features. PROVISION level. */
   receive_sms_v2: receiveSmsV2Registry,
+
+  /** Forward inbound voice calls to the configured forwarding number. */
+  receive_call: receiveCallRegistry,
 
   /** Receive compliance status updates from Twilio. ACTION level. */
   compliance_status: complianceStatusRegistry,

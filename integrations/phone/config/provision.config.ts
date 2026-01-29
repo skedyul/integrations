@@ -1164,7 +1164,6 @@ const config: ProvisionConfig = {
                 handle: 'save_forwarding_number',
                 label: 'Save',
                 handler: 'update_forwarding_number',
-                icon: 'Save',
                 variant: 'primary',
               },
             ],
@@ -1185,7 +1184,7 @@ const config: ProvisionConfig = {
   // Note: 'compliance_status' is NOT listed here because it's ACTION-level -
   // created dynamically by the submit_compliance_document tool.
   //
-  webhooks: ['receive_sms', 'receive_sms_v2'],
+  webhooks: ['receive_sms', 'receive_call'],
 }
 
 export default config
