@@ -1,20 +1,65 @@
-FROM node:20-alpine
+# =============================================================================
+# BUILDER STAGE - Common build for all targets
+# =============================================================================
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
-COPY package.json pnpm-lock.yaml* ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Copy source
-COPY . .
+COPY package.json pnpm-lock.yaml tsconfig.json tsup.config.ts ./
+COPY src ./src
+COPY config ./config
+COPY skedyul.config.ts ./
 
-# Build
-RUN pnpm build
+# Install dependencies (including dev deps for build), compile, then prune
+# Note: Using --no-frozen-lockfile since this is a standalone integration package
+RUN pnpm install --no-frozen-lockfile && \
+    pnpm run build && \
+    pnpm prune --prod && \
+    pnpm store prune && \
+    rm -rf /tmp/* /var/cache/apk/* ~/.npm
 
-# Run
-ENV NODE_ENV=production
-ENV PORT=3000
+# =============================================================================
+# DEDICATED STAGE - For local Docker and ECS deployments (HTTP server)
+# =============================================================================
+FROM node:22-alpine AS dedicated
+
+WORKDIR /app
+
+# Copy built artifacts
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+
+# Allow overriding the baked-in MCP env at runtime
+ARG MCP_ENV_JSON="{}"
+ENV MCP_ENV_JSON=${MCP_ENV_JSON}
+
+# Expose the HTTP port
 EXPOSE 3000
 
+# Run as HTTP server (dedicated mode auto-detected by absence of AWS_LAMBDA_FUNCTION_NAME)
 CMD ["node", "dist/server/mcp_server.js"]
+
+# =============================================================================
+# SERVERLESS STAGE - For AWS Lambda deployments
+# =============================================================================
+FROM public.ecr.aws/lambda/nodejs:22 AS serverless
+
+WORKDIR ${LAMBDA_TASK_ROOT}
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+
+# Allow overriding the baked-in MCP env at runtime
+ARG MCP_ENV_JSON="{}"
+ENV MCP_ENV_JSON=${MCP_ENV_JSON}
+
+# Lambda handler format
+CMD ["dist/server/mcp_server.handler"]
+
+# =============================================================================
+# DEFAULT - Use dedicated for local development, override with --target for production
+# =============================================================================
+FROM dedicated
