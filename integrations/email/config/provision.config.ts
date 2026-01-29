@@ -219,18 +219,12 @@ const config: ProvisionConfig = {
       name: 'Email',
       icon: 'Mail',
 
-      identifierField: {
-        handle: 'email',
-        label: 'Email',
-        definition: {
-          handle: 'email',
-        },
-      },
-
+      // Field definitions for this channel. The email field has identifier: true.
       fields: [
         {
           handle: 'email',
           label: 'Email',
+          identifier: true,
           definition: {
             handle: 'email',
           },

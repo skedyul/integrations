@@ -325,19 +325,12 @@ const config: ProvisionConfig = {
       name: 'Phone',
       icon: 'Phone',
 
-      identifierField: {
-        handle: 'phone',
-        label: 'Phone',
-        definition: {
-          handle: 'phone',
-        },
-      },
-
-      // Identifier field definition for filtering identifier fields (e.g., 'phone', 'email')
+      // Field definitions for this channel. The phone field has identifier: true.
       fields: [
         {
           handle: 'phone',
           label: 'Phone',
+          identifier: true,
           definition: {
             handle: 'phone'
           },
