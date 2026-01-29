@@ -38,7 +38,7 @@ ENV MCP_ENV_JSON=${MCP_ENV_JSON}
 EXPOSE 3000
 
 # Run as HTTP server (dedicated mode auto-detected by absence of AWS_LAMBDA_FUNCTION_NAME)
-CMD ["node", "dist/server/mcp-server.js"]
+CMD ["node", "dist/server/mcp_server.js"]
 
 # =============================================================================
 # SERVERLESS STAGE - For AWS Lambda deployments
@@ -55,7 +55,7 @@ ARG MCP_ENV_JSON="{}"
 ENV MCP_ENV_JSON=${MCP_ENV_JSON}
 
 # Lambda handler format
-CMD ["dist/server/mcp-server.handler"]
+CMD ["dist/server/mcp_server.handler"]
 
 # =============================================================================
 # DEFAULT - Use dedicated for local development, override with --target for production
