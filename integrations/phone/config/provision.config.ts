@@ -1184,7 +1184,9 @@ const config: ProvisionConfig = {
   // Note: 'compliance_status' is NOT listed here because it's ACTION-level -
   // created dynamically by the submit_compliance_document tool.
   //
-  webhooks: ['receive_sms', 'receive_call'],
+  // receive_call is managed at ACTION level by update_forwarding_number tool
+  // (one registration per installation, created on first save)
+  webhooks: ['receive_sms'],
 }
 
 export default config

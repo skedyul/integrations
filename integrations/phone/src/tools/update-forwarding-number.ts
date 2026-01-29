@@ -108,11 +108,26 @@ export const updateForwardingNumberRegistry: ToolDefinition<
         // Check if a webhook registration already exists for receive_call
         const { webhooks: existingWebhooks } = await webhook.list({ name: 'receive_call' })
         
+        console.log('[UpdateForwardingNumber] Found existing receive_call registrations:', existingWebhooks.length)
+        
         let voiceUrl: string
         if (existingWebhooks.length > 0) {
-          // Reuse existing registration
+          // Reuse the first existing registration
           voiceUrl = existingWebhooks[0].url
           console.log('[UpdateForwardingNumber] Reusing existing webhook registration:', voiceUrl)
+          
+          // Clean up duplicate registrations if there are more than one
+          if (existingWebhooks.length > 1) {
+            console.log('[UpdateForwardingNumber] Cleaning up', existingWebhooks.length - 1, 'duplicate registrations')
+            for (let i = 1; i < existingWebhooks.length; i++) {
+              try {
+                await webhook.delete(existingWebhooks[i].id)
+                console.log('[UpdateForwardingNumber] Deleted duplicate registration:', existingWebhooks[i].id)
+              } catch (deleteError) {
+                console.error('[UpdateForwardingNumber] Failed to delete duplicate:', existingWebhooks[i].id, deleteError)
+              }
+            }
+          }
         } else {
           // Create new webhook registration
           const result = await webhook.create('receive_call')
