@@ -13,15 +13,28 @@ import { getHeaderValue, serializeBody } from './lib/helpers'
  *
  * Validates the Twilio signature, looks up the forwarding number from the
  * phone_number model, and returns TwiML to forward the call.
+ *
+ * Supports both GET and POST requests:
+ * - GET: Twilio sends data as query parameters
+ * - POST: Twilio sends data as form-urlencoded body
  */
 async function handleReceiveCall(
   request: WebhookRequest,
   context: WebhookContext,
 ): Promise<WebhookResponse> {
-  const { headers } = request
-  const rawBody = serializeBody(request.body)
-  const params = new URLSearchParams(rawBody)
-  const paramsObject = Object.fromEntries(params.entries())
+  const { headers, method } = request
+  const isGetRequest = method === 'GET'
+
+  // For GET requests, params come from query string
+  // For POST requests, params come from form-urlencoded body
+  let paramsObject: Record<string, string>
+  if (isGetRequest) {
+    paramsObject = request.query ?? {}
+  } else {
+    const rawBody = serializeBody(request.body)
+    const params = new URLSearchParams(rawBody)
+    paramsObject = Object.fromEntries(params.entries())
+  }
 
   // Validate Twilio signature
   const twilioSignature =
@@ -66,15 +79,23 @@ async function handleReceiveCall(
     }
   }
 
+  // For GET requests, Twilio signature is validated against the full URL (with query params)
+  // with an empty params object. For POST, it's validated against the URL + body params.
+  const signatureParams = isGetRequest ? {} : paramsObject
+
   const isValid = twilio.validateRequest(
     twilioAuthToken,
     twilioSignature,
     webhookUrl,
-    paramsObject,
+    signatureParams,
   )
 
   if (!isValid) {
-    console.log('[receiveCall] Invalid Twilio signature')
+    console.log('[receiveCall] Invalid Twilio signature', {
+      method,
+      webhookUrl,
+      hasParams: Object.keys(signatureParams).length > 0,
+    })
     return {
       status: 403,
       body: { error: 'Invalid Twilio signature' },
@@ -82,8 +103,8 @@ async function handleReceiveCall(
   }
 
   // Twilio voice calls use 'To' (or 'Called') for the dialed number
-  const to = params.get('To') ?? params.get('Called') ?? ''
-  const from = params.get('From') ?? params.get('Caller') ?? ''
+  const to = paramsObject.To ?? paramsObject.Called ?? ''
+  const from = paramsObject.From ?? paramsObject.Caller ?? ''
 
   if (!to) {
     console.log('[receiveCall] Missing To/Called parameter')
@@ -147,7 +168,7 @@ async function handleReceiveCall(
 export const receiveCallRegistry: WebhookDefinition = {
   name: 'receive_call',
   description: 'Forward inbound voice calls to the configured forwarding number',
-  methods: ['POST'],
+  methods: ['GET', 'POST'], // Twilio can use either method
   type: 'CALLBACK', // Must return TwiML to Twilio
   handler: handleReceiveCall,
 }
