@@ -2,13 +2,12 @@
  * Mailgun Provider Implementation
  * ================================
  *
- * Implements the EmailProvider interface using the Mailgun API.
+ * Implements the EmailProvider interface using the ts-mailgun library.
  *
- * @see https://documentation.mailgun.com/docs/mailgun/api-reference/
+ * @see https://www.npmjs.com/package/ts-mailgun
  */
 
-import Mailgun from 'mailgun.js'
-import FormData from 'form-data'
+import { NodeMailgun } from 'ts-mailgun'
 import crypto from 'crypto'
 import type { WebhookRequest } from 'skedyul'
 import type {
@@ -29,8 +28,7 @@ export class MailgunProvider implements EmailProvider {
 
   private readonly apiKey: string
   private readonly domain: string
-  private readonly apiUrl: string
-  private readonly client: ReturnType<Mailgun['client']>
+  private readonly mailer: NodeMailgun
 
   constructor(env: EmailEnv) {
     if (!env.MAILGUN_API_KEY) {
@@ -42,54 +40,27 @@ export class MailgunProvider implements EmailProvider {
 
     this.apiKey = env.MAILGUN_API_KEY
     this.domain = env.MAILGUN_DOMAIN
-    this.apiUrl = env.MAILGUN_API_URL ?? 'https://api.mailgun.net'
 
-    const mailgun = new Mailgun(FormData)
-    this.client = mailgun.client({
-      username: 'api',
-      key: this.apiKey,
-      url: this.apiUrl,
-    })
+    this.mailer = new NodeMailgun()
+    this.mailer.apiKey = this.apiKey
+    this.mailer.domain = this.domain
+
+    this.mailer.init()
   }
 
   async send(params: SendEmailParams): Promise<SendEmailResult> {
-    const fromAddress = params.fromName
-      ? `${params.fromName} <${params.from}>`
-      : params.from
+    // Configure from address for this send
+    this.mailer.fromEmail = params.from
+    this.mailer.fromTitle = params.fromName ?? ''
 
-    const messageData: Record<string, unknown> = {
-      from: fromAddress,
-      to: params.to,
-      subject: params.subject,
-    }
+    // Determine the message content - prefer HTML if available
+    const message = params.html ?? params.text ?? ''
 
-    if (params.text) {
-      messageData.text = params.text
-    }
-    if (params.html) {
-      messageData.html = params.html
-    }
-    if (params.replyTo) {
-      messageData['h:Reply-To'] = params.replyTo
-    }
-    if (params.headers) {
-      for (const [key, value] of Object.entries(params.headers)) {
-        messageData[`h:${key}`] = value
-      }
-    }
-
-    // Handle attachments
-    if (params.attachments && params.attachments.length > 0) {
-      messageData.attachment = params.attachments.map((att) => ({
-        filename: att.filename,
-        data: typeof att.content === 'string' 
-          ? Buffer.from(att.content) 
-          : att.content,
-        contentType: att.contentType,
-      }))
-    }
-
-    const response = await this.client.messages.create(this.domain, messageData)
+    const response = await this.mailer.send(
+      params.to,
+      params.subject,
+      message,
+    )
 
     return {
       messageId: response.id,
