@@ -503,7 +503,15 @@ const config: ProvisionConfig = {
   // ─────────────────────────────────────────────────────────────────────────
   // Provision-Level Webhooks
   // ─────────────────────────────────────────────────────────────────────────
-  webhooks: ['receive_email'],
+  //
+  // Webhook handlers with lifecycle hooks for external provider setup.
+  // onProvision: Tool to call when webhook is provisioned (creates/updates Mailgun routes)
+  //
+  webhooks: {
+    receive_email: {
+      onProvision: 'setup_mailgun_routes',
+    },
+  },
 }
 
 export default config

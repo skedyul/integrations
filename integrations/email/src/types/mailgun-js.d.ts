@@ -25,8 +25,53 @@ declare module 'mailgun.js' {
     ): Promise<MessagesSendResult>
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Routes Types
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  interface Route {
+    id: string
+    priority: number
+    description: string
+    expression: string
+    actions: string[]
+    created_at: string
+  }
+
+  interface RoutesListResult {
+    items: Route[]
+    total_count: number
+  }
+
+  interface RouteCreateParams {
+    priority: number
+    description: string
+    expression: string
+    action: string[]
+  }
+
+  interface RouteUpdateParams {
+    priority?: number
+    description?: string
+    expression?: string
+    action?: string[]
+  }
+
+  interface RoutesClient {
+    list(): Promise<RoutesListResult>
+    get(routeId: string): Promise<Route>
+    create(params: RouteCreateParams): Promise<Route>
+    update(routeId: string, params: RouteUpdateParams): Promise<Route>
+    destroy(routeId: string): Promise<{ message: string }>
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Client
+  // ─────────────────────────────────────────────────────────────────────────────
+
   interface MailgunClient {
     messages: MessagesClient
+    routes: RoutesClient
   }
 
   interface MailgunClientOptions {

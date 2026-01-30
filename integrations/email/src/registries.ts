@@ -32,6 +32,7 @@ import { sendEmailRegistry } from './tools/send_email'
 import { updateEmailAddressRegistry } from './tools/update_email_address'
 import { installRegistry } from './tools/install'
 import { uninstallRegistry } from './tools/uninstall'
+import { setupMailgunRoutesRegistry } from './tools/setup_mailgun_routes'
 
 /**
  * Tool Registry
@@ -50,6 +51,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Uninstall hook - removes {subdomain}@skedyul.app email address. */
   uninstall: uninstallRegistry,
+
+  /** Provision hook - creates/updates Mailgun routes for receiving emails. */
+  setup_mailgun_routes: setupMailgunRoutesRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
