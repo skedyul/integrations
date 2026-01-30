@@ -27,8 +27,14 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
   handler: async (input, context) => {
     const provider = createEmailProvider(context.env as EmailEnv)
 
+    const fallbackFromEmail =
+      context.workplace?.subdomain != null
+        ? `${context.workplace.subdomain}@skedyul.app`
+        : 'no-reply@skedyul.app'
+    const fromEmail = input.channel.identifierValue?.trim() || fallbackFromEmail
+
     const result = await provider.send({
-      from: input.channel.identifierValue,
+      from: fromEmail,
       to: input.subscription.identifierValue,
       subject: input.message.title ?? 'No Subject',
       text: input.message.content,
