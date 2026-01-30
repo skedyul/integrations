@@ -33,22 +33,40 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
         : 'no-reply@skedyul.app'
     const fromEmail = input.channel.identifierValue?.trim() || fallbackFromEmail
 
-    const result = await provider.send({
-      from: fromEmail,
-      to: input.subscription.identifierValue,
-      subject: input.message.title ?? 'No Subject',
-      text: input.message.content,
-      html: input.message.contentRaw,
-    })
+    try {
+      const result = await provider.send({
+        from: fromEmail,
+        to: input.subscription.identifierValue,
+        subject: input.message.title ?? 'No Subject',
+        text: input.message.content,
+        html: input.message.contentRaw,
+      })
 
-    return {
-      output: {
-        status: 'sent',
-        remoteId: result.messageId,
-      },
-      billing: {
-        credits: 1,
-      },
+      return {
+        output: {
+          status: 'sent',
+          remoteId: result.messageId,
+        },
+        billing: {
+          credits: 1,
+        },
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : JSON.stringify(error, null, 2)
+      const errorStack = error instanceof Error ? error.stack : undefined
+
+      console.error('[send_email] Failed to send email via Mailgun', {
+        error: errorMessage,
+        stack: errorStack,
+        channel: input.channel.identifierValue,
+        subscription: input.subscription.identifierValue,
+        messageId: input.message.id,
+        appInstallationId: context.appInstallationId,
+        workplace: context.workplace?.subdomain,
+      })
+
+      throw error
     }
   },
 }
