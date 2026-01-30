@@ -6,10 +6,8 @@
  * This is provider-agnostic - works with any EmailProvider implementation.
  */
 
-import skedyul from 'skedyul'
+import { file } from 'skedyul'
 import type { EmailProvider, InboundAttachment } from './email_provider'
-
-const { file } = skedyul
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -46,7 +44,7 @@ function sanitizeFilename(filename: string): string {
  * Process inbound email attachments.
  *
  * Downloads each attachment from the provider's storage URL,
- * uploads to S3, and creates File records.
+ * uploads to S3 via the file.upload API, and returns file records.
  */
 export async function processAttachments(
   params: ProcessAttachmentsParams,
@@ -73,21 +71,22 @@ export async function processAttachments(
       const contentType = attachment.contentType || 'application/octet-stream'
 
       // Download attachment content using provider
+      console.log(`[Email] Downloading attachment ${i + 1}: ${filename}`)
       const content = await provider.fetchAttachment(attachment.url)
 
       // Use provided size or calculate from buffer
       const size = attachment.size > 0 ? attachment.size : content.length
 
-      // Build storage path
-      const path = `email/messages/${messageId}/attachments/${sanitizedFilename}`
+      // Build storage path for organization
+      const path = `email/messages/${messageId}/attachments`
 
       // Upload to S3 and create file record via skedyul SDK
+      console.log(`[Email] Uploading attachment ${i + 1}: ${filename} (${size} bytes)`)
       const result = await file.upload({
         content,
-        path,
-        name: filename,
+        name: sanitizedFilename,
         mimeType: contentType,
-        isPrivate: true,
+        path,
       })
 
       processed.push({
@@ -97,7 +96,7 @@ export async function processAttachments(
         size,
       })
 
-      console.log(`[Email] Processed attachment ${i + 1}: ${filename}`)
+      console.log(`[Email] Processed attachment ${i + 1}: ${filename} -> ${result.id}`)
     } catch (error) {
       console.error(`[Email] Error processing attachment ${i + 1}:`, error)
       // Continue processing other attachments
