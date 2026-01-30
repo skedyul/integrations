@@ -2,13 +2,14 @@
  * Mailgun Provider Implementation
  * ================================
  *
- * Implements the EmailProvider interface using the ts-mailgun library.
+ * Implements the EmailProvider interface using the mailgun.js library.
  *
- * @see https://www.npmjs.com/package/ts-mailgun
+ * @see https://www.npmjs.com/package/mailgun.js
  */
 
-import { NodeMailgun } from 'ts-mailgun'
 import crypto from 'crypto'
+import Mailgun from 'mailgun.js'
+import formData from 'form-data'
 import type { WebhookRequest } from 'skedyul'
 import type {
   EmailProvider,
@@ -27,8 +28,8 @@ export class MailgunProvider implements EmailProvider {
   readonly name = 'mailgun'
 
   private readonly apiKey: string
+  private readonly client: ReturnType<Mailgun['client']>
   private readonly domain: string
-  private readonly mailer: NodeMailgun
 
   constructor(env: EmailEnv) {
     if (!env.MAILGUN_API_KEY) {
@@ -38,29 +39,30 @@ export class MailgunProvider implements EmailProvider {
       throw new Error('MAILGUN_DOMAIN is required')
     }
 
-    this.apiKey = env.MAILGUN_API_KEY
     this.domain = env.MAILGUN_DOMAIN
+    this.apiKey = env.MAILGUN_API_KEY
 
-    this.mailer = new NodeMailgun()
-    this.mailer.apiKey = this.apiKey
-    this.mailer.domain = this.domain
+    const mailgun = new Mailgun(formData)
 
-    this.mailer.init()
+    this.client = mailgun.client({
+      username: 'api',
+      key: env.MAILGUN_API_KEY,
+      url: env.MAILGUN_API_URL,
+    })
   }
 
   async send(params: SendEmailParams): Promise<SendEmailResult> {
-    // Configure from address for this send
-    this.mailer.fromEmail = params.from
-    this.mailer.fromTitle = params.fromName ?? ''
+    const fromAddress = params.fromName
+      ? `${params.fromName} <${params.from}>`
+      : params.from
 
-    // Determine the message content - prefer HTML if available
-    const message = params.html ?? params.text ?? ''
-
-    const response = await this.mailer.send(
-      params.to,
-      params.subject,
-      message,
-    )
+    const response = await this.client.messages.create(this.domain, {
+      from: fromAddress,
+      to: params.to,
+      subject: params.subject,
+      text: params.text,
+      html: params.html,
+    })
 
     return {
       messageId: response.id,

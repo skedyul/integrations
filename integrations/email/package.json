@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/email",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "private": true,
   "type": "module",
   "main": "./src/registries.ts",
@@ -8,10 +8,12 @@
     "build": "tsup"
   },
   "dependencies": {
-    "skedyul": "latest",
-    "ts-mailgun": "^0.5.1"
+    "form-data": "^4.0.5",
+    "mailgun.js": "^4.0.0",
+    "skedyul": "latest"
   },
   "devDependencies": {
+    "@types/mailgun-js": "^0.22.19",
     "@types/node": "^20.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
