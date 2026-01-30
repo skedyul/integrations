@@ -103,23 +103,33 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     })
     console.log(`[SetupMailgunRoutes] Mailgun client initialized`)
 
-    // Step 3: Check for existing Mailgun route matching our expression
+    // Step 3: Check for existing Mailgun route matching our webhook registration ID
+    // We match by description (contains webhookRegistrationId) to support multiple environments
+    // sharing the same Mailgun account with the same expression
     console.log(`[SetupMailgunRoutes] Step 3: Fetching existing Mailgun routes...`)
-    console.log(`[SetupMailgunRoutes] Looking for expression: ${ROUTE_EXPRESSION}`)
+    console.log(`[SetupMailgunRoutes] Looking for description: ${webhookRegistrationId}`)
     
-    const routes = await mg.routes.list()
-    console.log(`[SetupMailgunRoutes] Found ${routes.items?.length ?? 0} total Mailgun routes`)
+    let routes: { items?: Array<{ id: string; expression: string; description?: string; actions?: string[] }> }
+    try {
+      console.log(`[SetupMailgunRoutes] Calling mg.routes.list()...`)
+      routes = await mg.routes.list()
+      console.log(`[SetupMailgunRoutes] Found ${routes.items?.length ?? 0} total Mailgun routes`)
+    } catch (listError) {
+      console.error(`[SetupMailgunRoutes] ERROR listing routes:`, listError)
+      const errorMessage = listError instanceof Error ? listError.message : String(listError)
+      throw new Error(`Failed to list Mailgun routes: ${errorMessage}`)
+    }
     
     // Log all routes for debugging
     if (routes.items && routes.items.length > 0) {
       console.log(`[SetupMailgunRoutes] Existing routes:`)
-      routes.items.forEach((r: { id: string; expression: string; actions?: string[] }, i: number) => {
-        console.log(`[SetupMailgunRoutes]   [${i}] ID: ${r.id}, Expression: ${r.expression}`)
+      routes.items.forEach((r: { id: string; expression: string; description?: string; actions?: string[] }, i: number) => {
+        console.log(`[SetupMailgunRoutes]   [${i}] ID: ${r.id}, Description: ${r.description}, Expression: ${r.expression}`)
       })
     }
     
     const existingRoute = routes.items?.find(
-      (route: { expression: string; id: string }) => route.expression === ROUTE_EXPRESSION
+      (route: { description?: string; id: string }) => route.description === webhookRegistrationId
     )
 
     const expectedAction = `store(notify="${webhookUrl}")`
@@ -128,15 +138,18 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     if (existingRoute) {
       console.log(`[SetupMailgunRoutes] Found matching route: ${existingRoute.id}`)
       
-      // Check if the route already has the correct action
+      // Check if the route already has the correct expression and action
       const currentActions = existingRoute.actions || []
+      const currentExpression = existingRoute.expression || ''
+      console.log(`[SetupMailgunRoutes] Current expression: ${currentExpression}`)
       console.log(`[SetupMailgunRoutes] Current actions: ${JSON.stringify(currentActions)}`)
       
+      const hasCorrectExpression = currentExpression === ROUTE_EXPRESSION
       const hasCorrectAction = currentActions.some(
         (action: string) => action === expectedAction
       )
 
-      if (hasCorrectAction) {
+      if (hasCorrectExpression && hasCorrectAction) {
         console.log(`[SetupMailgunRoutes] Route already configured correctly - no changes needed`)
         return {
           output: {
@@ -148,6 +161,8 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
           billing: { credits: 0 },
         }
       }
+      
+      console.log(`[SetupMailgunRoutes] Route needs update: expression=${!hasCorrectExpression ? 'outdated' : 'ok'}, action=${!hasCorrectAction ? 'outdated' : 'ok'}`)
 
       // Update existing route with new webhook URL
       console.log(`[SetupMailgunRoutes] Updating route with new action...`)
@@ -159,8 +174,16 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
       }
       console.log(`[SetupMailgunRoutes] Update payload: ${JSON.stringify(updatePayload)}`)
       
-      const updateResult = await mg.routes.update(existingRoute.id, updatePayload)
-      console.log(`[SetupMailgunRoutes] Update result: ${JSON.stringify(updateResult)}`)
+      let updateResult: unknown
+      try {
+        console.log(`[SetupMailgunRoutes] Calling mg.routes.update()...`)
+        updateResult = await mg.routes.update(existingRoute.id, updatePayload)
+        console.log(`[SetupMailgunRoutes] Update result: ${JSON.stringify(updateResult)}`)
+      } catch (updateError) {
+        console.error(`[SetupMailgunRoutes] ERROR updating route:`, updateError)
+        const errorMessage = updateError instanceof Error ? updateError.message : String(updateError)
+        throw new Error(`Failed to update Mailgun route: ${errorMessage}`)
+      }
 
       console.log(`[SetupMailgunRoutes] === COMPLETED: UPDATED ===`)
       return {
@@ -184,8 +207,16 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     }
     console.log(`[SetupMailgunRoutes] Create payload: ${JSON.stringify(createPayload)}`)
     
-    const route = await mg.routes.create(createPayload)
-    console.log(`[SetupMailgunRoutes] Create result: ${JSON.stringify(route)}`)
+    let route: { id: string }
+    try {
+      console.log(`[SetupMailgunRoutes] Calling mg.routes.create()...`)
+      route = await mg.routes.create(createPayload)
+      console.log(`[SetupMailgunRoutes] Create result: ${JSON.stringify(route)}`)
+    } catch (createError) {
+      console.error(`[SetupMailgunRoutes] ERROR creating route:`, createError)
+      const errorMessage = createError instanceof Error ? createError.message : String(createError)
+      throw new Error(`Failed to create Mailgun route: ${errorMessage}`)
+    }
 
     console.log(`[SetupMailgunRoutes] === COMPLETED: CREATED ===`)
     return {
