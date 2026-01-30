@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/email",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "private": true,
   "type": "module",
   "main": "./src/registries.ts",
@@ -13,7 +13,6 @@
     "skedyul": "latest"
   },
   "devDependencies": {
-    "@types/mailgun-js": "^0.22.19",
     "@types/node": "^20.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"

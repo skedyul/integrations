@@ -61,25 +61,41 @@ export class MailgunProvider implements EmailProvider {
       ? `${params.fromName} <${params.from}>`
       : params.from
 
+    // Per npm docs, 'to' should be an array: https://www.npmjs.com/package/mailgun.js
+    const toArray = Array.isArray(params.to) ? params.to : [params.to]
+
     console.log('[MailgunProvider] Sending email:', {
       domain: this.domain,
       from: fromAddress,
-      to: params.to,
+      to: toArray,
       subject: params.subject,
     })
 
-    const messageData = {
+    // Build message data per mailgun.js docs
+    const messageData: Record<string, unknown> = {
       from: fromAddress,
-      to: params.to,
+      to: toArray,
       subject: params.subject,
-      text: params.text,
-      html: params.html,
+    }
+
+    // Only include text/html if they have values
+    if (params.text) {
+      messageData.text = params.text
+    }
+    if (params.html) {
+      messageData.html = params.html
     }
 
     console.log('[MailgunProvider] Message data:', JSON.stringify(messageData, null, 2))
 
     try {
-      const response = await this.client.messages.create(this.domain, messageData)
+      const response = await this.client.messages.create(this.domain, messageData as {
+        from: string
+        to: string | string[]
+        subject: string
+        text?: string
+        html?: string
+      })
 
       console.log('[MailgunProvider] Mailgun response:', JSON.stringify(response, null, 2))
 
@@ -90,6 +106,9 @@ export class MailgunProvider implements EmailProvider {
     } catch (error) {
       console.error('[MailgunProvider] Mailgun API error:', error)
 
+      // Log full error object
+      console.error('[MailgunProvider] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+
       // Log more details if available
       if (error && typeof error === 'object') {
         const errObj = error as Record<string, unknown>
@@ -99,6 +118,8 @@ export class MailgunProvider implements EmailProvider {
           statusCode: errObj.statusCode,
           details: errObj.details,
           type: errObj.type,
+          body: errObj.body,
+          response: errObj.response,
         })
       }
 
