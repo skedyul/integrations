@@ -59,8 +59,6 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     const env = context.env as EmailEnv
 
     console.log(`[SetupMailgunRoutes] === STARTING PROVISION ===`)
-    console.log(`[SetupMailgunRoutes] webhookName: ${context.webhookName}`)
-    console.log(`[SetupMailgunRoutes] appVersionId: ${context.appVersionId}`)
     console.log(`[SetupMailgunRoutes] trigger: ${context.trigger}`)
     console.log(`[SetupMailgunRoutes] MAILGUN_API_KEY present: ${!!env.MAILGUN_API_KEY}`)
 
@@ -71,7 +69,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
 
     // Step 1: Check for existing Skedyul webhook registration
     console.log(`[SetupMailgunRoutes] Step 1: Checking for existing webhook registrations...`)
-    const listResult = await webhook.list({ name: context.webhookName })
+    const listResult = await webhook.list({ name: "receive_email" })
     const existingWebhooks = listResult.webhooks
     console.log(`[SetupMailgunRoutes] Found ${existingWebhooks.length} existing registrations`)
     
@@ -88,7 +86,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     } else {
       // Create new webhook registration
       console.log(`[SetupMailgunRoutes] No existing registration found, creating new one...`)
-      const webhookResult = await webhook.create(context.webhookName)
+      const webhookResult = await webhook.create("receive_email")
       webhookUrl = webhookResult.url
       webhookRegistrationId = webhookResult.id
       console.log(`[SetupMailgunRoutes] Created new registration:`)
