@@ -63,7 +63,6 @@ export type EmailEnv = {
   MAILGUN_API_KEY?: string
   MAILGUN_DOMAIN?: string
   MAILGUN_SIGNING_SECRET?: string
-  MAILGUN_API_URL?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

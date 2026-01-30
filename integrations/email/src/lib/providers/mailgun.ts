@@ -42,13 +42,18 @@ export class MailgunProvider implements EmailProvider {
     this.domain = env.MAILGUN_DOMAIN
     this.apiKey = env.MAILGUN_API_KEY
 
+    console.log('[MailgunProvider] Initializing with domain:', this.domain)
+
+    // Follow npm docs exactly: https://www.npmjs.com/package/mailgun.js
     const mailgun = new Mailgun(formData)
 
+    // Use default Mailgun API URL (no url param needed)
     this.client = mailgun.client({
       username: 'api',
       key: env.MAILGUN_API_KEY,
-      url: env.MAILGUN_API_URL,
     })
+
+    console.log('[MailgunProvider] Client initialized successfully')
   }
 
   async send(params: SendEmailParams): Promise<SendEmailResult> {
@@ -56,17 +61,48 @@ export class MailgunProvider implements EmailProvider {
       ? `${params.fromName} <${params.from}>`
       : params.from
 
-    const response = await this.client.messages.create(this.domain, {
+    console.log('[MailgunProvider] Sending email:', {
+      domain: this.domain,
+      from: fromAddress,
+      to: params.to,
+      subject: params.subject,
+    })
+
+    const messageData = {
       from: fromAddress,
       to: params.to,
       subject: params.subject,
       text: params.text,
       html: params.html,
-    })
+    }
 
-    return {
-      messageId: response.id,
-      provider: this.name,
+    console.log('[MailgunProvider] Message data:', JSON.stringify(messageData, null, 2))
+
+    try {
+      const response = await this.client.messages.create(this.domain, messageData)
+
+      console.log('[MailgunProvider] Mailgun response:', JSON.stringify(response, null, 2))
+
+      return {
+        messageId: response.id,
+        provider: this.name,
+      }
+    } catch (error) {
+      console.error('[MailgunProvider] Mailgun API error:', error)
+
+      // Log more details if available
+      if (error && typeof error === 'object') {
+        const errObj = error as Record<string, unknown>
+        console.error('[MailgunProvider] Error details:', {
+          message: errObj.message,
+          status: errObj.status,
+          statusCode: errObj.statusCode,
+          details: errObj.details,
+          type: errObj.type,
+        })
+      }
+
+      throw error
     }
   }
 

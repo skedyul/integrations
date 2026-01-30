@@ -53,13 +53,6 @@ const config: ProvisionConfig = {
       description: 'Webhook signing key for verifying inbound emails',
       placeholder: 'Your webhook signing key',
     },
-    MAILGUN_API_URL: {
-      label: 'Mailgun API URL',
-      required: false,
-      visibility: 'visible',
-      description: 'Mailgun API endpoint (use EU endpoint if needed)',
-      placeholder: 'https://api.mailgun.net',
-    },
   },
 
   // ─────────────────────────────────────────────────────────────────────────
