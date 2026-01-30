@@ -24,7 +24,6 @@ import type { EmailEnv } from '../lib/email_provider'
 
 const ROUTE_EXPRESSION = 'match_recipient(".*@skedyul.app")'
 const ROUTE_PRIORITY = 10
-const ROUTE_DESCRIPTION = 'Skedyul email webhook'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schema
@@ -69,16 +68,19 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     const { webhooks: existingWebhooks } = await webhook.list({ name: context.webhookName })
     
     let webhookUrl: string
+    let webhookRegistrationId: string
 
     if (existingWebhooks.length > 0) {
       // Reuse existing webhook registration
       webhookUrl = existingWebhooks[0].url
-      console.log(`[SetupMailgunRoutes] Found existing webhook registration: ${webhookUrl}`)
+      webhookRegistrationId = existingWebhooks[0].id
+      console.log(`[SetupMailgunRoutes] Found existing webhook registration: ${webhookRegistrationId} -> ${webhookUrl}`)
     } else {
       // Create new webhook registration
       const webhookResult = await webhook.create(context.webhookName)
       webhookUrl = webhookResult.url
-      console.log(`[SetupMailgunRoutes] Created new webhook registration: ${webhookUrl}`)
+      webhookRegistrationId = webhookResult.id
+      console.log(`[SetupMailgunRoutes] Created new webhook registration: ${webhookRegistrationId} -> ${webhookUrl}`)
     }
 
     // Step 2: Initialize Mailgun client
@@ -120,7 +122,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
       console.log(`[SetupMailgunRoutes] Updating existing route: ${existingRoute.id}`)
       await mg.routes.update(existingRoute.id, {
         priority: ROUTE_PRIORITY,
-        description: ROUTE_DESCRIPTION,
+        description: webhookRegistrationId,
         expression: ROUTE_EXPRESSION,
         action: [expectedAction],
       })
@@ -141,7 +143,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     // Step 4: Create new Mailgun route
     const route = await mg.routes.create({
       priority: ROUTE_PRIORITY,
-      description: ROUTE_DESCRIPTION,
+      description: webhookRegistrationId,
       expression: ROUTE_EXPRESSION,
       action: [expectedAction],
     })
