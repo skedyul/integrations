@@ -1,4 +1,4 @@
-import { z, instance, communicationChannel, type z as ZodType } from 'skedyul'
+import { z, instance, communicationChannel, type z as ZodType, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 /**
@@ -30,7 +30,12 @@ export const uninstallRegistry: ToolDefinition<UninstallInput, UninstallOutput> 
   inputs: UninstallInputSchema,
   outputSchema: UninstallOutputSchema,
   handler: async (_input, context) => {
-    const subdomain = context.workplace?.subdomain
+    // This is a runtime-only tool (uninstall lifecycle)
+    if (!isRuntimeContext(context)) {
+      throw new Error('uninstall can only be called in a runtime context')
+    }
+
+    const subdomain = context.workplace.subdomain
     if (!subdomain) {
       throw new Error('Workplace subdomain not available in context')
     }

@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, communicationChannel } from 'skedyul'
+import skedyul, { type z as ZodType, instance, communicationChannel, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
@@ -31,8 +31,19 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
   inputs: UpdatePhoneDetailsInputSchema,
   outputSchema: UpdatePhoneDetailsOutputSchema,
   handler: async (input, context) => {
-    // Get phone_id from input or context.params (path params)
-    const phoneNumberId = input.phone_id || context.params?.phone_id
+    // This is a runtime-only tool
+    if (!isRuntimeContext(context)) {
+      return {
+        output: {
+          status: 'error',
+          message: 'This tool can only be called in a runtime context',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    // Get phone_id from input or context.request.params (path params)
+    const phoneNumberId = input.phone_id || context.request.params?.phone_id
     const { name } = input
 
     // Validate phone number ID is provided

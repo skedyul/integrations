@@ -1,4 +1,4 @@
-import skedyul from 'skedyul'
+import skedyul, { isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   MessageSendInputSchema,
@@ -7,8 +7,6 @@ import {
   type MessageSendOutput,
 } from 'skedyul'
 import { createEmailProvider, type EmailEnv } from '../lib/email_provider'
-
-const { z } = skedyul
 
 /**
  * Send an email message.
@@ -25,6 +23,11 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
   inputs: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,
   handler: async (input, context) => {
+    // This is a runtime-only tool (message sending)
+    if (!isRuntimeContext(context)) {
+      throw new Error('send_email can only be called in a runtime context')
+    }
+
     const env = context.env as EmailEnv
 
     // Log environment configuration (mask sensitive values)
@@ -37,17 +40,14 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
 
     console.log('[send_email] Context:', {
       appInstallationId: context.appInstallationId,
-      workplace: context.workplace?.subdomain,
+      workplace: context.workplace.subdomain,
       envKeys: Object.keys(env),
     })
 
     const provider = createEmailProvider(env)
     console.log('[send_email] Provider created:', provider.name)
 
-    const fallbackFromEmail =
-      context.workplace?.subdomain != null
-        ? `${context.workplace.subdomain}@skedyul.app`
-        : 'no-reply@skedyul.app'
+    const fallbackFromEmail = `${context.workplace.subdomain}@skedyul.app`
     const fromEmail = input.channel.identifierValue?.trim() || fallbackFromEmail
 
     const emailParams = {
@@ -115,7 +115,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
         subscription: input.subscription.identifierValue,
         messageId: input.message.id,
         appInstallationId: context.appInstallationId,
-        workplace: context.workplace?.subdomain,
+        workplace: context.workplace.subdomain,
         env: {
           MAILGUN_DOMAIN: env.MAILGUN_DOMAIN ?? '(not set)',
         },

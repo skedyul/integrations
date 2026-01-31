@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, communicationChannel, webhook } from 'skedyul'
+import skedyul, { type z as ZodType, instance, communicationChannel, webhook, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -38,19 +38,19 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
   inputs: SubmitNewPhoneNumberInputSchema,
   outputSchema: SubmitNewPhoneNumberOutputSchema,
   handler: async (input, context) => {
-    const { compliance_record: complianceRecordId, name } = input
-    const { appInstallationId, workplace, env } = context
-
-    // Validate required context fields
-    if (!appInstallationId || !workplace) {
+    // This is a runtime-only tool (form_submit)
+    if (!isRuntimeContext(context)) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required context: appInstallationId or workplace',
+          message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
       }
     }
+
+    const { compliance_record: complianceRecordId, name } = input
+    const { appInstallationId, workplace, env } = context
 
     // Validate compliance record ID is provided
     if (!complianceRecordId) {

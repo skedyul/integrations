@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, communicationChannel } from 'skedyul'
+import skedyul, { type z as ZodType, instance, communicationChannel, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
@@ -35,9 +35,20 @@ export const removePhoneNumberRegistry: ToolDefinition<
   inputs: RemovePhoneNumberInputSchema,
   outputSchema: RemovePhoneNumberOutputSchema,
   handler: async (input, context) => {
+    // This is a runtime-only tool (form_submit/page_action)
+    if (!isRuntimeContext(context)) {
+      return {
+        output: {
+          status: 'error',
+          message: 'This tool can only be called in a runtime context',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
     // Accept phone_number_id (from hidden field), instance_id (from modal context), 
-    // phone_id (from input), or phone_id from context.params (path params)
-    const phoneNumberId = input.phone_number_id || input.instance_id || input.phone_id || context.params?.phone_id
+    // phone_id (from input), or phone_id from context.request.params (path params)
+    const phoneNumberId = input.phone_number_id || input.instance_id || input.phone_id || context.request.params?.phone_id
     const { appInstallationId, workplace } = context
 
     // Validate required context fields

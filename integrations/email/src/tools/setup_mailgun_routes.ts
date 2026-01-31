@@ -106,7 +106,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     // Step 3: Check for existing Mailgun route matching this appVersionId
     // We match by description (appVersionId) to support multiple environments sharing the same Mailgun account
     // Each app version gets exactly one route, preventing duplicates across provisions
-    const { appVersionId } = context
+    const appVersionId = context.app.versionId
     
     console.log(`[SetupMailgunRoutes] Step 3: Fetching existing Mailgun routes...`)
     console.log(`[SetupMailgunRoutes] Looking for route with appVersionId: ${appVersionId}`)

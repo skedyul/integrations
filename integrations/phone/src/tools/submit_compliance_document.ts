@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, file, webhook } from 'skedyul'
+import skedyul, { type z as ZodType, instance, file, webhook, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -142,6 +142,17 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
   inputs: SubmitComplianceDocumentInputSchema,
   outputSchema: SubmitComplianceDocumentOutputSchema,
   handler: async (input, context) => {
+    // This is a runtime-only tool (form_submit)
+    if (!isRuntimeContext(context)) {
+      return {
+        output: {
+          status: 'error',
+          message: 'This tool can only be called in a runtime context',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
     const { 
       business_name, 
       business_email, 
@@ -151,17 +162,6 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       file: fileId 
     } = input
     const { appInstallationId, workplace, env } = context
-
-    // Validate required context fields
-    if (!appInstallationId || !workplace) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required context: appInstallationId or workplace',
-        },
-        billing: { credits: 0 },
-      }
-    }
 
     // Validate required input fields
     if (!business_name || !business_email || !business_id || !country || !address || !fileId) {

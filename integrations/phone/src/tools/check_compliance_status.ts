@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance } from 'skedyul'
+import skedyul, { type z as ZodType, instance, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -51,18 +51,18 @@ export const checkComplianceStatusRegistry: ToolDefinition<
   inputs: CheckComplianceStatusInputSchema,
   outputSchema: CheckComplianceStatusOutputSchema,
   handler: async (_input, context) => {
-    const { appInstallationId, workplace, env } = context
-
-    // Validate required context fields
-    if (!appInstallationId || !workplace) {
+    // This is a runtime-only tool (page_action)
+    if (!isRuntimeContext(context)) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required context: appInstallationId or workplace',
+          message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
       }
     }
+
+    const { appInstallationId, workplace, env } = context
 
     // 1. Get the compliance record for this installation
     const { data: records } = await instance.list('compliance_record', {

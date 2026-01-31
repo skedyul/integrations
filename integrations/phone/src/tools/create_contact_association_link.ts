@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, contactAssociationLink } from 'skedyul'
+import skedyul, { type z as ZodType, contactAssociationLink, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 
 const { z } = skedyul
@@ -34,19 +34,19 @@ export const createContactAssociationLinkRegistry: ToolDefinition<
   inputs: CreateContactAssociationLinkInputSchema,
   outputSchema: CreateContactAssociationLinkOutputSchema,
   handler: async (input, context) => {
-    const { linked_model: modelId, identifier_field: identifierFieldId, communication_channel_id } = input
-    const { appInstallationId, workplace } = context
-
-    // Validate required context fields
-    if (!appInstallationId || !workplace) {
+    // This is a runtime-only tool (form_submit)
+    if (!isRuntimeContext(context)) {
       return {
         output: {
           status: 'error',
-          message: 'Missing required context: appInstallationId or workplace',
+          message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
       }
     }
+
+    const { linked_model: modelId, identifier_field: identifierFieldId, communication_channel_id } = input
+    const { appInstallationId, workplace } = context
 
     // Determine communication channel ID
     const channelId = communication_channel_id

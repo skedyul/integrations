@@ -1,4 +1,4 @@
-import { instance, type WebhookContext, type WebhookRequest, type WebhookResponse, type WebhookDefinition } from 'skedyul'
+import { instance, isRuntimeWebhookContext, type WebhookContext, type WebhookRequest, type WebhookResponse, type WebhookDefinition } from 'skedyul'
 
 /**
  * Twilio compliance bundle status mapping.
@@ -53,6 +53,15 @@ async function handleComplianceStatusCallback(
   request: WebhookRequest,
   context: WebhookContext,
 ): Promise<WebhookResponse> {
+  // This webhook requires runtime context (has installation and workplace)
+  if (!isRuntimeWebhookContext(context)) {
+    console.error('[Compliance Webhook] Missing runtime context')
+    return {
+      status: 500,
+      body: { error: 'This webhook requires a runtime context with appInstallationId' },
+    }
+  }
+
   console.log('[Compliance Webhook] Received status callback:', {
     body: request.body,
     registration: context.registration,
@@ -80,15 +89,6 @@ async function handleComplianceStatusCallback(
     return {
       status: 400,
       body: { error: 'Missing complianceRecordId in webhook context' },
-    }
-  }
-
-  // Validate we have installation context (platform injects this)
-  if (!context.appInstallationId || !context.workplace) {
-    console.error('[Compliance Webhook] Missing platform context')
-    return {
-      status: 500,
-      body: { error: 'Missing platform context' },
     }
   }
 

@@ -1,4 +1,4 @@
-import skedyul from 'skedyul'
+import skedyul, { isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   MessageSendInputSchema,
@@ -7,7 +7,6 @@ import {
   type MessageSendOutput,
 } from 'skedyul'
 
-const { z } = skedyul
 import { createTwilioClient } from '../lib/twilio_client'
 
 /**

@@ -1,4 +1,4 @@
-import skedyul, { type z as ZodType, instance, webhook } from 'skedyul'
+import skedyul, { type z as ZodType, instance, webhook, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import { createTwilioClient } from '../lib/twilio_client'
 
@@ -26,7 +26,18 @@ export const updateForwardingNumberRegistry: ToolDefinition<
   inputs: UpdateForwardingNumberInputSchema,
   outputSchema: UpdateForwardingNumberOutputSchema,
   handler: async (input, context) => {
-    const phoneNumberId = input.phone_id || context.params?.phone_id
+    // This is a runtime-only tool
+    if (!isRuntimeContext(context)) {
+      return {
+        output: {
+          status: 'error',
+          message: 'This tool can only be called in a runtime context',
+        },
+        billing: { credits: 0 },
+      }
+    }
+
+    const phoneNumberId = input.phone_id || context.request.params?.phone_id
     const forwardingValue = input.forwarding_phone_number.trim()
 
     if (!phoneNumberId) {
