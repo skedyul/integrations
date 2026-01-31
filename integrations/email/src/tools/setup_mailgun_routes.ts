@@ -103,11 +103,13 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     })
     console.log(`[SetupMailgunRoutes] Mailgun client initialized`)
 
-    // Step 3: Check for existing Mailgun route matching our webhook registration ID
-    // We match by description (contains webhookRegistrationId) to support multiple environments
-    // sharing the same Mailgun account with the same expression
+    // Step 3: Check for existing Mailgun route matching this appVersionId
+    // We match by description (appVersionId) to support multiple environments sharing the same Mailgun account
+    // Each app version gets exactly one route, preventing duplicates across provisions
+    const { appVersionId } = context
+    
     console.log(`[SetupMailgunRoutes] Step 3: Fetching existing Mailgun routes...`)
-    console.log(`[SetupMailgunRoutes] Looking for description: ${webhookRegistrationId}`)
+    console.log(`[SetupMailgunRoutes] Looking for route with appVersionId: ${appVersionId}`)
     
     let routes: { items?: Array<{ id: string; expression: string; description?: string; actions?: string[] }> }
     try {
@@ -128,8 +130,10 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
       })
     }
     
+    // Find any route that matches this appVersionId
     const existingRoute = routes.items?.find(
-      (route: { description?: string; id: string }) => route.description === webhookRegistrationId
+      (route: { description?: string; id: string }) => 
+        route.description === appVersionId
     )
 
     const expectedAction = `store(notify="${webhookUrl}")`
@@ -168,7 +172,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
       console.log(`[SetupMailgunRoutes] Updating route with new action...`)
       const updatePayload = {
         priority: ROUTE_PRIORITY,
-        description: webhookRegistrationId,
+        description: appVersionId,
         expression: ROUTE_EXPRESSION,
         action: [expectedAction],
       }
@@ -201,7 +205,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
     console.log(`[SetupMailgunRoutes] No matching route found, creating new one...`)
     const createPayload = {
       priority: ROUTE_PRIORITY,
-      description: webhookRegistrationId,
+      description: appVersionId,
       expression: ROUTE_EXPRESSION,
       action: [expectedAction],
     }
