@@ -1,4 +1,4 @@
-import { communicationChannel } from 'skedyul'
+import { communicationChannel, token, runWithConfig, getConfig } from 'skedyul'
 import type {
   WebhookContext,
   WebhookRequest,
@@ -28,11 +28,9 @@ async function handleCommunicationChannelCreated(
     `[Email Webhook] Channel created for ${channel.identifierValue}, webhook URL: ${webhookUrl}`,
   )
 
-  // Mailgun routes are configured at the domain level, not per-address
-  // The receive_email webhook handles all inbound emails and routes by recipient
-  return {
-    message: `Email channel created for ${channel.identifierValue}`,
-  }
+  // Mailgun routes are configured at the domain level (via setup_mailgun_routes),
+  // not per-address. Return null to indicate no per-channel setup is needed.
+  return null
 }
 
 /**
@@ -45,9 +43,8 @@ async function handleCommunicationChannelDeleted(
 
   console.log(`[Email Webhook] Channel deleted for ${channel.identifierValue}`)
 
-  return {
-    message: `Email channel deleted for ${channel.identifierValue}`,
-  }
+  // Mailgun routes are managed at the domain level, no per-channel cleanup needed
+  return null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,42 +115,59 @@ async function handleReceiveEmail(
 
   const channel = channels[0]
 
+  // Exchange token to get a workplace-scoped token for file operations
+  // The provision-level webhook doesn't have workplace context, but the channel does
+  console.log('[Email Webhook] Exchanging token for installation:', channel.appInstallationId)
+  const { token: scopedToken } = await token.exchange(channel.appInstallationId)
+  const currentConfig = getConfig()
+
   // Generate a message ID for attachment processing
   const messageId = `email-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
-  // Process attachments
-  const attachments = await processAttachments({
-    attachments: inboundEmail.attachments,
-    messageId,
-    provider,
-  })
-
-  // Create the inbound message
+  // Process attachments and create message using the scoped token
+  // This ensures file.upload has the proper workplace context
   try {
-    const result = await communicationChannel.receiveMessage({
-      communicationChannelId: channel.id,
-      from: inboundEmail.from,
-      contact: {
-        identifierValue: inboundEmail.from,
+    const result = await runWithConfig(
+      { ...currentConfig, apiToken: scopedToken },
+      async () => {
+        // Process attachments with workplace-scoped token
+        const attachments = await processAttachments({
+          attachments: inboundEmail.attachments,
+          messageId,
+          provider,
+        })
+
+        console.log('[Email Webhook] Processed attachments:', attachments.length)
+
+        // Create the inbound message
+        const messageResult = await communicationChannel.receiveMessage({
+          communicationChannelId: channel.id,
+          from: inboundEmail.from,
+          contact: {
+            identifierValue: inboundEmail.from,
+          },
+          message: {
+            message: inboundEmail.textBody,
+            contentRaw: inboundEmail.htmlBody,
+            title: inboundEmail.subject,
+            remoteId: inboundEmail.messageId || undefined,
+            // Create new chat for each email thread (emails are standalone)
+            newChat: true,
+            ...(attachments.length > 0 && {
+              attachments: attachments.map((a) => ({
+                fileId: a.fileId,
+                name: a.name,
+                mimeType: a.mimeType,
+                size: a.size,
+              })),
+            }),
+          },
+          remoteId: inboundEmail.messageId || undefined,
+        })
+
+        return messageResult
       },
-      message: {
-        message: inboundEmail.textBody,
-        contentRaw: inboundEmail.htmlBody,
-        title: inboundEmail.subject,
-        remoteId: inboundEmail.messageId || undefined,
-        // Create new chat for each email thread (emails are standalone)
-        newChat: true,
-        ...(attachments.length > 0 && {
-          attachments: attachments.map((a) => ({
-            fileId: a.fileId,
-            name: a.name,
-            mimeType: a.mimeType,
-            size: a.size,
-          })),
-        }),
-      },
-      remoteId: inboundEmail.messageId || undefined,
-    })
+    )
 
     console.log('[Email Webhook] Message created:', {
       channelId: channel.id,
