@@ -169,57 +169,10 @@ const config: ProvisionConfig = {
                       'Select the model and fields to map for Petbooqz clients.',
                   },
                   handler: 'link_shared_model',
-                  fields: [
-                    {
-                      component: 'Input',
-                      id: 'model_handle',
-                      row: 0,
-                      col: 0,
-                      hidden: true,
-                      props: {
-                        type: 'hidden',
-                        value: 'client',
-                      },
-                    },
-                    {
-                      component: 'Select',
-                      id: 'target_model_id',
-                      row: 1,
-                      col: 0,
-                      props: {
-                        label: 'Target Model',
-                        placeholder: 'Select a model...',
-                        helpText:
-                          'The model in your workspace to sync clients to.',
-                        items: '__INJECT_SYSTEM_MODELS__',
-                      },
-                    },
-                    {
-                      component: 'Input',
-                      id: 'field_petbooqz_id',
-                      row: 2,
-                      col: 0,
-                      props: {
-                        label: 'Petbooqz ID Field',
-                        placeholder: 'Enter field ID...',
-                        helpText:
-                          'The field ID to store the Petbooqz external ID.',
-                        type: 'text',
-                      },
-                    },
-                  ],
-                  layout: {
-                    type: 'form',
-                    rows: [
-                      {
-                        columns: [{ field: 'target_model_id', colSpan: 12 }],
-                      },
-                      {
-                        columns: [{ field: 'field_petbooqz_id', colSpan: 12 }],
-                      },
-                    ],
+                  template: 'APP_MODEL_RESOURCE_INSTANCE_MAPPER',
+                  templateParams: {
+                    modelHandle: 'client',
                   },
-                  actions: [],
                 },
               },
             ],
@@ -280,57 +233,10 @@ const config: ProvisionConfig = {
                       'Select the model and fields to map for Petbooqz patients.',
                   },
                   handler: 'link_shared_model',
-                  fields: [
-                    {
-                      component: 'Input',
-                      id: 'model_handle',
-                      row: 0,
-                      col: 0,
-                      hidden: true,
-                      props: {
-                        type: 'hidden',
-                        value: 'patient',
-                      },
-                    },
-                    {
-                      component: 'Select',
-                      id: 'target_model_id',
-                      row: 1,
-                      col: 0,
-                      props: {
-                        label: 'Target Model',
-                        placeholder: 'Select a model...',
-                        helpText:
-                          'The model in your workspace to sync patients to.',
-                        items: '__INJECT_SYSTEM_MODELS__',
-                      },
-                    },
-                    {
-                      component: 'Input',
-                      id: 'field_petbooqz_id',
-                      row: 2,
-                      col: 0,
-                      props: {
-                        label: 'Petbooqz ID Field',
-                        placeholder: 'Enter field ID...',
-                        helpText:
-                          'The field ID to store the Petbooqz external ID.',
-                        type: 'text',
-                      },
-                    },
-                  ],
-                  layout: {
-                    type: 'form',
-                    rows: [
-                      {
-                        columns: [{ field: 'target_model_id', colSpan: 12 }],
-                      },
-                      {
-                        columns: [{ field: 'field_petbooqz_id', colSpan: 12 }],
-                      },
-                    ],
+                  template: 'APP_MODEL_RESOURCE_INSTANCE_MAPPER',
+                  templateParams: {
+                    modelHandle: 'patient',
                   },
-                  actions: [],
                 },
               },
             ],
@@ -391,57 +297,10 @@ const config: ProvisionConfig = {
                       'Select the model and fields to map for Petbooqz appointments.',
                   },
                   handler: 'link_shared_model',
-                  fields: [
-                    {
-                      component: 'Input',
-                      id: 'model_handle',
-                      row: 0,
-                      col: 0,
-                      hidden: true,
-                      props: {
-                        type: 'hidden',
-                        value: 'appointment',
-                      },
-                    },
-                    {
-                      component: 'Select',
-                      id: 'target_model_id',
-                      row: 1,
-                      col: 0,
-                      props: {
-                        label: 'Target Model',
-                        placeholder: 'Select a model...',
-                        helpText:
-                          'The model in your workspace to sync appointments to.',
-                        items: '__INJECT_SYSTEM_MODELS__',
-                      },
-                    },
-                    {
-                      component: 'Input',
-                      id: 'field_petbooqz_id',
-                      row: 2,
-                      col: 0,
-                      props: {
-                        label: 'Petbooqz ID Field',
-                        placeholder: 'Enter field ID...',
-                        helpText:
-                          'The field ID to store the Petbooqz external ID.',
-                        type: 'text',
-                      },
-                    },
-                  ],
-                  layout: {
-                    type: 'form',
-                    rows: [
-                      {
-                        columns: [{ field: 'target_model_id', colSpan: 12 }],
-                      },
-                      {
-                        columns: [{ field: 'field_petbooqz_id', colSpan: 12 }],
-                      },
-                    ],
+                  template: 'APP_MODEL_RESOURCE_INSTANCE_MAPPER',
+                  templateParams: {
+                    modelHandle: 'appointment',
                   },
-                  actions: [],
                 },
               },
             ],
