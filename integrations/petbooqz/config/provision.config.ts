@@ -83,6 +83,38 @@ const config: ProvisionConfig = {
       },
     },
   ],
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pages
+  // ─────────────────────────────────────────────────────────────────────────
+  pages: [
+    {
+      type: 'INSTANCE',
+      title: 'Settings',
+      path: '/settings',
+      default: true,
+      navigation: true,
+      blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Petbooqz Settings',
+            description: 'Configure your Petbooqz integration settings.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'petbooqz-settings',
+            fields: [],
+            layout: {
+              type: 'form',
+              rows: [],
+            },
+          },
+        },
+      ],
+    },
+  ],
 }
 
 export default config
