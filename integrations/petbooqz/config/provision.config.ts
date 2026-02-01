@@ -6,55 +6,15 @@
  * when the app version is deployed.
  *
  * Sections:
- *   - env:           Environment variables (API keys, credentials)
  *   - models:        Data models with INTERNAL or SHARED scope
  *   - relationships: Links between models (one-to-many, etc.)
+ *
+ * Note: Per-install env vars (API credentials) are in install.config.ts
  */
 
 import type { ProvisionConfig } from 'skedyul'
 
 const config: ProvisionConfig = {
-  // ─────────────────────────────────────────────────────────────────────────
-  // Environment Variables
-  // ─────────────────────────────────────────────────────────────────────────
-  //
-  // These are configured per-installation by the user when installing the app.
-  // Values marked as 'encrypted' are securely stored.
-  //
-  env: {
-    PETBOOQZ_BASE_URL: {
-      label: 'Petbooqz API Base URL',
-      required: true,
-      visibility: 'visible',
-      placeholder: 'http://example.com/petbooqz/ExternalAPI/yourpetpa/v1/',
-      description: 'Base URL for the Petbooqz API endpoint',
-    },
-    PETBOOQZ_USERNAME: {
-      label: 'API Username',
-      required: true,
-      visibility: 'encrypted',
-      description: 'Username for Petbooqz API authentication',
-    },
-    PETBOOQZ_PASSWORD: {
-      label: 'API Password',
-      required: true,
-      visibility: 'encrypted',
-      description: 'Password for Petbooqz API authentication',
-    },
-    PETBOOQZ_API_KEY: {
-      label: 'API Key',
-      required: true,
-      visibility: 'encrypted',
-      description: 'API key provided by Petbooqz',
-    },
-    PETBOOQZ_CLIENT_PRACTICE: {
-      label: 'Client Practice ID',
-      required: false,
-      visibility: 'visible',
-      description: 'Optional client practice identifier for multi-practice setups',
-    },
-  },
-
   // ─────────────────────────────────────────────────────────────────────────
   // Models
   // ─────────────────────────────────────────────────────────────────────────

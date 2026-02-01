@@ -5,9 +5,10 @@
  * This is the main configuration file for the Petbooqz app.
  *
  * Structure:
- *   skedyul.config.ts      - App metadata + imports (this file)
- *   src/registries.ts      - Tool and webhook registries
- *   config/provision.config.ts - Models, channels, workflows, pages, env vars
+ *   skedyul.config.ts           - App metadata + imports (this file)
+ *   src/registries.ts           - Tool and webhook registries
+ *   config/provision.config.ts  - Models, relationships (provision-level)
+ *   config/install.config.ts    - Per-install env vars, lifecycle hooks
  *
  * Dynamic imports are resolved at build/deploy time.
  * The compiled config is stored in the database for runtime use.
@@ -54,7 +55,18 @@ export default defineConfig({
 
   /**
    * Resources automatically synced when the app version is deployed:
-   *   - env, models, relationships, channels, workflows, pages, webhooks
+   *   - models, relationships, channels, workflows, pages
    */
   provision: import('./config/provision.config'),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Install Configuration
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Per-install configuration:
+   *   - env: Credentials collected during install, passed at runtime
+   *   - onInstall: Tool to verify credentials before completing installation
+   */
+  install: import('./config/install.config'),
 })

@@ -34,6 +34,7 @@ import { patientHistoryCreateRegistry } from './tools/patient_history_create'
 import { patientHistoryGetRegistry } from './tools/patient_history_get'
 import { patientHistoryUpdateRegistry } from './tools/patient_history_update'
 import { patientsGetRegistry } from './tools/patients_get'
+import { verifyCredentialsRegistry } from './tools/verify_credentials'
 
 /**
  * Tool Registry
@@ -79,4 +80,7 @@ export const toolRegistry: ToolRegistry = {
 
   /** Get patient information by ID */
   patients_get: patientsGetRegistry,
+
+  /** Verify Petbooqz credentials during installation (onInstall hook) */
+  verify_credentials: verifyCredentialsRegistry,
 }
