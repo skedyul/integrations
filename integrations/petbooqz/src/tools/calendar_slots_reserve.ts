@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 export interface ReserveSlotResponse {
@@ -26,32 +25,32 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_reserve',
   description: 'Reserve a calendar slot on the Petbooqz calendar',
-  inputs: CalendarSlotsReserveInputSchema,
+  inputSchema: CalendarSlotsReserveInputSchema,
   outputSchema: CalendarSlotsReserveOutputSchema,
-  handler: async ({ input, context }) => {
-  const client = createClientFromEnv(context.env)
-  const response = await client.post<ReserveSlotResponse[]>(
-    `/calendars/${input.calendar_id}/reserve`,
-    {
-      datetime: input.datetime,
-      duration: input.duration,
-      appointment_note: input.appointment_note,
-    },
-  )
+  handler: async (input, context) => {
+    const client = createClientFromEnv(context.env)
+    const response = await client.post<ReserveSlotResponse[]>(
+      `/calendars/${input.calendar_id}/reserve`,
+      {
+        datetime: input.datetime,
+        duration: input.duration,
+        appointment_note: input.appointment_note,
+      },
+    )
 
-  // API returns array with single object
-  const slotId = response[0]?.slot_id
-  if (!slotId) {
-    throw new Error('Failed to reserve slot: no slot_id returned')
-  }
+    // API returns array with single object
+    const slotId = response[0]?.slot_id
+    if (!slotId) {
+      throw new Error('Failed to reserve slot: no slot_id returned')
+    }
 
-  return {
-    output: {
-      slot_id: slotId,
-    },
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {
+        slot_id: slotId,
+      },
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }

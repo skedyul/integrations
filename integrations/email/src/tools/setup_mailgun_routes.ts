@@ -50,7 +50,7 @@ export const setupMailgunRoutesRegistry: ToolDefinition<
 > = {
   name: 'setup_mailgun_routes',
   description: 'Creates or updates Mailgun routes for receiving emails during webhook provisioning',
-  inputs: SetupMailgunRoutesInputSchema,
+  inputSchema: SetupMailgunRoutesInputSchema,
   outputSchema: SetupMailgunRoutesOutputSchema,
 
   handler: async (_input, rawContext: ToolExecutionContext) => {

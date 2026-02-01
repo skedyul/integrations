@@ -35,7 +35,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
 > = {
   name: 'submit_new_phone_number',
   description: 'Searches for and purchases an Australian mobile phone number from Twilio',
-  inputs: SubmitNewPhoneNumberInputSchema,
+  inputSchema: SubmitNewPhoneNumberInputSchema,
   outputSchema: SubmitNewPhoneNumberOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit)

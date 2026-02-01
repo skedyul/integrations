@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 
 const PatientHistoryUpdateInputSchema = z.object({})
 
@@ -14,14 +13,14 @@ export const patientHistoryUpdateRegistry: ToolDefinition<
 > = {
   name: 'patient_history_update',
   description: 'Update patient history on Petbooqz',
-  inputs: PatientHistoryUpdateInputSchema,
+  inputSchema: PatientHistoryUpdateInputSchema,
   outputSchema: PatientHistoryUpdateOutputSchema,
   handler: async () => {
-  return {
-    output: {},
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {},
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }

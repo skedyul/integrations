@@ -1,22 +1,18 @@
 {
-  "name": "@skedyul/petbooqz",
-  "version": "1.0.17",
-  "description": "Petbooqz integration for Skedyul",
-  "main": "dist/server/mcp-server.js",
+  "name": "@skedyul-integrations/petbooqz",
+  "version": "2.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/registries.ts",
   "scripts": {
-    "build": "tsc && tsc --project tsconfig.tests.json",
-    "start": "node dist/server/mcp-server.js",
-    "test": "npm run build && node --test dist-tests/**/*.test.js"
+    "build": "tsup"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "skedyul": "latest",
-    "zod": "^4.0.0"
+    "skedyul": "latest"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "typescript": "^5.5.0"
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
   }
 }
-
-

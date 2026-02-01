@@ -31,7 +31,7 @@ export const createContactAssociationLinkRegistry: ToolDefinition<
 > = {
   name: 'create_contact_association_link',
   description: 'Creates a contact association link between a communication channel and a model',
-  inputs: CreateContactAssociationLinkInputSchema,
+  inputSchema: CreateContactAssociationLinkInputSchema,
   outputSchema: CreateContactAssociationLinkOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit)

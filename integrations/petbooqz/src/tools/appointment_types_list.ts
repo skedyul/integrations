@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 export interface AppointmentType {
@@ -31,19 +30,19 @@ export const appointmentTypesListRegistry: ToolDefinition<
 > = {
   name: 'appointment_types_list',
   description: 'List all appointment types on the Petbooqz calendar',
-  inputs: AppointmentTypesListInputSchema,
+  inputSchema: AppointmentTypesListInputSchema,
   outputSchema: AppointmentTypesListOutputSchema,
-  handler: async ({ context }) => {
-  const client = createClientFromEnv(context.env)
-  const appointmentTypes = await client.get<AppointmentType[]>('/appointmenttypes')
+  handler: async (_input, context) => {
+    const client = createClientFromEnv(context.env)
+    const appointmentTypes = await client.get<AppointmentType[]>('/appointmenttypes')
 
-  return {
-    output: {
-      appointmentTypes,
-    },
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {
+        appointmentTypes,
+      },
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }

@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 export interface Patient {
@@ -37,19 +36,19 @@ export const patientsGetRegistry: ToolDefinition<
 > = {
   name: 'patients_get',
   description: 'Get patient information by ID on Petbooqz',
-  inputs: PatientsGetInputSchema,
+  inputSchema: PatientsGetInputSchema,
   outputSchema: PatientsGetOutputSchema,
-  handler: async ({ input, context }) => {
-  const client = createClientFromEnv(context.env)
-  const patient = await client.get<Patient>(`/patients/${input.patient_id}`)
+  handler: async (input, context) => {
+    const client = createClientFromEnv(context.env)
+    const patient = await client.get<Patient>(`/patients/${input.patient_id}`)
 
-  return {
-    output: {
-      patient,
-    },
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {
+        patient,
+      },
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }

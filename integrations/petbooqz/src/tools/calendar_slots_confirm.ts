@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 export interface ConfirmSlotResponse {
@@ -35,34 +34,34 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_confirm',
   description: 'Confirm a calendar slot on the Petbooqz calendar',
-  inputs: CalendarSlotsConfirmInputSchema,
+  inputSchema: CalendarSlotsConfirmInputSchema,
   outputSchema: CalendarSlotsConfirmOutputSchema,
-  handler: async ({ input, context }) => {
-  const client = createClientFromEnv(context.env)
-  const response = await client.post<ConfirmSlotResponse>(
-    `/calendars/${input.calendar_id}/confirm`,
-    {
-      client_first: input.client_first,
-      client_last: input.client_last,
-      email_address: input.email_address,
-      phone_number: input.phone_number,
-      patient_name: input.patient_name,
-      appointment_type: input.appointment_type,
-      appointment_note: input.appointment_note,
-      client_id: input.client_id,
-      patient_id: input.patient_id,
-    },
-    { slot_id: input.slot_id },
-  )
+  handler: async (input, context) => {
+    const client = createClientFromEnv(context.env)
+    const response = await client.post<ConfirmSlotResponse>(
+      `/calendars/${input.calendar_id}/confirm`,
+      {
+        client_first: input.client_first,
+        client_last: input.client_last,
+        email_address: input.email_address,
+        phone_number: input.phone_number,
+        patient_name: input.patient_name,
+        appointment_type: input.appointment_type,
+        appointment_note: input.appointment_note,
+        client_id: input.client_id,
+        patient_id: input.patient_id,
+      },
+      { slot_id: input.slot_id },
+    )
 
-  return {
-    output: {
-      client_id: response.client_id,
-      patient_id: response.patient_id,
-    },
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {
+        client_id: response.client_id,
+        patient_id: response.patient_id,
+      },
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }

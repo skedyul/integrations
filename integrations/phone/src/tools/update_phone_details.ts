@@ -28,7 +28,7 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
 > = {
   name: 'update_phone_details',
   description: 'Updates the phone number details (name) in both the phone_number model and the communication channel',
-  inputs: UpdatePhoneDetailsInputSchema,
+  inputSchema: UpdatePhoneDetailsInputSchema,
   outputSchema: UpdatePhoneDetailsOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool

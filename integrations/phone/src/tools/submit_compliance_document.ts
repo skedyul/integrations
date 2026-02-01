@@ -139,7 +139,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 > = {
   name: 'submit_compliance_document',
   description: 'Submits an uploaded compliance document to Twilio for verification',
-  inputs: SubmitComplianceDocumentInputSchema,
+  inputSchema: SubmitComplianceDocumentInputSchema,
   outputSchema: SubmitComplianceDocumentOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit)

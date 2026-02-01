@@ -20,7 +20,7 @@ import { createEmailProvider, type EmailEnv } from '../lib/email_provider'
 export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_email',
   description: 'Send an email message',
-  inputs: MessageSendInputSchema,
+  inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool (message sending)

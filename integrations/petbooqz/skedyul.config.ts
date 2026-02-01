@@ -1,70 +1,60 @@
+/**
+ * Skedyul App Configuration
+ * =========================
+ *
+ * This is the main configuration file for the Petbooqz app.
+ *
+ * Structure:
+ *   skedyul.config.ts      - App metadata + imports (this file)
+ *   src/registries.ts      - Tool and webhook registries
+ *   config/provision.config.ts - Models, channels, workflows, pages, env vars
+ *
+ * Dynamic imports are resolved at build/deploy time.
+ * The compiled config is stored in the database for runtime use.
+ */
+
 import { defineConfig } from 'skedyul'
 import pkg from './package.json'
 
 export default defineConfig({
-  // App metadata
-  name: 'Petbooqz',
-  version: pkg.version,
-  description: 'Petbooqz veterinary practice management integration.',
+  // ─────────────────────────────────────────────────────────────────────────
+  // App Metadata
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Runtime configuration
+  /** Display name shown in the app marketplace and settings */
+  name: 'Petbooqz',
+
+  /** Semantic version - loaded from package.json */
+  version: pkg.version,
+
+  /** Short description for the app listing */
+  description: 'Petbooqz veterinary practice management integration',
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Runtime Configuration
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Compute layer determines how the app runs:
+   *   - 'serverless': AWS Lambda - fast cold starts, pay-per-use, auto-scaling
+   *   - 'dedicated':  ECS/Docker - persistent connections, custom runtimes
+   */
   computeLayer: 'serverless',
 
-  // Paths
-  tools: './src/registry.ts',
-  workflows: './workflows',
+  // ─────────────────────────────────────────────────────────────────────────
+  // Registries (from src/registries.ts)
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Global/version-level env vars (baked into container)
-  env: {
-    LOG_LEVEL: {
-      label: 'Log Level',
-      required: false,
-      visibility: 'visible',
-      default: 'info',
-    },
-  },
+  /** Tool registry - callable functions for pages, forms, workflows, API */
+  tools: import('./src/registries'),
 
-  // Install-time configuration
-  install: {
-    // Per-install env vars (configured by user when installing)
-    env: {
-      PETBOOQZ_BASE_URL: {
-        label: 'Petbooqz API Base URL',
-        required: true,
-        visibility: 'visible',
-        placeholder: 'http://example.com/petbooqz/ExternalAPI/yourpetpa/v1/',
-        description: 'Base URL for the Petbooqz API endpoint',
-      },
-      PETBOOQZ_USERNAME: {
-        label: 'API Username',
-        required: true,
-        visibility: 'encrypted',
-        description: 'Username for Petbooqz API authentication',
-      },
-      PETBOOQZ_PASSWORD: {
-        label: 'API Password',
-        required: true,
-        visibility: 'encrypted',
-        description: 'Password for Petbooqz API authentication',
-      },
-      PETBOOQZ_API_KEY: {
-        label: 'API Key',
-        required: true,
-        visibility: 'encrypted',
-        description: 'API key provided by Petbooqz',
-      },
-      PETBOOQZ_CLIENT_PRACTICE: {
-        label: 'Client Practice ID',
-        required: false,
-        visibility: 'visible',
-        description: 'Optional client practice identifier for multi-practice setups',
-      },
-    },
-    // Model mappings
-    appModels: [
-      { entityHandle: 'client', label: 'Client/Owner' },
-      { entityHandle: 'patient', label: 'Patient/Pet' },
-    ],
-  },
+  // ─────────────────────────────────────────────────────────────────────────
+  // Provision Configuration
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Resources automatically synced when the app version is deployed:
+   *   - env, models, relationships, channels, workflows, pages, webhooks
+   */
+  provision: import('./config/provision.config'),
 })
-

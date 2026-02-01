@@ -25,7 +25,7 @@ export const updateEmailAddressRegistry: ToolDefinition<
 > = {
   name: 'update_email_address',
   description: 'Update email address display name',
-  inputs: UpdateEmailAddressInputSchema,
+  inputSchema: UpdateEmailAddressInputSchema,
   outputSchema: UpdateEmailAddressOutputSchema,
   handler: async (input) => {
     const updateData: Record<string, unknown> = {}

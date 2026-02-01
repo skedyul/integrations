@@ -23,7 +23,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
 > = {
   name: 'update_forwarding_number',
   description: 'Updates the call forwarding number for this phone record and configures Twilio voiceUrl',
-  inputs: UpdateForwardingNumberInputSchema,
+  inputSchema: UpdateForwardingNumberInputSchema,
   outputSchema: UpdateForwardingNumberOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool

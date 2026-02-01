@@ -32,7 +32,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
 > = {
   name: 'remove_phone_number',
   description: 'Removes a phone number from the account, deleting its SMS channel and subscriptions',
-  inputs: RemovePhoneNumberInputSchema,
+  inputSchema: RemovePhoneNumberInputSchema,
   outputSchema: RemovePhoneNumberOutputSchema,
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit/page_action)

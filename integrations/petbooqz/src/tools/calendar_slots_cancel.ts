@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 const CalendarSlotsCancelInputSchema = z.object({
@@ -20,21 +19,21 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_cancel',
   description: 'Cancel a calendar slot on the Petbooqz calendar',
-  inputs: CalendarSlotsCancelInputSchema,
+  inputSchema: CalendarSlotsCancelInputSchema,
   outputSchema: CalendarSlotsCancelOutputSchema,
-  handler: async ({ input, context }) => {
-  const client = createClientFromEnv(context.env)
-  await client.delete(`/calendars/${input.calendar_id}/cancel`, {
-    slot_id: input.slot_id,
-  })
+  handler: async (input, context) => {
+    const client = createClientFromEnv(context.env)
+    await client.delete(`/calendars/${input.calendar_id}/cancel`, {
+      slot_id: input.slot_id,
+    })
 
-  return {
-    output: {
-      success: true,
-    },
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {
+        success: true,
+      },
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }

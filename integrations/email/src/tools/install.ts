@@ -27,7 +27,7 @@ type InstallOutput = ZodType.infer<typeof InstallOutputSchema>
 export const installRegistry: ToolDefinition<InstallInput, InstallOutput> = {
   name: 'install',
   description: 'Install the Email app - creates {subdomain}@skedyul.app email address',
-  inputs: InstallInputSchema,
+  inputSchema: InstallInputSchema,
   outputSchema: InstallOutputSchema,
   handler: async (_input, context) => {
     // This is a runtime-only tool (install lifecycle)

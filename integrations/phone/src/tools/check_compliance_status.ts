@@ -48,7 +48,7 @@ export const checkComplianceStatusRegistry: ToolDefinition<
 > = {
   name: 'check_compliance_status',
   description: 'Checks the current compliance status from Twilio',
-  inputs: CheckComplianceStatusInputSchema,
+  inputSchema: CheckComplianceStatusInputSchema,
   outputSchema: CheckComplianceStatusOutputSchema,
   handler: async (_input, context) => {
     // This is a runtime-only tool (page_action)

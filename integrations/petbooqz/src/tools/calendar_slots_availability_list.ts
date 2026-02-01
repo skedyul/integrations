@@ -1,5 +1,4 @@
-import { z } from 'zod'
-import type { ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 export interface AvailableSlot {
@@ -36,22 +35,22 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_availability_list',
   description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
-  inputs: CalendarSlotsAvailabilityListInputSchema,
+  inputSchema: CalendarSlotsAvailabilityListInputSchema,
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
-  handler: async ({ input, context }) => {
-  const client = createClientFromEnv(context.env)
-  const availableSlots = await client.post<AvailableSlot[]>('/slots', {
-    calendars: input.calendars,
-    dates: input.dates,
-  })
+  handler: async (input, context) => {
+    const client = createClientFromEnv(context.env)
+    const availableSlots = await client.post<AvailableSlot[]>('/slots', {
+      calendars: input.calendars,
+      dates: input.dates,
+    })
 
-  return {
-    output: {
-      availableSlots,
-    },
-    billing: {
-      credits: 0,
-    },
-  }
+    return {
+      output: {
+        availableSlots,
+      },
+      billing: {
+        credits: 0,
+      },
+    }
   },
 }
