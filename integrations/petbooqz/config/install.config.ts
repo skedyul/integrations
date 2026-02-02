@@ -2,10 +2,10 @@
  * Install Configuration
  * =====================
  *
- * Defines per-install environment variables and lifecycle hooks.
+ * Defines per-install environment variables.
  * - env: Collected from user during install, passed at runtime (NOT baked into container)
- * - onInstall: Tool to verify credentials before completing installation
- * - onUninstall: Tool to clean up when uninstalled
+ *
+ * Note: The install.ts handler validates credentials and normalizes the base URL.
  */
 
 import type { InstallConfig } from 'skedyul'
@@ -20,11 +20,12 @@ const config: InstallConfig = {
   //
   env: {
     PETBOOQZ_BASE_URL: {
-      label: 'Petbooqz API Base URL',
+      label: 'Petbooqz Server URL',
       required: true,
       visibility: 'visible',
-      placeholder: 'http://example.com/petbooqz/ExternalAPI/yourpetpa/v1/',
-      description: 'Base URL for the Petbooqz API endpoint',
+      placeholder: '60.240.27.225:36680',
+      description:
+        'Server address for Petbooqz (e.g., 60.240.27.225:36680 or http://your-server.com)',
     },
     PETBOOQZ_USERNAME: {
       label: 'API Username',
@@ -52,12 +53,7 @@ const config: InstallConfig = {
     },
   },
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Lifecycle Hooks
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /** Tool to invoke when app is installed - verifies credentials before completing */
-  onInstall: 'verify_credentials',
+  // Note: Credential verification and URL normalization is handled by install.ts
 }
 
 export default config

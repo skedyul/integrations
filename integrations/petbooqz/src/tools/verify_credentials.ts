@@ -25,6 +25,7 @@ export const verifyCredentialsRegistry: ToolDefinition<
   VerifyCredentialsOutput
 > = {
   name: 'verify_credentials',
+  label: 'Verify Credentials',
   description: 'Verify Petbooqz API credentials are valid during installation',
   inputSchema: VerifyCredentialsInputSchema,
   outputSchema: VerifyCredentialsOutputSchema,

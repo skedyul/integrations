@@ -138,6 +138,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
   SubmitComplianceDocumentOutput
 > = {
   name: 'submit_compliance_document',
+  label: 'Submit Compliance Document',
   description: 'Submits an uploaded compliance document to Twilio for verification',
   inputSchema: SubmitComplianceDocumentInputSchema,
   outputSchema: SubmitComplianceDocumentOutputSchema,

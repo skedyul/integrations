@@ -18,6 +18,7 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
   CalendarSlotsReleaseOutput
 > = {
   name: 'calendar_slots_release',
+  label: 'Release Calendar Slot',
   description: 'Release a calendar slot on the Petbooqz calendar',
   inputSchema: CalendarSlotsReleaseInputSchema,
   outputSchema: CalendarSlotsReleaseOutputSchema,

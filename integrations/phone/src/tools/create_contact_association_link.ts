@@ -30,6 +30,7 @@ export const createContactAssociationLinkRegistry: ToolDefinition<
   CreateContactAssociationLinkOutput
 > = {
   name: 'create_contact_association_link',
+  label: 'Create Contact Association Link',
   description: 'Creates a contact association link between a communication channel and a model',
   inputSchema: CreateContactAssociationLinkInputSchema,
   outputSchema: CreateContactAssociationLinkOutputSchema,

@@ -1,5 +1,5 @@
 export interface ApiClientConfig {
-  baseUrl: string
+  rootUrl: string
   username: string
   password: string
   apiKey?: string
@@ -7,32 +7,59 @@ export interface ApiClientConfig {
 }
 
 /**
+ * Determines which API version to use based on the endpoint path
+ * Skedyul/v1: patient histories, clients, patients, asap orders
+ * Vetstoria/v2: calendars, slots, appointment types
+ */
+function getApiVersion(endpoint: string): 'Skedyul/v1' | 'Vetstoria/v2' {
+  // Remove query string for pattern matching
+  const endpointPath = endpoint.split('?')[0]
+  
+  // Skedyul/v1 endpoints
+  const skedyulEndpoints = [
+    '/newHistory',
+    '/histories/',
+    '/clients/',
+    '/patients/',
+    '/asap', // asap orders
+  ]
+
+  // Check if endpoint matches any Skedyul pattern
+  if (skedyulEndpoints.some((pattern) => endpointPath.startsWith(pattern))) {
+    return 'Skedyul/v1'
+  }
+
+  // Default to Vetstoria/v2 for calendar-related endpoints
+  return 'Vetstoria/v2'
+}
+
+/**
  * Creates an API client from environment variables
  */
 export function createClientFromEnv(env: Record<string, string | undefined>): PetbooqzApiClient {
-  const baseUrl = env.PETBOOQZ_BASE_URL
+  const rootUrl = env.PETBOOQZ_BASE_URL
   const username = env.PETBOOQZ_USERNAME
   const password = env.PETBOOQZ_PASSWORD
   const apiKey = env.PETBOOQZ_API_KEY
   const clientPractice = env.PETBOOQZ_CLIENT_PRACTICE
 
-  if (!baseUrl || !username || !password) {
+  if (!rootUrl || !username || !password) {
     throw new Error(
       'Missing required environment variables: PETBOOQZ_BASE_URL, PETBOOQZ_USERNAME, PETBOOQZ_PASSWORD',
     )
   }
 
-  return new PetbooqzApiClient({ baseUrl, username, password, apiKey, clientPractice })
+  return new PetbooqzApiClient({ rootUrl, username, password, apiKey, clientPractice })
 }
 
 export class PetbooqzApiClient {
-  private baseUrl: string
+  private rootUrl: string
   private authHeader: string
   private apiKey?: string
   private clientPractice?: string
 
   constructor(config: ApiClientConfig) {
-    this.baseUrl = config.baseUrl.replace(/\/$/, '') // Remove trailing slash
+    this.rootUrl = config.rootUrl.replace(/\/$/, '') // Remove trailing slash
     const credentials = `${config.username}:${config.password}`
     this.authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
     this.apiKey = config.apiKey
@@ -43,7 +70,13 @@ export class PetbooqzApiClient {
     endpoint: string,
     options: RequestInit = {},
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`
+    // Determine API version based on endpoint
+    const apiVersion = getApiVersion(endpoint)
+    
+    // Construct full URL: {rootUrl}/petbooqz/ExternalAPI/{ApiVersion}/{endpoint}
+    // Remove leading slash from endpoint if present
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+    const url = `${this.rootUrl}/petbooqz/ExternalAPI/${apiVersion}/${cleanEndpoint}`
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

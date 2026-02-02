@@ -18,6 +18,7 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
   CalendarSlotsCancelOutput
 > = {
   name: 'calendar_slots_cancel',
+  label: 'Cancel Calendar Slot',
   description: 'Cancel a calendar slot on the Petbooqz calendar',
   inputSchema: CalendarSlotsCancelInputSchema,
   outputSchema: CalendarSlotsCancelOutputSchema,

@@ -40,6 +40,7 @@ export const calendarSlotsGetRegistry: ToolDefinition<
   CalendarSlotsGetOutput
 > = {
   name: 'calendar_slots_get',
+  label: 'Get Calendar Slot',
   description: 'Get calendar slot details on the Petbooqz calendar',
   inputSchema: CalendarSlotsGetInputSchema,
   outputSchema: CalendarSlotsGetOutputSchema,

@@ -30,9 +30,9 @@ import { calendarSlotsReleaseRegistry } from './tools/calendar_slots_release'
 import { calendarSlotsReserveRegistry } from './tools/calendar_slots_reserve'
 import { calendarsListRegistry } from './tools/calendars_list'
 import { clientsGetRegistry } from './tools/clients_get'
+import { clientsSearchRegistry } from './tools/clients_search'
 import { patientHistoryCreateRegistry } from './tools/patient_history_create'
 import { patientHistoryGetRegistry } from './tools/patient_history_get'
-import { patientHistoryUpdateRegistry } from './tools/patient_history_update'
 import { patientsGetRegistry } from './tools/patients_get'
 import { verifyCredentialsRegistry } from './tools/verify_credentials'
 import { linkSharedModelRegistry } from './tools/link_shared_model'
@@ -70,14 +70,14 @@ export const toolRegistry: ToolRegistry = {
   /** Get client information by ID */
   clients_get: clientsGetRegistry,
 
+  /** Search for clients by phone number */
+  clients_search: clientsSearchRegistry,
+
   /** Create a patient history entry */
   patient_history_create: patientHistoryCreateRegistry,
 
   /** Get patient history */
   patient_history_get: patientHistoryGetRegistry,
-
-  /** Update patient history */
-  patient_history_update: patientHistoryUpdateRegistry,
 
   /** Get patient information by ID */
   patients_get: patientsGetRegistry,

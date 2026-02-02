@@ -26,6 +26,7 @@ type UninstallOutput = ZodType.infer<typeof UninstallOutputSchema>
 
 export const uninstallRegistry: ToolDefinition<UninstallInput, UninstallOutput> = {
   name: 'uninstall',
+  label: 'Uninstall Email App',
   description: 'Uninstall the Email app - removes {subdomain}@skedyul.app email address',
   inputSchema: UninstallInputSchema,
   outputSchema: UninstallOutputSchema,

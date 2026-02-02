@@ -26,6 +26,7 @@ type InstallOutput = ZodType.infer<typeof InstallOutputSchema>
 
 export const installRegistry: ToolDefinition<InstallInput, InstallOutput> = {
   name: 'install',
+  label: 'Install Email App',
   description: 'Install the Email app - creates {subdomain}@skedyul.app email address',
   inputSchema: InstallInputSchema,
   outputSchema: InstallOutputSchema,

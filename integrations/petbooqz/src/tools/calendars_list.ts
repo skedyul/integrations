@@ -25,6 +25,7 @@ export const calendarsListRegistry: ToolDefinition<
   CalendarsListOutput
 > = {
   name: 'calendars_list',
+  label: 'List Calendars',
   description: 'List all calendars on Petbooqz',
   inputSchema: CalendarsListInputSchema,
   outputSchema: CalendarsListOutputSchema,

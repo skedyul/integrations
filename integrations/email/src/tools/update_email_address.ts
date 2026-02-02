@@ -24,6 +24,7 @@ export const updateEmailAddressRegistry: ToolDefinition<
   UpdateEmailAddressOutput
 > = {
   name: 'update_email_address',
+  label: 'Update Email Address',
   description: 'Update email address display name',
   inputSchema: UpdateEmailAddressInputSchema,
   outputSchema: UpdateEmailAddressOutputSchema,

@@ -4,7 +4,8 @@ import { z, resource, type ToolDefinition } from 'skedyul'
  * Link Shared Model Tool
  *
  * Called when a user configures a SHARED model mapping via the form modal.
- * Creates AppResourceInstance records for the model and its fields.
+ * Creates AppResourceInstance records for the model and AppField records
+ * for each field mapping.
  */
 
 const LinkSharedModelInputSchema = z.object({
@@ -12,8 +13,8 @@ const LinkSharedModelInputSchema = z.object({
   model_handle: z.string(),
   /** The user's selected target model ID */
   target_model_id: z.string(),
-  /** Field mapping: Petbooqz ID field -> user's field ID */
-  field_petbooqz_id: z.string().optional(),
+  /** Field mappings: provision field handle -> workspace field ID */
+  field_mappings: z.record(z.string(), z.string()).optional(),
 })
 
 const LinkSharedModelOutputSchema = z.object({
@@ -30,11 +31,12 @@ export const linkSharedModelRegistry: ToolDefinition<
   LinkSharedModelOutput
 > = {
   name: 'link_shared_model',
+  label: 'Link Shared Model',
   description: 'Link a SHARED model to a user workspace model and configure field mappings',
   inputSchema: LinkSharedModelInputSchema,
   outputSchema: LinkSharedModelOutputSchema,
   handler: async (input, _context) => {
-    const { model_handle, target_model_id, field_petbooqz_id } = input
+    const { model_handle, target_model_id, field_mappings } = input
 
     if (!model_handle || !target_model_id) {
       return {
@@ -48,26 +50,21 @@ export const linkSharedModelRegistry: ToolDefinition<
 
     try {
       // Link the SHARED model to the user's model
-      // This creates an AppResourceInstance for the MODEL
+      // This creates an AppResourceInstance for the MODEL and AppField records
+      // for each field mapping
       const { instanceId } = await resource.link({
         handle: model_handle,
         targetModelId: target_model_id,
+        fieldMappings: field_mappings,
       })
 
-      // TODO: For field mappings, we need to extend resource.link or call a separate
-      // API to create field AppResourceInstances with dependsOnInstanceId pointing
-      // to the model instance. For now, we only create the model instance.
-      // Field instances will need to be created with:
-      // - appResourceId: the FIELD AppResource ID
-      // - targetId: the user's field ID (field_petbooqz_id)
-      // - dependsOnInstanceId: instanceId (the model instance)
-
       const modelName = model_handle.charAt(0).toUpperCase() + model_handle.slice(1)
+      const fieldCount = field_mappings ? Object.keys(field_mappings).length : 0
 
       return {
         output: {
           success: true,
-          message: `${modelName} model linked successfully${field_petbooqz_id ? ' with field mapping' : ''}`,
+          message: `${modelName} model linked successfully${fieldCount > 0 ? ` with ${fieldCount} field mapping${fieldCount > 1 ? 's' : ''}` : ''}`,
           instanceId,
         },
         billing: { credits: 0 },

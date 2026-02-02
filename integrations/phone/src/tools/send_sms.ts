@@ -15,6 +15,7 @@ import { createTwilioClient } from '../lib/twilio_client'
  */
 export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_sms',
+  label: 'Send SMS',
   description: 'Send an SMS message via Twilio',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

@@ -154,10 +154,12 @@ const config: ProvisionConfig = {
                 props: {
                   label: 'Client Model Mapping',
                   description:
-                    'Select which model and fields to use for syncing Petbooqz clients.',
+                    '{% if resources.client.linked %}Linked to: {{ resources.client.targetName }}{% else %}Select which model and fields to use for syncing Petbooqz clients.{% endif %}',
                   mode: 'setting',
+                  status: '{% if resources.client.linked %}success{% else %}pending{% endif %}',
+                  statusText: '{% if resources.client.linked %}Configured{% else %}Not configured{% endif %}',
                   button: {
-                    label: 'Configure',
+                    label: '{% if resources.client.linked %}Reconfigure{% else %}Configure{% endif %}',
                     variant: 'outline',
                     size: 'sm',
                   },
@@ -218,12 +220,15 @@ const config: ProvisionConfig = {
                 props: {
                   label: 'Patient Model Mapping',
                   description:
-                    'Select which model and fields to use for syncing Petbooqz patients.',
+                    '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked %}Linked to: {{ resources.patient.targetName }}{% else %}Select which model and fields to use for syncing Petbooqz patients.{% endif %}',
                   mode: 'setting',
+                  status: '{% if resources.client.linked == false %}warning{% elsif resources.patient.linked %}success{% else %}pending{% endif %}',
+                  statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked %}Configured{% else %}Not configured{% endif %}',
                   button: {
-                    label: 'Configure',
+                    label: '{% if resources.patient.linked %}Reconfigure{% else %}Configure{% endif %}',
                     variant: 'outline',
                     size: 'sm',
+                    isDisabled: '{% if resources.client.linked %}false{% else %}true{% endif %}',
                   },
                 },
                 modalForm: {
@@ -282,12 +287,15 @@ const config: ProvisionConfig = {
                 props: {
                   label: 'Appointment Model Mapping',
                   description:
-                    'Select which model and fields to use for syncing Petbooqz appointments.',
+                    '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked == false %}Configure Patient mapping first.{% elsif resources.appointment.linked %}Linked to: {{ resources.appointment.targetName }}{% else %}Select which model and fields to use for syncing Petbooqz appointments.{% endif %}',
                   mode: 'setting',
+                  status: '{% if resources.client.linked == false or resources.patient.linked == false %}warning{% elsif resources.appointment.linked %}success{% else %}pending{% endif %}',
+                  statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked == false %}Requires Patient{% elsif resources.appointment.linked %}Configured{% else %}Not configured{% endif %}',
                   button: {
-                    label: 'Configure',
+                    label: '{% if resources.appointment.linked %}Reconfigure{% else %}Configure{% endif %}',
                     variant: 'outline',
                     size: 'sm',
+                    isDisabled: '{% if resources.client.linked and resources.patient.linked %}false{% else %}true{% endif %}',
                   },
                 },
                 modalForm: {

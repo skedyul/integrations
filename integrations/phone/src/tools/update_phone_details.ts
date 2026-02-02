@@ -27,6 +27,7 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
   UpdatePhoneDetailsOutput
 > = {
   name: 'update_phone_details',
+  label: 'Update Phone Details',
   description: 'Updates the phone number details (name) in both the phone_number model and the communication channel',
   inputSchema: UpdatePhoneDetailsInputSchema,
   outputSchema: UpdatePhoneDetailsOutputSchema,

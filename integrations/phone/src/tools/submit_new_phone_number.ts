@@ -34,6 +34,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
   SubmitNewPhoneNumberOutput
 > = {
   name: 'submit_new_phone_number',
+  label: 'Purchase Phone Number',
   description: 'Searches for and purchases an Australian mobile phone number from Twilio',
   inputSchema: SubmitNewPhoneNumberInputSchema,
   outputSchema: SubmitNewPhoneNumberOutputSchema,
