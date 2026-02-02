@@ -123,8 +123,6 @@ const config: ProvisionConfig = {
   // ─────────────────────────────────────────────────────────────────────────
   // Pages
   // ─────────────────────────────────────────────────────────────────────────
-  // Pages
-  // ─────────────────────────────────────────────────────────────────────────
   pages: [
     // ─────────────────────────────────────────────────────────────────────────
     // Clients Page - Configure Client Model Mapping
@@ -138,13 +136,7 @@ const config: ProvisionConfig = {
       blocks: [
         {
           type: 'model-mapper',
-          modelHandle: 'client',
-          title: 'Client',
-          description:
-            '{% if resources.client.linked %}Linked to: {{ resources.client.targetName }}{% else %}Map the Petbooqz Client model to your existing data model.{% endif %}',
-          status: '{% if resources.client.linked %}success{% else %}pending{% endif %}',
-          statusText: '{% if resources.client.linked %}Configured{% else %}Not configured{% endif %}',
-          buttonLabel: '{% if resources.client.linked %}Reconfigure{% else %}Configure{% endif %}',
+          model: 'client',
         },
       ],
     },
@@ -160,14 +152,7 @@ const config: ProvisionConfig = {
       blocks: [
         {
           type: 'model-mapper',
-          modelHandle: 'patient',
-          title: 'Patient Model',
-          description:
-            '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked %}Linked to: {{ resources.patient.targetName }}{% else %}Map the Petbooqz Patient model to your existing data model.{% endif %}',
-          status: '{% if resources.client.linked == false %}warning{% elsif resources.patient.linked %}success{% else %}pending{% endif %}',
-          statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked %}Configured{% else %}Not configured{% endif %}',
-          buttonLabel: '{% if resources.patient.linked %}Reconfigure{% else %}Configure{% endif %}',
-          buttonDisabled: '{% if resources.client.linked %}false{% else %}true{% endif %}',
+          model: 'patient',
         },
       ],
     },
@@ -183,14 +168,7 @@ const config: ProvisionConfig = {
       blocks: [
         {
           type: 'model-mapper',
-          modelHandle: 'appointment',
-          title: 'Appointment Model',
-          description:
-            '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked == false %}Configure Patient mapping first.{% elsif resources.appointment.linked %}Linked to: {{ resources.appointment.targetName }}{% else %}Map the Petbooqz Appointment model to your existing data model.{% endif %}',
-          status: '{% if resources.client.linked == false or resources.patient.linked == false %}warning{% elsif resources.appointment.linked %}success{% else %}pending{% endif %}',
-          statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked == false %}Requires Patient{% elsif resources.appointment.linked %}Configured{% else %}Not configured{% endif %}',
-          buttonLabel: '{% if resources.appointment.linked %}Reconfigure{% else %}Configure{% endif %}',
-          buttonDisabled: '{% if resources.client.linked and resources.patient.linked %}false{% else %}true{% endif %}',
+          model: 'appointment',
         },
       ],
     },
