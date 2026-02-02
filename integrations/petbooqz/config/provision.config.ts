@@ -123,6 +123,8 @@ const config: ProvisionConfig = {
   // ─────────────────────────────────────────────────────────────────────────
   // Pages
   // ─────────────────────────────────────────────────────────────────────────
+  // Pages
+  // ─────────────────────────────────────────────────────────────────────────
   pages: [
     // ─────────────────────────────────────────────────────────────────────────
     // Clients Page - Configure Client Model Mapping
@@ -135,58 +137,14 @@ const config: ProvisionConfig = {
       navigation: true,
       blocks: [
         {
-          type: 'card',
-          restructurable: false,
-          header: {
-            title: 'Client Model Configuration',
-            description:
-              'Map the Petbooqz Client model to your existing data model.',
-          },
-          form: {
-            formVersion: 'v2',
-            id: 'client-model-config',
-            fields: [
-              {
-                component: 'FieldSetting',
-                id: 'client-mapping',
-                row: 0,
-                col: 0,
-                props: {
-                  label: 'Client Model Mapping',
-                  description:
-                    '{% if resources.client.linked %}Linked to: {{ resources.client.targetName }}{% else %}Select which model and fields to use for syncing Petbooqz clients.{% endif %}',
-                  mode: 'setting',
-                  status: '{% if resources.client.linked %}success{% else %}pending{% endif %}',
-                  statusText: '{% if resources.client.linked %}Configured{% else %}Not configured{% endif %}',
-                  button: {
-                    label: '{% if resources.client.linked %}Reconfigure{% else %}Configure{% endif %}',
-                    variant: 'outline',
-                    size: 'sm',
-                  },
-                },
-                modalForm: {
-                  header: {
-                    title: 'Configure Client Mapping',
-                    description:
-                      'Select the model and fields to map for Petbooqz clients.',
-                  },
-                  handler: 'link_shared_model',
-                  template: 'APP_MODEL_RESOURCE_INSTANCE_MAPPER',
-                  templateParams: {
-                    modelHandle: 'client',
-                  },
-                },
-              },
-            ],
-            layout: {
-              type: 'form',
-              rows: [
-                {
-                  columns: [{ field: 'client-mapping', colSpan: 12 }],
-                },
-              ],
-            },
-          },
+          type: 'model-mapper',
+          modelHandle: 'client',
+          title: 'Client Model',
+          description:
+            '{% if resources.client.linked %}Linked to: {{ resources.client.targetName }}{% else %}Map the Petbooqz Client model to your existing data model.{% endif %}',
+          status: '{% if resources.client.linked %}success{% else %}pending{% endif %}',
+          statusText: '{% if resources.client.linked %}Configured{% else %}Not configured{% endif %}',
+          buttonLabel: '{% if resources.client.linked %}Reconfigure{% else %}Configure{% endif %}',
         },
       ],
     },
@@ -201,59 +159,15 @@ const config: ProvisionConfig = {
       navigation: true,
       blocks: [
         {
-          type: 'card',
-          restructurable: false,
-          header: {
-            title: 'Patient Model Configuration',
-            description:
-              'Map the Petbooqz Patient model to your existing data model.',
-          },
-          form: {
-            formVersion: 'v2',
-            id: 'patient-model-config',
-            fields: [
-              {
-                component: 'FieldSetting',
-                id: 'patient-mapping',
-                row: 0,
-                col: 0,
-                props: {
-                  label: 'Patient Model Mapping',
-                  description:
-                    '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked %}Linked to: {{ resources.patient.targetName }}{% else %}Select which model and fields to use for syncing Petbooqz patients.{% endif %}',
-                  mode: 'setting',
-                  status: '{% if resources.client.linked == false %}warning{% elsif resources.patient.linked %}success{% else %}pending{% endif %}',
-                  statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked %}Configured{% else %}Not configured{% endif %}',
-                  button: {
-                    label: '{% if resources.patient.linked %}Reconfigure{% else %}Configure{% endif %}',
-                    variant: 'outline',
-                    size: 'sm',
-                    isDisabled: '{% if resources.client.linked %}false{% else %}true{% endif %}',
-                  },
-                },
-                modalForm: {
-                  header: {
-                    title: 'Configure Patient Mapping',
-                    description:
-                      'Select the model and fields to map for Petbooqz patients.',
-                  },
-                  handler: 'link_shared_model',
-                  template: 'APP_MODEL_RESOURCE_INSTANCE_MAPPER',
-                  templateParams: {
-                    modelHandle: 'patient',
-                  },
-                },
-              },
-            ],
-            layout: {
-              type: 'form',
-              rows: [
-                {
-                  columns: [{ field: 'patient-mapping', colSpan: 12 }],
-                },
-              ],
-            },
-          },
+          type: 'model-mapper',
+          modelHandle: 'patient',
+          title: 'Patient Model',
+          description:
+            '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked %}Linked to: {{ resources.patient.targetName }}{% else %}Map the Petbooqz Patient model to your existing data model.{% endif %}',
+          status: '{% if resources.client.linked == false %}warning{% elsif resources.patient.linked %}success{% else %}pending{% endif %}',
+          statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked %}Configured{% else %}Not configured{% endif %}',
+          buttonLabel: '{% if resources.patient.linked %}Reconfigure{% else %}Configure{% endif %}',
+          buttonDisabled: '{% if resources.client.linked %}false{% else %}true{% endif %}',
         },
       ],
     },
@@ -268,59 +182,15 @@ const config: ProvisionConfig = {
       navigation: true,
       blocks: [
         {
-          type: 'card',
-          restructurable: false,
-          header: {
-            title: 'Appointment Model Configuration',
-            description:
-              'Map the Petbooqz Appointment model to your existing data model.',
-          },
-          form: {
-            formVersion: 'v2',
-            id: 'appointment-model-config',
-            fields: [
-              {
-                component: 'FieldSetting',
-                id: 'appointment-mapping',
-                row: 0,
-                col: 0,
-                props: {
-                  label: 'Appointment Model Mapping',
-                  description:
-                    '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked == false %}Configure Patient mapping first.{% elsif resources.appointment.linked %}Linked to: {{ resources.appointment.targetName }}{% else %}Select which model and fields to use for syncing Petbooqz appointments.{% endif %}',
-                  mode: 'setting',
-                  status: '{% if resources.client.linked == false or resources.patient.linked == false %}warning{% elsif resources.appointment.linked %}success{% else %}pending{% endif %}',
-                  statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked == false %}Requires Patient{% elsif resources.appointment.linked %}Configured{% else %}Not configured{% endif %}',
-                  button: {
-                    label: '{% if resources.appointment.linked %}Reconfigure{% else %}Configure{% endif %}',
-                    variant: 'outline',
-                    size: 'sm',
-                    isDisabled: '{% if resources.client.linked and resources.patient.linked %}false{% else %}true{% endif %}',
-                  },
-                },
-                modalForm: {
-                  header: {
-                    title: 'Configure Appointment Mapping',
-                    description:
-                      'Select the model and fields to map for Petbooqz appointments.',
-                  },
-                  handler: 'link_shared_model',
-                  template: 'APP_MODEL_RESOURCE_INSTANCE_MAPPER',
-                  templateParams: {
-                    modelHandle: 'appointment',
-                  },
-                },
-              },
-            ],
-            layout: {
-              type: 'form',
-              rows: [
-                {
-                  columns: [{ field: 'appointment-mapping', colSpan: 12 }],
-                },
-              ],
-            },
-          },
+          type: 'model-mapper',
+          modelHandle: 'appointment',
+          title: 'Appointment Model',
+          description:
+            '{% if resources.client.linked == false %}Configure Client mapping first.{% elsif resources.patient.linked == false %}Configure Patient mapping first.{% elsif resources.appointment.linked %}Linked to: {{ resources.appointment.targetName }}{% else %}Map the Petbooqz Appointment model to your existing data model.{% endif %}',
+          status: '{% if resources.client.linked == false or resources.patient.linked == false %}warning{% elsif resources.appointment.linked %}success{% else %}pending{% endif %}',
+          statusText: '{% if resources.client.linked == false %}Requires Client{% elsif resources.patient.linked == false %}Requires Patient{% elsif resources.appointment.linked %}Configured{% else %}Not configured{% endif %}',
+          buttonLabel: '{% if resources.appointment.linked %}Reconfigure{% else %}Configure{% endif %}',
+          buttonDisabled: '{% if resources.client.linked and resources.patient.linked %}false{% else %}true{% endif %}',
         },
       ],
     },
