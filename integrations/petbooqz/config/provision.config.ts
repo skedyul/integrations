@@ -139,7 +139,7 @@ const config: ProvisionConfig = {
         {
           type: 'model-mapper',
           modelHandle: 'client',
-          title: 'Client Model',
+          title: 'Client',
           description:
             '{% if resources.client.linked %}Linked to: {{ resources.client.targetName }}{% else %}Map the Petbooqz Client model to your existing data model.{% endif %}',
           status: '{% if resources.client.linked %}success{% else %}pending{% endif %}',
