@@ -104,13 +104,13 @@ const config: ProvisionConfig = {
     {
       source: {
         model: 'appointment',
-        field: 'client',
-        label: 'Client',
+        field: 'patient',
+        label: 'Patient',
         cardinality: 'MANY_TO_ONE',
         onDelete: 'RESTRICT',
       },
       target: {
-        model: 'client',
+        model: 'patient',
         field: 'appointments',
         label: 'Appointments',
         cardinality: 'ONE_TO_MANY',
