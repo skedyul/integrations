@@ -1,5 +1,7 @@
 import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
+import installHandler from '../install'
+import provisionHandler from '../provision'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues
@@ -50,6 +52,8 @@ const skedyulServer = server.create(
       name: 'Email',
       version: pkg.version,
     },
+    installHandler,
+    provisionHandler,
   },
   toolRegistry,
   webhookRegistry,
