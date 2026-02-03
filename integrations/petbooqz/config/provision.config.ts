@@ -101,6 +101,38 @@ const config: ProvisionConfig = {
         onDelete: 'NONE',
       },
     },
+    {
+      source: {
+        model: 'appointment',
+        field: 'patient',
+        label: 'Patient',
+        cardinality: 'MANY_TO_ONE',
+        onDelete: 'RESTRICT',
+      },
+      target: {
+        model: 'patient',
+        field: 'appointments',
+        label: 'Appointments',
+        cardinality: 'ONE_TO_MANY',
+        onDelete: 'NONE',
+      },
+    },
+    {
+      source: {
+        model: 'appointment',
+        field: 'client',
+        label: 'Client',
+        cardinality: 'MANY_TO_ONE',
+        onDelete: 'RESTRICT',
+      },
+      target: {
+        model: 'client',
+        field: 'appointments',
+        label: 'Appointments',
+        cardinality: 'ONE_TO_MANY',
+        onDelete: 'NONE',
+      },
+    },
   ],
 
   // ─────────────────────────────────────────────────────────────────────────
