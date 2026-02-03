@@ -424,13 +424,3 @@ export const receiveSmsRegistry: WebhookDefinition = {
   onCommunicationChannelDeleted: handleCommunicationChannelDeletedSmsWebhook,
   onCommunicationChannelUpdated: handleCommunicationChannelUpdatedSmsWebhook,
 }
-
-export const receiveSmsV2Registry: WebhookDefinition = {
-  name: 'receive_sms_v2',
-  description: 'Receives incoming SMS using token exchange flow (searches internal phone_number model)',
-  methods: ['POST'],
-  handler: handleReceiveSmsWithTokenExchange,
-  onCommunicationChannelCreated: handleCommunicationChannelCreatedSmsWebhook,
-  onCommunicationChannelDeleted: handleCommunicationChannelDeletedSmsWebhook,
-  onCommunicationChannelUpdated: handleCommunicationChannelUpdatedSmsWebhook,
-}

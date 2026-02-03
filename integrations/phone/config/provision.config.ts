@@ -1179,7 +1179,6 @@ const config: ProvisionConfig = {
   //
   // receive_call is managed at ACTION level by update_forwarding_number tool
   // (one registration per installation, created on first save)
-  webhooks: ['receive_sms'],
 }
 
 export default config

@@ -89,9 +89,6 @@ export const webhookRegistry: WebhookRegistry = {
   /** Receive incoming SMS messages from Twilio. PROVISION level. */
   receive_sms: receiveSmsRegistry,
 
-  /** Alternative SMS receiver with enhanced features. PROVISION level. */
-  receive_sms_v2: receiveSmsV2Registry,
-
   /** Forward inbound voice calls to the configured forwarding number. */
   receive_call: receiveCallRegistry,
 

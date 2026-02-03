@@ -499,15 +499,6 @@ const config: ProvisionConfig = {
       ],
     },
   ],
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Provision Hook
-  // ─────────────────────────────────────────────────────────────────────────
-  //
-  // Tool to call after the executable is healthy during provisioning.
-  // Sets up external integrations like Mailgun routes.
-  //
-  onProvision: 'setup_mailgun_routes',
 }
 
 export default config
