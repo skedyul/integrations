@@ -102,6 +102,7 @@ export default async function provision(
 
   // Check for existing Mailgun route matching this appVersionId
   console.log(`[Email Provision] Fetching existing Mailgun routes...`)
+  console.log(`[Email Provision] Looking for route with description: "${appVersionId}"`)
 
   let routes: {
     items?: Array<{
@@ -112,20 +113,34 @@ export default async function provision(
     }>
   }
   try {
+    // Fetch routes (mailgun.js may not support pagination params in typed API)
     routes = await mg.routes.list()
+    
+    // Log the raw response for debugging
+    console.log(`[Email Provision] Raw routes response: ${JSON.stringify(routes, null, 2)}`)
     console.log(
       `[Email Provision] Found ${routes.items?.length ?? 0} total Mailgun routes`,
     )
+    
+    // Log existing route descriptions for debugging
+    if (routes.items && routes.items.length > 0) {
+      for (const r of routes.items) {
+        console.log(`[Email Provision] Route: id="${r.id}", description="${r.description}", expression="${r.expression}"`)
+      }
+    }
   } catch (listError) {
     const errorMessage =
       listError instanceof Error ? listError.message : String(listError)
     throw new Error(`Failed to list Mailgun routes: ${errorMessage}`)
   }
 
-  // Find any route that matches this appVersionId
+  // Find any route that matches this appVersionId (exact match on description)
   const existingRoute = routes.items?.find(
-    (route) => route.description === appVersionId,
+    (route) => route.description?.trim() === appVersionId.trim(),
   )
+  
+  console.log(`[Email Provision] Looking for description: "${appVersionId}"`)
+  console.log(`[Email Provision] Existing route found: ${existingRoute ? `id=${existingRoute.id}, desc=${existingRoute.description}` : 'NONE'}`)
 
   const expectedAction = `store(notify="${webhookUrl}")`
 
