@@ -38,10 +38,9 @@ declare module 'mailgun.js' {
     created_at: string
   }
 
-  interface RoutesListResult {
-    items: Route[]
-    total_count: number
-  }
+  // Note: The actual SDK returns Route[] directly, not wrapped in an object
+  // This type is kept for backwards compatibility but the code handles both cases
+  type RoutesListResult = Route[]
 
   interface RouteCreateParams {
     priority: number

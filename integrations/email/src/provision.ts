@@ -104,29 +104,31 @@ export default async function provision(
   console.log(`[Email Provision] Fetching existing Mailgun routes...`)
   console.log(`[Email Provision] Looking for route with description: "${appVersionId}"`)
 
-  let routes: {
-    items?: Array<{
-      id: string
-      expression: string
-      description?: string
-      actions?: string[]
-    }>
+  // Mailgun SDK returns routes as a direct array, not wrapped in { items: [...] }
+  type MailgunRoute = {
+    id: string
+    expression: string
+    description?: string
+    actions?: string[]
   }
+  
+  let routesList: MailgunRoute[] = []
   try {
-    // Fetch routes (mailgun.js may not support pagination params in typed API)
-    routes = await mg.routes.list()
+    // Fetch routes - SDK returns array directly
+    const response = await mg.routes.list()
     
-    // Log the raw response for debugging
-    console.log(`[Email Provision] Raw routes response: ${JSON.stringify(routes, null, 2)}`)
-    console.log(
-      `[Email Provision] Found ${routes.items?.length ?? 0} total Mailgun routes`,
-    )
+    // Handle both array response and object with items (SDK version differences)
+    if (Array.isArray(response)) {
+      routesList = response as MailgunRoute[]
+    } else if (response && typeof response === 'object' && 'items' in response) {
+      routesList = (response as { items: MailgunRoute[] }).items ?? []
+    }
+    
+    console.log(`[Email Provision] Found ${routesList.length} total Mailgun routes`)
     
     // Log existing route descriptions for debugging
-    if (routes.items && routes.items.length > 0) {
-      for (const r of routes.items) {
-        console.log(`[Email Provision] Route: id="${r.id}", description="${r.description}", expression="${r.expression}"`)
-      }
+    for (const r of routesList) {
+      console.log(`[Email Provision] Route: id="${r.id}", description="${r.description}"`)
     }
   } catch (listError) {
     const errorMessage =
@@ -135,7 +137,7 @@ export default async function provision(
   }
 
   // Find any route that matches this appVersionId (exact match on description)
-  const existingRoute = routes.items?.find(
+  const existingRoute = routesList.find(
     (route) => route.description?.trim() === appVersionId.trim(),
   )
   
