@@ -2,7 +2,7 @@ import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 
 export interface Calendar {
-  column: string
+  column: string | null
   name: string
 }
 
@@ -11,7 +11,7 @@ const CalendarsListInputSchema = z.object({})
 const CalendarsListOutputSchema = z.object({
   calendars: z.array(
     z.object({
-      column: z.string(),
+      column: z.string().nullable(),
       name: z.string(),
     }),
   ),
