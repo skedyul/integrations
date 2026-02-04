@@ -269,8 +269,7 @@ const config: ProvisionConfig = {
       sections: [
         {
           items: [
-            { label: 'Addresses', href: '/addresses', icon: 'Mail' },
-            { label: 'Domains', href: '/domains', icon: 'Globe' },
+            { label: 'Email', href: '/email', icon: 'Mail' },
           ],
         },
       ],
@@ -282,92 +281,21 @@ const config: ProvisionConfig = {
   // ─────────────────────────────────────────────────────────────────────────
   pages: [
     // ───────────────────────────────────────────────────────────────────────
-    // Email Addresses List Page
+    // Email Settings Page (Single Email)
     // ───────────────────────────────────────────────────────────────────────
-    {
-      type: 'LIST',
-      title: 'Email Addresses',
-      path: '/addresses',
-      default: true,
-      navigation: true,
-      context: {
-        email_addresses: {
-          model: 'email_address',
-          mode: 'many',
-        },
-      },
-      blocks: [
-        {
-          type: 'card',
-          restructurable: false,
-          header: {
-            title: 'Email Addresses',
-            description: 'Manage your email addresses for sending and receiving messages.',
-          },
-          form: {
-            formVersion: 'v2',
-            id: 'email-addresses-list',
-            fields: [
-              {
-                component: 'List',
-                id: 'addresses_list',
-                row: 0,
-                col: 0,
-                iterable: '{{ email_addresses }}',
-                itemTemplate: {
-                  component: 'ActionTile',
-                  span: 12,
-                  mdSpan: 12,
-                  lgSpan: 12,
-                  props: {
-                    id: '{{ item.id }}',
-                    label: '{{ item.email }}',
-                    description: '{{ item.name }}',
-                    leftIcon: 'Mail',
-                    href: '/addresses/{{ item.id }}',
-                    badge: [
-                      "{%- if item.is_default -%}Default{%- endif -%}",
-                    ].join(''),
-                  },
-                },
-                props: {
-                  emptyMessage: 'No email addresses configured.',
-                },
-              },
-            ],
-            layout: {
-              type: 'form',
-              rows: [
-                { columns: [{ field: 'addresses_list', colSpan: 12 }] },
-              ],
-            },
-          },
-        },
-      ],
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // Email Address Detail Page
-    // ───────────────────────────────────────────────────────────────────────
+    // App only supports one email address per installation.
+    // This is the default landing page.
+    //
     {
       type: 'INSTANCE',
-      title: 'Email Address',
-      path: '/addresses/[address_id]',
-      navigation: {
-        breadcrumb: {
-          items: [
-            { label: 'Addresses', href: '/addresses' },
-            { label: '{{ email_address.email }}' },
-          ],
-        },
-      },
+      title: 'Email',
+      path: '/email',
+      default: true,
+      navigation: true,
       context: {
         email_address: {
           model: 'email_address',
           mode: 'first',
-          filters: {
-            id: { eq: '{{ path_params.address_id }}' },
-          },
         },
       },
       blocks: [
@@ -375,12 +303,12 @@ const config: ProvisionConfig = {
           type: 'card',
           restructurable: false,
           header: {
-            title: 'Email Address Details',
-            description: 'View and manage this email address.',
+            title: 'Email Settings',
+            description: 'Manage your email address for sending and receiving messages.',
           },
           form: {
             formVersion: 'v2',
-            id: 'email-address-detail',
+            id: 'email-settings-form',
             fields: [
               {
                 component: 'Input',
@@ -399,9 +327,9 @@ const config: ProvisionConfig = {
                 row: 1,
                 col: 0,
                 props: {
-                  label: 'Display Name',
+                  label: 'Name',
                   value: '{{ email_address.name }}',
-                  placeholder: 'Enter a display name for outgoing emails',
+                  placeholder: 'Enter a friendly name for this email',
                 },
               },
             ],
@@ -414,86 +342,12 @@ const config: ProvisionConfig = {
             },
             actions: [
               {
-                handle: 'save_email_details',
+                handle: 'save_email_settings',
                 label: 'Save',
                 handler: 'update_email_address',
                 variant: 'primary',
               },
             ],
-          },
-        },
-      ],
-    },
-
-    // ───────────────────────────────────────────────────────────────────────
-    // Domains List Page (placeholder for future)
-    // ───────────────────────────────────────────────────────────────────────
-    {
-      type: 'LIST',
-      title: 'Domains',
-      path: '/domains',
-      navigation: true,
-      context: {
-        email_domains: {
-          model: 'email_domain',
-          mode: 'many',
-        },
-      },
-      blocks: [
-        {
-          type: 'card',
-          restructurable: false,
-          header: {
-            title: 'Email Domains',
-            description: 'Manage email domains for your organization.',
-          },
-          form: {
-            formVersion: 'v2',
-            id: 'email-domains-list',
-            fields: [
-              {
-                component: 'Alert',
-                id: 'system_domain_info',
-                row: 0,
-                col: 0,
-                props: {
-                  title: 'System Domain',
-                  description: 'Your organization uses the skedyul.app domain for email. Custom domains will be available in a future update.',
-                  icon: 'Info',
-                  variant: 'default',
-                },
-              },
-              {
-                component: 'List',
-                id: 'domains_list',
-                row: 1,
-                col: 0,
-                iterable: '{{ email_domains }}',
-                itemTemplate: {
-                  component: 'ActionTile',
-                  span: 12,
-                  mdSpan: 12,
-                  lgSpan: 12,
-                  props: {
-                    id: '{{ item.id }}',
-                    label: '{{ item.domain }}',
-                    description: '{{ item.type }}',
-                    leftIcon: 'Globe',
-                    badge: '{{ item.status }}',
-                  },
-                },
-                props: {
-                  emptyMessage: 'No domains configured.',
-                },
-              },
-            ],
-            layout: {
-              type: 'form',
-              rows: [
-                { columns: [{ field: 'system_domain_info', colSpan: 12 }] },
-                { columns: [{ field: 'domains_list', colSpan: 12 }] },
-              ],
-            },
           },
         },
       ],

@@ -78,7 +78,7 @@ export default async function install(
   } else {
     const channel = await communicationChannel.create('email', {
       identifierValue: defaultEmail,
-      name: `${subdomain} Email`,
+      name: "Everything Inbox",
     })
     channelId = channel.id
     console.log(`[Email Install] Created channel: ${channelId}`)
