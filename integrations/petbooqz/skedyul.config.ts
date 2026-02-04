@@ -81,7 +81,7 @@ export default defineConfig({
    */
   agents: [
     {
-      handle: 'booking-agent',
+      handle: 'booking_agent',
       name: 'Booking Agent',
       description: 'Books veterinary appointments for clients and their pets',
       system: `You are a booking assistant for a veterinary practice using the Petbooqz system.
