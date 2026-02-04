@@ -1,4 +1,9 @@
 import type { InstallHandlerContext, InstallHandlerResult } from 'skedyul'
+import {
+  MissingRequiredFieldError,
+  InvalidConfigurationError,
+  AuthenticationError,
+} from 'skedyul'
 import { PetbooqzApiClient } from './lib/api_client'
 
 /**
@@ -47,13 +52,13 @@ export default async function install(
 
   // Validate required env vars
   if (!PETBOOQZ_BASE_URL) {
-    throw new Error('PETBOOQZ_BASE_URL is required')
+    throw new MissingRequiredFieldError('PETBOOQZ_BASE_URL')
   }
   if (!PETBOOQZ_USERNAME) {
-    throw new Error('PETBOOQZ_USERNAME is required')
+    throw new MissingRequiredFieldError('PETBOOQZ_USERNAME')
   }
   if (!PETBOOQZ_PASSWORD) {
-    throw new Error('PETBOOQZ_PASSWORD is required')
+    throw new MissingRequiredFieldError('PETBOOQZ_PASSWORD')
   }
 
   console.log(
@@ -65,8 +70,9 @@ export default async function install(
   let normalizedBaseUrl: string
   try {
     normalizedBaseUrl = normalizeBaseUrl(PETBOOQZ_BASE_URL)
-  } catch (error) {
-    throw new Error(
+  } catch {
+    throw new InvalidConfigurationError(
+      'PETBOOQZ_BASE_URL',
       `Invalid PETBOOQZ_BASE_URL: ${PETBOOQZ_BASE_URL}. Please enter a valid URL (e.g., 60.240.27.225:36680)`,
     )
   }
@@ -84,11 +90,11 @@ export default async function install(
 
   // Verify credentials by calling the /calendars endpoint
   try {
-    await apiClient.get('/calendars')
-    console.log('[Petbooqz Install] Credentials verified successfully')
+    const resp = await apiClient.get('/calendars')
+    console.log('[Petbooqz Install] Credentials verified successfully', resp)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    throw new Error(
+    throw new AuthenticationError(
       `Failed to verify Petbooqz credentials: ${errorMessage}. Please check your API URL, username, password, and API key.`,
     )
   }
