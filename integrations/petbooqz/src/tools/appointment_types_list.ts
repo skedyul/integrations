@@ -35,7 +35,16 @@ export const appointmentTypesListRegistry: ToolDefinition<
   outputSchema: AppointmentTypesListOutputSchema,
   handler: async (_input, context) => {
     const client = createClientFromEnv(context.env)
-    const appointmentTypes = await client.get<AppointmentType[]>('/appointmenttypes')
+    const response = await client.get<
+      AppointmentType[] | { appointmentTypes: AppointmentType[] }
+    >('/appointmenttypes')
+
+
+    console.log('appointmentTypesList response', response)
+
+    const appointmentTypes = Array.isArray(response)
+      ? response
+      : response.appointmentTypes ?? []
 
     return {
       output: {
