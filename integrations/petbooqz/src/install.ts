@@ -90,9 +90,38 @@ export default async function install(
 
   // Verify credentials by calling the /calendars endpoint
   try {
-    const resp = await apiClient.get('/calendars')
-    console.log('[Petbooqz Install] Credentials verified successfully', resp)
+    const resp = await apiClient.get<unknown>('/calendars')
+    console.log('[Petbooqz Install] API response:', JSON.stringify(resp))
+
+    // Validate that we got a proper response - calendars should return an array
+    if (resp === undefined || resp === null) {
+      throw new AuthenticationError(
+        'Failed to verify Petbooqz credentials: Empty response from API. Please check your API URL, username, password, and API key.',
+      )
+    }
+
+    // Check if the response is an error object (some APIs return 200 with error in body)
+    if (typeof resp === 'object' && resp !== null) {
+      const respObj = resp as Record<string, unknown>
+      if (respObj.error || respObj.Error || respObj.message?.toString().toLowerCase().includes('unauthorized')) {
+        throw new AuthenticationError(
+          `Failed to verify Petbooqz credentials: ${respObj.error || respObj.Error || respObj.message}. Please check your API URL, username, password, and API key.`,
+        )
+      }
+    }
+
+    // Validate that we got an array of calendars (expected response format)
+    if (!Array.isArray(resp)) {
+      console.warn('[Petbooqz Install] Unexpected response format (expected array):', typeof resp)
+      // Don't throw here, as some configurations might return different formats
+    }
+
+    console.log('[Petbooqz Install] Credentials verified successfully')
   } catch (error) {
+    // Re-throw AuthenticationError as-is
+    if (error instanceof AuthenticationError) {
+      throw error
+    }
     const errorMessage = error instanceof Error ? error.message : String(error)
     throw new AuthenticationError(
       `Failed to verify Petbooqz credentials: ${errorMessage}. Please check your API URL, username, password, and API key.`,
