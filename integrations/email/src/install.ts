@@ -55,7 +55,7 @@ export default async function install(
   } else {
     const address = await instance.create('email_address', {
       email: defaultEmail,
-      name: subdomain,
+      name: "Everything Inbox",
       is_default: true,
       domain: domainId,
     })
