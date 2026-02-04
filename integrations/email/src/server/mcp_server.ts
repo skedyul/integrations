@@ -52,8 +52,10 @@ const skedyulServer = server.create(
       name: 'Email',
       version: pkg.version,
     },
-    installHandler,
-    provisionHandler,
+    hooks: {
+      install: installHandler,
+      provision: provisionHandler,
+    },
   },
   toolRegistry,
   webhookRegistry,

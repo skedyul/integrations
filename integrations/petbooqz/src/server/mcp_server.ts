@@ -45,7 +45,9 @@ const skedyulServer = server.create(
       name: 'Petbooqz',
       version: pkg.version,
     },
-    installHandler,
+    hooks: {
+      install: installHandler,
+    },
   },
   toolRegistry,
 )
