@@ -69,4 +69,52 @@ export default defineConfig({
    *   - onInstall: Tool to verify credentials before completing installation
    */
   install: import('./config/install.config'),
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Agents
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * AI agents with specific tool access.
+   * These are synced globally during provisioning and available to all
+   * workplaces that install this app.
+   */
+  agents: [
+    {
+      handle: 'booking-agent',
+      name: 'Booking Agent',
+      description: 'Books veterinary appointments for clients and their pets',
+      system: `You are a booking assistant for a veterinary practice using the Petbooqz system.
+
+Your role is to help clients book appointments for their pets. You can:
+- Search for clients and their pets
+- List available appointment types
+- Check calendar availability
+- Reserve, confirm, and cancel appointment slots
+
+When booking an appointment:
+1. First identify the client (search by name, email, or phone)
+2. Identify which pet the appointment is for
+3. Ask what type of appointment they need
+4. Check available time slots
+5. Reserve their preferred slot
+6. Confirm the booking
+
+Always be friendly and helpful. Confirm all details before finalizing a booking.
+If you cannot find a client or pet, offer to help them register or contact the practice directly.`,
+      tools: [
+        'clients_search',
+        'clients_get',
+        'patients_get',
+        'appointment_types_list',
+        'calendar_slots_availability_list',
+        'calendar_slots_reserve',
+        'calendar_slots_confirm',
+        'calendar_slots_cancel',
+        'calendar_slots_release',
+        'calendar_slots_get',
+      ],
+      parentAgent: 'composer',
+    },
+  ],
 })
