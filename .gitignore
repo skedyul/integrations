@@ -2,3 +2,4 @@ integrations/**/dist
 integrations/**/dist-tests
 integrations/**/node_modules
 integrations/**/.turbo/**
+integrations/**/.skedyul
