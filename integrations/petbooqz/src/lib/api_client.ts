@@ -6,12 +6,14 @@ export interface ApiClientConfig {
   clientPractice?: string
 }
 
+export type ApiVersion = 'Skedyul/v1' | 'Vetstoria/v1' | 'Vetstoria/v2'
+
 /**
  * Determines which API version to use based on the endpoint path
  * Skedyul/v1: patient histories, clients, patients, asap orders
- * Vetstoria/v2: calendars, slots, appointment types
+ * Vetstoria/v1: calendars, slots, appointment types
  */
-function getApiVersion(endpoint: string): 'Skedyul/v1' | 'Vetstoria/v2' {
+function getApiVersion(endpoint: string): 'Skedyul/v1' | 'Vetstoria/v1' {
   // Remove query string for pattern matching
   const endpointPath = endpoint.split('?')[0]
   
@@ -29,8 +31,8 @@ function getApiVersion(endpoint: string): 'Skedyul/v1' | 'Vetstoria/v2' {
     return 'Skedyul/v1'
   }
 
-  // Default to Vetstoria/v2 for calendar-related endpoints
-  return 'Vetstoria/v2'
+  // Default to Vetstoria/v1 for calendar-related endpoints
+  return 'Vetstoria/v1'
 }
 
 /**
@@ -69,9 +71,10 @@ export class PetbooqzApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
+    apiVersionOverride?: ApiVersion,
   ): Promise<T> {
     // Determine API version based on endpoint
-    const apiVersion = getApiVersion(endpoint)
+    const apiVersion = apiVersionOverride ?? getApiVersion(endpoint)
     
     // Construct full URL: {rootUrl}/petbooqz/ExternalAPI/{ApiVersion}/{endpoint}
     // Remove leading slash from endpoint if present
@@ -125,19 +128,24 @@ export class PetbooqzApiClient {
     return response.json() as Promise<T>
   }
 
-  async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  async get<T>(
+    endpoint: string,
+    params?: Record<string, string>,
+    apiVersionOverride?: ApiVersion,
+  ): Promise<T> {
     let url = endpoint
     if (params) {
       const searchParams = new URLSearchParams(params)
       url = `${endpoint}?${searchParams.toString()}`
     }
-    return this.request<T>(url, { method: 'GET' })
+    return this.request<T>(url, { method: 'GET' }, apiVersionOverride)
   }
 
   async post<T>(
     endpoint: string,
     data?: unknown,
     params?: Record<string, string>,
+    apiVersionOverride?: ApiVersion,
   ): Promise<T> {
     let url = endpoint
     if (params) {
@@ -147,15 +155,19 @@ export class PetbooqzApiClient {
     return this.request<T>(url, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    })
+    }, apiVersionOverride)
   }
 
-  async delete<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+  async delete<T>(
+    endpoint: string,
+    params?: Record<string, string>,
+    apiVersionOverride?: ApiVersion,
+  ): Promise<T> {
     let url = endpoint
     if (params) {
       const searchParams = new URLSearchParams(params)
       url = `${endpoint}?${searchParams.toString()}`
     }
-    return this.request<T>(url, { method: 'DELETE' })
+    return this.request<T>(url, { method: 'DELETE' }, apiVersionOverride)
   }
 }

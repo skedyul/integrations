@@ -35,7 +35,6 @@ import { patientHistoryCreateRegistry } from './tools/patient_history_create'
 import { patientHistoryGetRegistry } from './tools/patient_history_get'
 import { patientsGetRegistry } from './tools/patients_get'
 import { verifyCredentialsRegistry } from './tools/verify_credentials'
-import { linkSharedModelRegistry } from './tools/link_shared_model'
 
 /**
  * Tool Registry
@@ -85,6 +84,4 @@ export const toolRegistry: ToolRegistry = {
   /** Verify Petbooqz credentials during installation (onInstall hook) */
   verify_credentials: verifyCredentialsRegistry,
 
-  /** Link a SHARED model to a user workspace model */
-  link_shared_model: linkSharedModelRegistry,
 }

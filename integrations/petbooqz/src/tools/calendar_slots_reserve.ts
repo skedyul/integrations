@@ -1,8 +1,10 @@
 import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { createToolResponse } from '../lib/response'
+import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface ReserveSlotResponse {
-  slot_id: number
+  slot_id: string
 }
 
 const CalendarSlotsReserveInputSchema = z.object({
@@ -13,7 +15,7 @@ const CalendarSlotsReserveInputSchema = z.object({
 })
 
 const CalendarSlotsReserveOutputSchema = z.object({
-  slot_id: z.number(),
+  slot_id: z.string(),
 })
 
 type CalendarSlotsReserveInput = z.infer<typeof CalendarSlotsReserveInputSchema>
@@ -30,28 +32,44 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   outputSchema: CalendarSlotsReserveOutputSchema,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    const response = await client.post<ReserveSlotResponse[]>(
-      `/calendars/${input.calendar_id}/reserve`,
-      {
-        datetime: input.datetime,
-        duration: input.duration,
-        appointment_note: input.appointment_note,
-      },
-    )
+    
+    try {
+      const response = await client.post<ReserveSlotResponse[] | ReserveSlotResponse | PetbooqzErrorResponse>(
+        `/calendars/${input.calendar_id}/reserve`,
+        {
+          datetime: input.datetime,
+          duration: input.duration,
+          appointment_note: input.appointment_note,
+        },
+      )
 
-    // API returns array with single object
-    const slotId = response[0]?.slot_id
-    if (!slotId) {
-      throw new Error('Failed to reserve slot: no slot_id returned')
-    }
+      if (isPetbooqzError(response)) {
+        return createToolResponse<CalendarSlotsReserveOutput>('calendar_slots_reserve', {
+          success: false,
+          error: getErrorMessage(response),
+        })
+      }
 
-    return {
-      output: {
-        slot_id: slotId,
-      },
-      billing: {
-        credits: 0,
-      },
+      // API returns array with single object or single object
+      const slotId = Array.isArray(response) ? response[0]?.slot_id : response.slot_id
+      
+      if (!slotId) {
+        return createToolResponse<CalendarSlotsReserveOutput>('calendar_slots_reserve', {
+          success: false,
+          error: 'No slot_id returned from API',
+        })
+      }
+
+      return createToolResponse('calendar_slots_reserve', {
+        success: true,
+        data: { slot_id: slotId },
+        message: `Slot ${slotId} reserved`,
+      })
+    } catch (error) {
+      return createToolResponse<CalendarSlotsReserveOutput>('calendar_slots_reserve', {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to reserve slot',
+      })
     }
   },
 }

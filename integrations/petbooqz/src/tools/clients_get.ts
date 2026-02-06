@@ -1,5 +1,7 @@
 import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { createToolResponse } from '../lib/response'
+import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Client {
   title: string
@@ -15,24 +17,26 @@ export interface Client {
   is_active: string
 }
 
+const ClientSchema = z.object({
+  title: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  email_address: z.string(),
+  mobile_number: z.string(),
+  landline_number: z.string(),
+  address_1: z.string(),
+  city: z.string(),
+  state: z.string(),
+  preferred_brance_id: z.string(),
+  is_active: z.string(),
+})
+
 const ClientsGetInputSchema = z.object({
   client_id: z.string(),
 })
 
 const ClientsGetOutputSchema = z.object({
-  client: z.object({
-    title: z.string(),
-    first_name: z.string(),
-    last_name: z.string(),
-    email_address: z.string(),
-    mobile_number: z.string(),
-    landline_number: z.string(),
-    address_1: z.string(),
-    city: z.string(),
-    state: z.string(),
-    preferred_brance_id: z.string(),
-    is_active: z.string(),
-  }),
+  client: ClientSchema,
 })
 
 type ClientsGetInput = z.infer<typeof ClientsGetInputSchema>
@@ -49,15 +53,31 @@ export const clientsGetRegistry: ToolDefinition<
   outputSchema: ClientsGetOutputSchema,
   handler: async (input, context) => {
     const apiClient = createClientFromEnv(context.env)
-    const clientData = await apiClient.get<Client>(`/clients/${input.client_id}`)
+    
+    try {
+      const response = await apiClient.get<Client | PetbooqzErrorResponse>(
+        `/clients/${input.client_id}`,
+        undefined,
+        'Vetstoria/v2',
+      )
 
-    return {
-      output: {
-        client: clientData,
-      },
-      billing: {
-        credits: 0,
-      },
+      if (isPetbooqzError(response)) {
+        return createToolResponse<ClientsGetOutput>('clients_get', {
+          success: false,
+          error: getErrorMessage(response),
+        })
+      }
+
+      return createToolResponse('clients_get', {
+        success: true,
+        data: { client: response },
+        message: `Client ${response.first_name} ${response.last_name} retrieved`,
+      })
+    } catch (error) {
+      return createToolResponse<ClientsGetOutput>('clients_get', {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get client',
+      })
     }
   },
 }

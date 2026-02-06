@@ -1,5 +1,7 @@
 import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { createToolResponse } from '../lib/response'
+import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Slot {
   slot_id: string
@@ -13,13 +15,7 @@ export interface Slot {
   calendar: string
 }
 
-const CalendarSlotsGetInputSchema = z.object({
-  calendar_id: z.string(),
-  slot_id: z.string(),
-})
-
-const CalendarSlotsGetOutputSchema = z.object({
-  slot: z.object({
+const SlotSchema = z.object({
     slot_id: z.string(),
     datetime: z.string(),
     duration: z.number(),
@@ -29,7 +25,15 @@ const CalendarSlotsGetOutputSchema = z.object({
     phone_number: z.string().nullable(),
     status: z.string().nullable(),
     calendar: z.string(),
-  }),
+})
+
+const CalendarSlotsGetInputSchema = z.object({
+  calendar_id: z.string(),
+  slot_id: z.string(),
+})
+
+const CalendarSlotsGetOutputSchema = z.object({
+  slot: SlotSchema,
 })
 
 type CalendarSlotsGetInput = z.infer<typeof CalendarSlotsGetInputSchema>
@@ -46,18 +50,30 @@ export const calendarSlotsGetRegistry: ToolDefinition<
   outputSchema: CalendarSlotsGetOutputSchema,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    const slot = await client.get<Slot>(
+    
+    try {
+      const response = await client.get<Slot | PetbooqzErrorResponse>(
       `/calendars/${input.calendar_id}/check`,
       { slot_id: input.slot_id },
     )
 
-    return {
-      output: {
-        slot,
-      },
-      billing: {
-        credits: 0,
-      },
+      if (isPetbooqzError(response)) {
+        return createToolResponse<CalendarSlotsGetOutput>('calendar_slots_get', {
+          success: false,
+          error: getErrorMessage(response),
+        })
+      }
+
+      return createToolResponse('calendar_slots_get', {
+        success: true,
+        data: { slot: response },
+        message: `Slot ${response.slot_id} retrieved`,
+      })
+    } catch (error) {
+      return createToolResponse<CalendarSlotsGetOutput>('calendar_slots_get', {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get slot',
+      })
     }
   },
 }

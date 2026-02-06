@@ -1,5 +1,7 @@
 import { z, type ToolDefinition } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { createToolResponse } from '../lib/response'
+import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Patient {
   client_id: string
@@ -11,20 +13,22 @@ export interface Patient {
   is_active: string
 }
 
+const PatientSchema = z.object({
+  client_id: z.string(),
+  name: z.string(),
+  species: z.string(),
+  breed: z.string(),
+  date_of_birth: z.string(),
+  colour_id: z.string(),
+  is_active: z.string(),
+})
+
 const PatientsGetInputSchema = z.object({
   patient_id: z.string(),
 })
 
 const PatientsGetOutputSchema = z.object({
-  patient: z.object({
-    client_id: z.string(),
-    name: z.string(),
-    species: z.string(),
-    breed: z.string(),
-    date_of_birth: z.string(),
-    colour_id: z.string(),
-    is_active: z.string(),
-  }),
+  patient: PatientSchema,
 })
 
 type PatientsGetInput = z.infer<typeof PatientsGetInputSchema>
@@ -41,15 +45,31 @@ export const patientsGetRegistry: ToolDefinition<
   outputSchema: PatientsGetOutputSchema,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    const patient = await client.get<Patient>(`/patients/${input.patient_id}`)
+    
+    try {
+      const response = await client.get<Patient | PetbooqzErrorResponse>(
+        `/patients/${input.patient_id}`,
+        undefined,
+        'Vetstoria/v2',
+      )
 
-    return {
-      output: {
-        patient,
-      },
-      billing: {
-        credits: 0,
-      },
+      if (isPetbooqzError(response)) {
+        return createToolResponse<PatientsGetOutput>('patients_get', {
+          success: false,
+          error: getErrorMessage(response),
+        })
+      }
+
+      return createToolResponse('patients_get', {
+        success: true,
+        data: { patient: response },
+        message: `Patient ${response.name} retrieved`,
+      })
+    } catch (error) {
+      return createToolResponse<PatientsGetOutput>('patients_get', {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get patient',
+      })
     }
   },
 }

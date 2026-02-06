@@ -47,7 +47,7 @@ const config: InstallConfig = {
     },
     PETBOOQZ_CLIENT_PRACTICE: {
       label: 'Client Practice ID',
-      required: false,
+      required: true,
       visibility: 'visible',
       description: 'Optional client practice identifier for multi-practice setups',
     },
