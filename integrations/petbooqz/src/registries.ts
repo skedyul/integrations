@@ -23,6 +23,7 @@ import type { ToolRegistry } from 'skedyul'
 
 import { appointmentTypesListRegistry } from './tools/appointment_types_list'
 import { calendarSlotsAvailabilityListRegistry } from './tools/calendar_slots_availability_list'
+import { calendarSlotsBookRegistry } from './tools/calendar_slots_book'
 import { calendarSlotsCancelRegistry } from './tools/calendar_slots_cancel'
 import { calendarSlotsConfirmRegistry } from './tools/calendar_slots_confirm'
 import { calendarSlotsGetRegistry } from './tools/calendar_slots_get'
@@ -47,6 +48,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** List available calendar slots for given calendars and dates */
   calendar_slots_availability_list: calendarSlotsAvailabilityListRegistry,
+
+  /** Book a calendar slot (reserves and confirms in one step) */
+  calendar_slots_book: calendarSlotsBookRegistry,
 
   /** Cancel a calendar slot */
   calendar_slots_cancel: calendarSlotsCancelRegistry,
