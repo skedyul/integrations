@@ -1,0 +1,19 @@
+{
+  "name": "@skedyul-integrations/bft",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/registries.ts",
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "skedyul": "latest",
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
