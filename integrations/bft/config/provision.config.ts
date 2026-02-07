@@ -43,7 +43,7 @@ const config: ProvisionConfig = {
         {
           handle: 'description',
           label: 'Description',
-          type: 'TEXT',
+          type: 'LONG_STRING',
           required: false,
           system: false,
           description: 'Package description',
@@ -89,7 +89,7 @@ const config: ProvisionConfig = {
         {
           handle: 'description',
           label: 'Description',
-          type: 'TEXT',
+          type: 'LONG_STRING',
           required: false,
           system: false,
           description: 'Class description',

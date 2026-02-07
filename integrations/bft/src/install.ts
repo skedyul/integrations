@@ -3,10 +3,12 @@ import {
   MissingRequiredFieldError,
   InvalidConfigurationError,
 } from 'skedyul'
+import { discoverHapanaData } from './lib/hapana'
+import { syncFromDiscovery } from './lib/sync'
 
 /**
  * Parses the club name from a BFT URL.
- * 
+ *
  * Examples:
  * - "https://www.bodyfittraining.au/club/braybrook" → "braybrook"
  * - "https://www.bodyfittraining.au/club/braybrook/" → "braybrook"
@@ -20,12 +22,12 @@ function parseClubName(url: string): string {
  * Install handler for the BFT app.
  *
  * This handler:
- * 1. Validates the BFT_URL is provided
+ * 1. Validates the BFT_URL is provided and well-formed
  * 2. Parses the club name from the URL
- * 3. Validates the URL format
- * 4. Returns the parsed club name for reference
- *
- * @throws Error if URL is invalid or club name cannot be parsed
+ * 3. Discovers ALL Hapana data by intercepting the page's API calls
+ *    (siteID, settings, sessions, packages — one Playwright session)
+ * 4. Syncs the captured data into Skedyul models (no re-fetching)
+ * 5. Returns BFT_URL and HAPANA_SITE_ID for runtime use
  */
 export default async function install(
   ctx: InstallHandlerContext,
@@ -43,9 +45,8 @@ export default async function install(
   console.log(`[BFT Install] BFT URL: ${BFT_URL}`)
 
   // Validate URL format
-  let parsedUrl: URL
   try {
-    parsedUrl = new URL(BFT_URL)
+    new URL(BFT_URL)
   } catch {
     throw new InvalidConfigurationError(
       'BFT_URL',
@@ -64,21 +65,45 @@ export default async function install(
 
   console.log(`[BFT Install] Parsed club name: ${clubName}`)
 
-  // Verify the URL is accessible (optional check)
+  // Discover ALL Hapana data in one Playwright session
+  console.log(`[BFT Install] Discovering Hapana data (siteID, settings, sessions, packages)...`)
+  let discovery: Awaited<ReturnType<typeof discoverHapanaData>>
   try {
-    const response = await fetch(BFT_URL, { method: 'HEAD' })
-    if (!response.ok) {
-      console.warn(`[BFT Install] URL returned status ${response.status}, but continuing...`)
-    }
+    discovery = await discoverHapanaData(BFT_URL)
+    console.log(`[BFT Install] Discovery complete:`)
+    console.log(`  siteID: ${discovery.siteId}`)
+    console.log(`  settings: ${discovery.settings?.siteName ?? 'not captured'}`)
+    console.log(`  sessions: ${discovery.sessions.length}`)
+    console.log(`  packages: ${discovery.packages.length}`)
   } catch (error) {
-    console.warn(`[BFT Install] Could not verify URL accessibility: ${error instanceof Error ? error.message : String(error)}`)
-    // Don't throw - URL might be valid but not accessible during install
+    throw new InvalidConfigurationError(
+      'BFT_URL',
+      `Could not discover Hapana data from ${BFT_URL}: ${error instanceof Error ? error.message : String(error)}`,
+    )
   }
 
-  // Return the URL as-is (club name will be parsed in tools when needed)
+  // Sync captured data into models (no extra API calls)
+  console.log(`[BFT Install] Syncing captured data into models...`)
+  try {
+    const result = await syncFromDiscovery(BFT_URL, discovery)
+    console.log(`[BFT Install] Sync complete:`)
+    console.log(`  Packages: ${result.packagesCreated}`)
+    console.log(`  Classes: ${result.classesCreated}`)
+    console.log(`  Business details: updated`)
+  } catch (error) {
+    console.warn(
+      `[BFT Install] Sync failed: ${error instanceof Error ? error.message : String(error)}`,
+    )
+    console.warn(
+      `[BFT Install] You can run the refresh_data tool later to populate data`,
+    )
+  }
+
+  // Return both BFT_URL and the discovered HAPANA_SITE_ID
   return {
     env: {
       BFT_URL,
+      HAPANA_SITE_ID: discovery.siteId,
     },
   }
 }
