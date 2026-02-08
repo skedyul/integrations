@@ -194,9 +194,9 @@ const config: ProvisionConfig = {
       sections: [
         {
           items: [
+            { label: 'General', href: '/settings', icon: 'Settings' },
             { label: 'Packages', href: '/packages', icon: 'Package' },
             { label: 'Classes', href: '/classes', icon: 'BookOpen' },
-            { label: 'General', href: '/settings', icon: 'Settings' },
           ],
         },
       ],
@@ -319,6 +319,15 @@ const config: ProvisionConfig = {
       title: 'General',
       path: '/settings',
       navigation: true,
+      context: {
+        business_details: {
+          model: 'business_details',
+          mode: 'first',
+          filters: {
+            id: { eq: '{{ path_params.business_details_id }}' },
+          },
+        },
+      },
       blocks: [
         {
           type: 'card',
