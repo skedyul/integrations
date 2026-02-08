@@ -12,6 +12,7 @@ import {
   fetchSiteSettings,
   fetchSessions,
   fetchPackages,
+  fetchSessionDetails,
   getDateRange,
   extractUniqueClasses,
   type HapanaSession,
@@ -79,12 +80,13 @@ export interface ScrapedData {
 // Build ScrapedData from raw Hapana data
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildScrapedData(
+async function buildScrapedData(
   url: string,
   settings: HapanaSiteSettings | null,
   sessions: HapanaSession[],
   hapanaPackages: HapanaPackage[],
-): ScrapedData {
+  siteId?: string,
+): Promise<ScrapedData> {
   const currencySymbol = settings?.currencySymbol ?? '$'
 
   // Business details
@@ -111,14 +113,54 @@ function buildScrapedData(
     type: pkg.introOffer ? ('intro_offer' as const) : ('package' as const),
   }))
 
-  // Classes (unique session types)
+  // Classes (unique session types) - fetch descriptions from session details
   const uniqueClasses = extractUniqueClasses(sessions)
-  const classes: Class[] = uniqueClasses.map((cls) => ({
-    name: cls.name,
-    description: cls.template !== cls.name ? cls.template : '',
-    duration: cls.duration || undefined,
-    category: 'Classes',
-  }))
+  const classes: Class[] = []
+
+  if (siteId) {
+    // Fetch session details for each unique class to get descriptions
+    console.log(`[BFT Scraper] Fetching descriptions for ${uniqueClasses.length} unique classes...`)
+    for (const cls of uniqueClasses) {
+      try {
+        const details = await fetchSessionDetails(
+          url,
+          siteId,
+          cls.sessionId,
+          cls.sessionDate,
+        )
+        classes.push({
+          name: cls.name.trim(),
+          description: details.sessionDescription || cls.template || '',
+          duration: cls.duration || undefined,
+          category: 'Classes',
+        })
+        console.log(
+          `[BFT Scraper] Fetched description for "${cls.name}": ${details.sessionDescription?.substring(0, 50)}...`,
+        )
+      } catch (error) {
+        console.warn(
+          `[BFT Scraper] Failed to fetch description for "${cls.name}": ${error}`,
+        )
+        // Fallback to template if available
+        classes.push({
+          name: cls.name.trim(),
+          description: cls.template !== cls.name ? cls.template : '',
+          duration: cls.duration || undefined,
+          category: 'Classes',
+        })
+      }
+    }
+  } else {
+    // Fallback when siteId is not available (e.g., from discovery)
+    classes.push(
+      ...uniqueClasses.map((cls) => ({
+        name: cls.name.trim(),
+        description: cls.template !== cls.name ? cls.template : '',
+        duration: cls.duration || undefined,
+        category: 'Classes',
+      })),
+    )
+  }
 
   // Schedule grouped by date
   const schedule: Schedule = {}
@@ -141,10 +183,10 @@ function buildScrapedData(
  * Build ScrapedData from a HapanaDiscoveryResult that was already captured
  * by Playwright during install. No additional API calls are made.
  */
-export function buildFromDiscovery(
+export async function buildFromDiscovery(
   url: string,
   discovery: HapanaDiscoveryResult,
-): ScrapedData {
+): Promise<ScrapedData> {
   console.log(
     `[BFT Scraper] Building from captured data: ${discovery.sessions.length} sessions, ${discovery.packages.length} packages`,
   )
@@ -153,6 +195,7 @@ export function buildFromDiscovery(
     discovery.settings,
     discovery.sessions,
     discovery.packages,
+    discovery.siteId,
   )
 }
 
@@ -182,7 +225,7 @@ export async function scrapeBftWebsite(
     `[BFT Scraper] Fetched: settings="${settings.siteName}", ${sessions.length} sessions, ${hapanaPackages.length} packages`,
   )
 
-  return buildScrapedData(url, settings, sessions, hapanaPackages)
+  return buildScrapedData(url, settings, sessions, hapanaPackages, siteId)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

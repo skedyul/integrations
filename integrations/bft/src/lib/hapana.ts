@@ -86,6 +86,25 @@ export interface HapanaSession {
   sessionTemplateID: string
 }
 
+export interface HapanaSessionDetails {
+  sessionID: string
+  sessionName: string
+  sessionDate: string
+  sessionImage: string
+  sessionDescription: string
+  startTime: string
+  endTime: string
+  duration: string
+  sessionType: string
+  sessionTypeID: string
+  instructor: HapanaInstructor[]
+}
+
+interface HapanaSessionDetailsResponse {
+  success: boolean
+  data: HapanaSessionDetails
+}
+
 export interface HapanaPagination {
   totalRecords: number
   pageSize: number
@@ -463,17 +482,124 @@ export function getDateRange(daysAhead = 14): {
 }
 
 /**
+ * Fetch session details for a specific session.
+ * Uses Playwright to intercept the sessionsDetails API call.
+ */
+export async function fetchSessionDetails(
+  bftUrl: string,
+  siteId: string,
+  sessionId: string,
+  sessionDate: string,
+): Promise<HapanaSessionDetails> {
+  const browser = await chromium.launch({ headless: true })
+
+  try {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+
+    let sessionDetails: HapanaSessionDetails | null = null
+
+    // Intercept the sessionsDetails API response
+    page.on('response', async (response) => {
+      const url = response.url()
+      if (
+        url.includes('/site/sessionsDetails') &&
+        url.includes(`sessionID=${sessionId}`) &&
+        url.includes(`sessionDate=${sessionDate}`)
+      ) {
+        try {
+          const json = (await response.json()) as HapanaSessionDetailsResponse
+          if (json.success && json.data) {
+            sessionDetails = json.data
+            console.log(
+              `[Hapana] Intercepted session details: "${sessionDetails.sessionName}"`,
+            )
+          }
+        } catch (e) {
+          console.warn(`[Hapana] Failed to parse session details response: ${e}`)
+        }
+      }
+    })
+
+    // Navigate to the page
+    console.log(
+      `[Hapana] Loading page to intercept session details for ${sessionId} on ${sessionDate}`,
+    )
+    await page.goto(bftUrl, { waitUntil: 'networkidle', timeout: 30000 })
+
+    // Wait a bit for the page to fully render
+    await page.waitForTimeout(2000)
+
+    // Click on the session element to trigger the details API call
+    // The element has session-id and session-date attributes
+    try {
+      const sessionSelector = `[session-id="${sessionId}"][session-date="${sessionDate}"]`
+      await page.waitForSelector(sessionSelector, { timeout: 10000 })
+      
+      // Scroll the element into view if needed
+      await page.evaluate(
+        (selector: string) => {
+          const element = document.querySelector(selector)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        },
+        sessionSelector,
+      )
+      
+      await page.waitForTimeout(500) // Wait for scroll
+      
+      // Click the element
+      await page.click(sessionSelector)
+      console.log(`[Hapana] Clicked session element to trigger details API`)
+    } catch (e) {
+      console.warn(
+        `[Hapana] Could not click session element, trying JavaScript click: ${e}`,
+      )
+      // If clicking doesn't work, try to trigger the API call directly via JavaScript
+      await page.evaluate(
+        (args: { sid: string; sdate: string }) => {
+          // Try to find and click the element
+          const element = document.querySelector(
+            `[session-id="${args.sid}"][session-date="${args.sdate}"]`,
+          )
+          if (element) {
+            ;(element as HTMLElement).click()
+          }
+        },
+        { sid: sessionId, sdate: sessionDate },
+      )
+    }
+
+    // Wait for the API response (give it time for the click to trigger the request)
+    await page.waitForTimeout(3000)
+
+    if (!sessionDetails) {
+      throw new Error(
+        `Could not intercept session details for sessionID ${sessionId} on ${sessionDate}`,
+      )
+    }
+
+    return sessionDetails
+  } finally {
+    await browser.close()
+  }
+}
+
+/**
  * Extract unique class types from a list of sessions.
  */
 export function extractUniqueClasses(
   sessions: HapanaSession[],
-): Array<{ name: string; template: string; duration: string; image: string }> {
+): Array<{ name: string; template: string; duration: string; image: string; sessionId: string; sessionDate: string }> {
   const seen = new Set<string>()
   const classes: Array<{
     name: string
     template: string
     duration: string
     image: string
+    sessionId: string
+    sessionDate: string
   }> = []
 
   for (const session of sessions) {
@@ -485,6 +611,8 @@ export function extractUniqueClasses(
         template: session.sessionTemplate,
         duration: session.duration,
         image: session.sessionImage,
+        sessionId: session.sessionID,
+        sessionDate: session.sessionDate,
       })
     }
   }

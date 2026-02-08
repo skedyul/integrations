@@ -37,7 +37,7 @@ export async function syncFromDiscovery(
   },
 ): Promise<SyncResult> {
   console.log(`[BFT Sync] Syncing from captured data...`)
-  const data = buildFromDiscovery(bftUrl, discovery)
+  const data = await buildFromDiscovery(bftUrl, discovery)
   return syncData(bftUrl, data, options)
 }
 
