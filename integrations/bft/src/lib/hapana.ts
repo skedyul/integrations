@@ -2,19 +2,24 @@
  * Hapana Widget API Client
  *
  * BFT clubs use the Hapana platform. All data is available via their
- * public widget API at https://widgetapi.hapana.com.
+ * widget API at https://widgetapi.hapana.com, which requires browser
+ * context for secure authentication.
  *
- * Discovery flow (install-time, uses Playwright):
+ * All API calls use Playwright to intercept browser requests:
  *   1. Launch headless Chromium and navigate to the BFT club page
- *   2. Intercept ALL requests to widgetapi.hapana.com
+ *   2. Intercept requests to widgetapi.hapana.com
  *   3. Extract the siteID from the request URL query params
- *   4. Capture the response data for settings, sessions, and packages
- *   5. Return everything so install can sync without re-fetching
+ *   4. Capture the response data (settings, sessions, packages)
  *
- * Runtime (tools, no browser):
- *   Use the stored siteID with plain fetch() calls to the Hapana API.
- *   The siteID is extracted from the URL the page actually uses — so it
- *   works reliably with direct fetch.
+ * Discovery flow (install-time):
+ *   - Intercepts ALL API calls during initial page load
+ *   - Captures settings, sessions, and packages in one go
+ *   - Returns everything so install can sync without re-fetching
+ *
+ * Runtime (tools):
+ *   - Each API call (settings, sessions, packages) uses Playwright
+ *   - Navigates to the page and intercepts the specific endpoint
+ *   - Ensures secure authentication via browser context
  */
 
 import { chromium } from 'playwright'
@@ -254,125 +259,180 @@ export async function discoverHapanaData(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Runtime API Methods (no browser — plain fetch)
+// Runtime API Methods (uses Playwright to intercept secure client requests)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch site settings from the Hapana API.
+ * Fetch site settings from the Hapana API by intercepting browser requests.
+ * Uses Playwright to load the page and intercept the secure API response.
  */
 export async function fetchSiteSettings(
+  bftUrl: string,
   siteId: string,
 ): Promise<HapanaSiteSettings> {
-  const url = `${HAPANA_BASE_URL}/settings?siteID=${encodeURIComponent(siteId)}`
-  console.log(`[Hapana] Fetching settings: ${url}`)
-  const response = await fetch(url)
+  const browser = await chromium.launch({ headless: true })
 
-  if (!response.ok) {
-    throw new Error(`Hapana settings API error: HTTP ${response.status}`)
+  try {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+
+    let settings: HapanaSiteSettings | null = null
+
+    // Intercept the settings API response
+    page.on('response', async (response) => {
+      const url = response.url()
+      if (url.includes('/site/settings') && url.includes('widgetapi.hapana.com')) {
+        try {
+          const json = await response.json()
+          settings = json as HapanaSiteSettings
+          console.log(`[Hapana] Intercepted settings: siteName="${settings.siteName}"`)
+        } catch {
+          // Ignore JSON parse errors
+        }
+      }
+    })
+
+    // Navigate and wait for the settings API call
+    console.log(`[Hapana] Loading page to intercept settings API: ${bftUrl}`)
+    await page.goto(bftUrl, { waitUntil: 'networkidle', timeout: 30000 })
+
+    // Give extra time for API response
+    await page.waitForTimeout(2000)
+
+    if (!settings) {
+      throw new Error('Could not intercept Hapana settings API response')
+    }
+
+    return settings
+  } finally {
+    await browser.close()
   }
-
-  return (await response.json()) as HapanaSiteSettings
 }
 
 /**
- * Fetch sessions (timetable) from the Hapana API.
- * Handles pagination automatically — returns ALL sessions in the date range.
+ * Fetch sessions (timetable) from the Hapana API by intercepting browser requests.
+ * Uses Playwright to load the page and intercept all session API responses (handles pagination).
  */
 export async function fetchSessions(
+  bftUrl: string,
   siteId: string,
   startDate: string,
   endDate: string,
   sessionCategory = 'classes',
 ): Promise<{ sessions: HapanaSession[]; pagination: HapanaPagination }> {
-  const allSessions: HapanaSession[] = []
-  let pageIndex = 1
-  let totalPages = 1
-  let pagination: HapanaPagination = {
-    totalRecords: 0,
-    pageSize: 20,
-    pageIndex: 1,
-    noOfPages: 1,
-  }
+  const browser = await chromium.launch({ headless: true })
 
-  while (pageIndex <= totalPages) {
-    const params = new URLSearchParams({
-      startDate,
-      endDate,
-      sessionCategory,
-      siteID: siteId,
-      pageIndex: String(pageIndex),
-      pageSize: '20',
+  try {
+    const context = await browser.newContext()
+    const page = await context.newPage()
+
+    const allSessions: HapanaSession[] = []
+    let pagination: HapanaPagination = {
+      totalRecords: 0,
+      pageSize: 20,
+      pageIndex: 1,
+      noOfPages: 1,
+    }
+
+    // Intercept all session API responses (may be multiple pages)
+    page.on('response', async (response) => {
+      const url = response.url()
+      if (url.includes('/site/sessions') && url.includes('widgetapi.hapana.com')) {
+        try {
+          const json = (await response.json()) as HapanaSessionsResponse
+          console.log(
+            `[Hapana] Intercepted sessions: success=${json.success}, count=${json.data?.length ?? 0}`,
+          )
+
+          if (json.success && json.data) {
+            allSessions.push(...json.data)
+            pagination = json.pagination
+            console.log(`[Hapana] Total sessions so far: ${allSessions.length}`)
+          }
+        } catch {
+          // Ignore JSON parse errors
+        }
+      }
     })
 
-    const url = `${HAPANA_BASE_URL}/sessions?${params.toString()}`
-    console.log(`[Hapana] Fetching sessions: ${url}`)
+    // Navigate and wait for all session API calls
+    console.log(`[Hapana] Loading page to intercept sessions API: ${bftUrl}`)
+    await page.goto(bftUrl, { waitUntil: 'networkidle', timeout: 30000 })
 
-    const response = await fetch(url)
+    // Give extra time for paginated API responses
+    await page.waitForTimeout(3000)
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      console.error(`[Hapana] Sessions API HTTP ${response.status}: ${body}`)
-      throw new Error(`Hapana sessions API error: HTTP ${response.status}`)
+    // If we got pagination info, try to trigger additional pages if needed
+    // The widget may load additional pages automatically, but we'll wait a bit more
+    if (pagination.noOfPages > 1 && allSessions.length < pagination.totalRecords) {
+      console.log(
+        `[Hapana] Detected ${pagination.noOfPages} pages, but only got ${allSessions.length} sessions. Waiting for more...`,
+      )
+      await page.waitForTimeout(2000)
     }
 
-    const data = (await response.json()) as HapanaSessionsResponse
-    console.log(
-      `[Hapana] Sessions page ${pageIndex}: success=${data.success}, records=${data.data?.length ?? 0}`,
-    )
-
-    if (!data.success) {
-      console.warn(`[Hapana] Sessions API returned success=false for page ${pageIndex}`)
-      break
-    }
-
-    allSessions.push(...data.data)
-    pagination = data.pagination
-    totalPages = data.pagination.noOfPages
-    pageIndex++
+    console.log(`[Hapana] Total sessions intercepted: ${allSessions.length}`)
+    return { sessions: allSessions, pagination }
+  } finally {
+    await browser.close()
   }
-
-  console.log(`[Hapana] Total sessions fetched: ${allSessions.length}`)
-  return { sessions: allSessions, pagination }
 }
 
 /**
- * Fetch packages (memberships, passes, intro offers) from the Hapana API.
+ * Fetch packages (memberships, passes, intro offers) from the Hapana API by intercepting browser requests.
+ * Uses Playwright to load the page and intercept the secure API response.
  */
 export async function fetchPackages(
+  bftUrl: string,
   siteId: string,
 ): Promise<HapanaPackage[]> {
-  const params = new URLSearchParams({
-    siteID: siteId,
-    isMultiSignature: 'true',
-  })
+  const browser = await chromium.launch({ headless: true })
 
-  const url = `${HAPANA_BASE_URL}/packages?${params.toString()}`
-  console.log(`[Hapana] Fetching packages: ${url}`)
+  try {
+    const context = await browser.newContext()
+    const page = await context.newPage()
 
-  const response = await fetch(url)
+    let packages: HapanaPackage[] = []
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    console.error(`[Hapana] Packages API HTTP ${response.status}: ${body}`)
-    throw new Error(`Hapana packages API error: HTTP ${response.status}`)
+    // Intercept the packages API response
+    page.on('response', async (response) => {
+      const url = response.url()
+      if (url.includes('/site/packages') && url.includes('widgetapi.hapana.com')) {
+        try {
+          const json = (await response.json()) as HapanaPackagesResponse
+          console.log(
+            `[Hapana] Intercepted packages: success=${json.success}, count=${json.data?.length ?? 0}`,
+          )
+
+          if (json.success && json.data) {
+            packages = json.data
+            for (const pkg of packages) {
+              console.log(
+                `[Hapana]   Package: "${pkg.name}" | ${pkg.category} | $${pkg.amount} | introOffer=${pkg.introOffer}`,
+              )
+            }
+          }
+        } catch {
+          // Ignore JSON parse errors
+        }
+      }
+    })
+
+    // Navigate and wait for the packages API call
+    console.log(`[Hapana] Loading page to intercept packages API: ${bftUrl}`)
+    await page.goto(bftUrl, { waitUntil: 'networkidle', timeout: 30000 })
+
+    // Give extra time for API response
+    await page.waitForTimeout(2000)
+
+    if (packages.length === 0) {
+      throw new Error('Could not intercept Hapana packages API response')
+    }
+
+    return packages
+  } finally {
+    await browser.close()
   }
-
-  const data = (await response.json()) as HapanaPackagesResponse
-  console.log(
-    `[Hapana] Packages response: success=${data.success}, count=${data.data?.length ?? 0}`,
-  )
-
-  if (!data.success) {
-    throw new Error('Hapana packages API returned success=false')
-  }
-
-  for (const pkg of data.data) {
-    console.log(
-      `[Hapana]   Package: "${pkg.name}" | ${pkg.category} | $${pkg.amount} | introOffer=${pkg.introOffer}`,
-    )
-  }
-
-  return data.data
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

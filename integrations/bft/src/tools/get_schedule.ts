@@ -60,7 +60,7 @@ export const getScheduleRegistry: ToolDefinition<
       const siteId = HAPANA_SITE_ID
       const daysAhead = input.daysAhead ?? 14
 
-      const schedule = await fetchLiveSchedule(siteId, daysAhead)
+      const schedule = await fetchLiveSchedule(BFT_URL, siteId, daysAhead)
 
       const totalSessions = Object.values(schedule).reduce(
         (sum, day) => sum + day.length,

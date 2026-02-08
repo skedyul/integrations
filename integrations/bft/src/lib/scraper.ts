@@ -173,9 +173,9 @@ export async function scrapeBftWebsite(
   const { startDate, endDate } = getDateRange(14)
 
   const [settings, { sessions }, hapanaPackages] = await Promise.all([
-    fetchSiteSettings(siteId),
-    fetchSessions(siteId, startDate, endDate),
-    fetchPackages(siteId),
+    fetchSiteSettings(url, siteId),
+    fetchSessions(url, siteId, startDate, endDate),
+    fetchPackages(url, siteId),
   ])
 
   console.log(
@@ -194,11 +194,12 @@ export async function scrapeBftWebsite(
  * Used by the get_schedule tool which always returns fresh data.
  */
 export async function fetchLiveSchedule(
+  url: string,
   siteId: string,
   daysAhead = 14,
 ): Promise<Schedule> {
   const { startDate, endDate } = getDateRange(daysAhead)
-  const { sessions } = await fetchSessions(siteId, startDate, endDate)
+  const { sessions } = await fetchSessions(url, siteId, startDate, endDate)
 
   const schedule: Schedule = {}
   for (const session of sessions) {
