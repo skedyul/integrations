@@ -23,6 +23,7 @@ export const syncPackagesRegistry: ToolDefinition<
   description: 'Re-scrapes the BFT website and updates only the Packages model',
   inputSchema: SyncPackagesInputSchema,
   outputSchema: SyncPackagesOutputSchema,
+  timeout: 300000, // 5 minutes - web scraping can take time
   handler: async (input, context) => {
     const { BFT_URL, HAPANA_SITE_ID } = context.env
 

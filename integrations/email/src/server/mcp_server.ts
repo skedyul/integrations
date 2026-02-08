@@ -53,8 +53,14 @@ const skedyulServer = server.create(
       version: pkg.version,
     },
     hooks: {
-      install: installHandler,
-      provision: provisionHandler,
+      install: {
+        handler: installHandler,
+        timeout: 60000, // 1 minute default
+      },
+      provision: {
+        handler: provisionHandler,
+        timeout: 300000, // 5 minutes default
+      },
     },
   },
   toolRegistry,

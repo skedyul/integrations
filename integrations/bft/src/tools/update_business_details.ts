@@ -27,6 +27,7 @@ export const updateBusinessDetailsRegistry: ToolDefinition<
   description: 'Updates business contact information in the BusinessDetails model',
   inputSchema: UpdateBusinessDetailsInputSchema,
   outputSchema: UpdateBusinessDetailsOutputSchema,
+  timeout: 300000, // 5 minutes - may involve web scraping
   handler: async (input, context) => {
     try {
       // Get the existing business details record
