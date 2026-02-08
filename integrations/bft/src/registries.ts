@@ -28,6 +28,7 @@ import { getBusinessDetailsRegistry } from './tools/get_business_details'
 import { refreshDataRegistry } from './tools/refresh_data'
 import { syncPackagesRegistry } from './tools/sync_packages'
 import { syncClassesRegistry } from './tools/sync_classes'
+import { updateBusinessDetailsRegistry } from './tools/update_business_details'
 
 /**
  * Tool Registry
@@ -55,4 +56,7 @@ export const toolRegistry: ToolRegistry = {
 
   /** Re-scrapes the BFT website and updates only the Classes model */
   sync_classes: syncClassesRegistry,
+
+  /** Updates business contact information in the BusinessDetails model */
+  update_business_details: updateBusinessDetailsRegistry,
 }

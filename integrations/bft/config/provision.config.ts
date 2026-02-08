@@ -196,7 +196,7 @@ const config: ProvisionConfig = {
           items: [
             { label: 'Packages', href: '/packages', icon: 'Package' },
             { label: 'Classes', href: '/classes', icon: 'BookOpen' },
-            { label: 'Settings', href: '/settings', icon: 'Settings' },
+            { label: 'General', href: '/settings', icon: 'Settings' },
           ],
         },
       ],
@@ -316,10 +316,109 @@ const config: ProvisionConfig = {
     },
     {
       type: 'INSTANCE',
-      title: 'Settings',
+      title: 'General',
       path: '/settings',
       navigation: true,
       blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'Business Details',
+            description: 'Update business contact information',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'business-details-form',
+            fields: [
+              {
+                component: 'Input',
+                id: 'name',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Name',
+                  value: '{{ business_details.name }}',
+                  placeholder: 'Enter business name',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'club_id',
+                row: 1,
+                col: 0,
+                props: {
+                  label: 'Club ID',
+                  value: '{{ business_details.club_id }}',
+                  placeholder: 'Enter club ID',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'address',
+                row: 2,
+                col: 0,
+                props: {
+                  label: 'Address',
+                  value: '{{ business_details.address }}',
+                  placeholder: 'Enter business address',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'phone',
+                row: 3,
+                col: 0,
+                props: {
+                  label: 'Phone',
+                  value: '{{ business_details.phone }}',
+                  placeholder: 'Enter phone number',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'email',
+                row: 4,
+                col: 0,
+                props: {
+                  label: 'Email',
+                  value: '{{ business_details.email }}',
+                  placeholder: 'Enter email address',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'website_url',
+                row: 5,
+                col: 0,
+                props: {
+                  label: 'Website URL',
+                  value: '{{ business_details.website_url }}',
+                  placeholder: 'Enter website URL',
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'name', colSpan: 12 }] },
+                { columns: [{ field: 'club_id', colSpan: 12 }] },
+                { columns: [{ field: 'address', colSpan: 12 }] },
+                { columns: [{ field: 'phone', colSpan: 12 }] },
+                { columns: [{ field: 'email', colSpan: 12 }] },
+                { columns: [{ field: 'website_url', colSpan: 12 }] },
+              ],
+            },
+            actions: [
+              {
+                handle: 'update_business_details',
+                label: 'Update',
+                handler: 'update_business_details',
+                variant: 'primary',
+              },
+            ],
+          },
+        },
         {
           type: 'card',
           restructurable: false,
