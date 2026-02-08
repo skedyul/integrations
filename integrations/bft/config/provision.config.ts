@@ -219,17 +219,45 @@ const config: ProvisionConfig = {
           model: 'package',
         },
         {
-          type: 'form',
-          title: 'Sync',
-          fields: [
-            {
-              handle: 'sync_packages',
-              type: 'FORM',
-              label: 'Sync Packages',
-              description: 'Refresh packages from BFT',
-              handler: 'sync_packages',
+          type: 'card',
+          restructurable: false,
+          form: {
+            formVersion: 'v2',
+            id: 'sync-packages-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'sync_packages',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Sync Packages',
+                  description: 'Refresh packages from BFT',
+                  mode: 'field',
+                  button: {
+                    label: 'Sync Packages',
+                    variant: 'outline',
+                    size: 'sm',
+                    leftIcon: 'RefreshCw',
+                  },
+                },
+                modalForm: {
+                  header: {
+                    title: 'Sync Packages',
+                    description: 'This will refresh all packages from BFT.',
+                  },
+                  handler: 'sync_packages',
+                  fields: [],
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'sync_packages', colSpan: 12 }] },
+              ],
             },
-          ],
+          },
         },
       ],
     },
@@ -244,17 +272,45 @@ const config: ProvisionConfig = {
           model: 'class',
         },
         {
-          type: 'form',
-          title: 'Sync',
-          fields: [
-            {
-              handle: 'sync_classes',
-              type: 'FORM',
-              label: 'Sync Classes',
-              description: 'Refresh classes from BFT',
-              handler: 'sync_classes',
+          type: 'card',
+          restructurable: false,
+          form: {
+            formVersion: 'v2',
+            id: 'sync-classes-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'sync_classes',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Sync Classes',
+                  description: 'Refresh classes from BFT',
+                  mode: 'field',
+                  button: {
+                    label: 'Sync Classes',
+                    variant: 'outline',
+                    size: 'sm',
+                    leftIcon: 'RefreshCw',
+                  },
+                },
+                modalForm: {
+                  header: {
+                    title: 'Sync Classes',
+                    description: 'This will refresh all classes from BFT.',
+                  },
+                  handler: 'sync_classes',
+                  fields: [],
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'sync_classes', colSpan: 12 }] },
+              ],
             },
-          ],
+          },
         },
       ],
     },
@@ -265,17 +321,45 @@ const config: ProvisionConfig = {
       navigation: true,
       blocks: [
         {
-          type: 'form',
-          title: 'Data Sync',
-          fields: [
-            {
-              handle: 'sync_all',
-              type: 'FORM',
-              label: 'Sync All Data',
-              description: 'Refresh all data from BFT (packages, classes, and business details)',
-              handler: 'refresh_data',
+          type: 'card',
+          restructurable: false,
+          form: {
+            formVersion: 'v2',
+            id: 'sync-all-form',
+            fields: [
+              {
+                component: 'FieldSetting',
+                id: 'sync_all',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Sync All Data',
+                  description: 'Refresh all data from BFT (packages, classes, and business details)',
+                  mode: 'field',
+                  button: {
+                    label: 'Sync All',
+                    variant: 'outline',
+                    size: 'sm',
+                    leftIcon: 'RefreshCw',
+                  },
+                },
+                modalForm: {
+                  header: {
+                    title: 'Sync All Data',
+                    description: 'This will refresh all data from BFT (packages, classes, and business details).',
+                  },
+                  handler: 'refresh_data',
+                  fields: [],
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'sync_all', colSpan: 12 }] },
+              ],
             },
-          ],
+          },
         },
       ],
     },
