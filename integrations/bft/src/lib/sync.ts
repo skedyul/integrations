@@ -8,7 +8,9 @@ import type { HapanaDiscoveryResult } from './hapana'
 
 export interface SyncResult {
   packagesCreated: number
+  packagesUpdated: number
   classesCreated: number
+  classesUpdated: number
   businessDetailsUpdated: boolean
   scrapedData: ScrapedData
 }
@@ -109,47 +111,85 @@ async function syncData(
     console.log(`[BFT Sync] Business details updated`)
   }
 
-  // Create packages
+  // Sync packages (idempotent - check by name)
   let packagesCreated = 0
+  let packagesUpdated = 0
   if (syncPackages) {
     for (const pkg of data.packages) {
       try {
-        await instance.create('package', {
+        // Check if package exists by name
+        const { data: existing } = await instance.list('package', {
+          filter: { name: pkg.name },
+          limit: 1,
+        })
+
+        const packageData = {
           name: pkg.name,
           description: pkg.description,
           price: pkg.price,
           type: pkg.type,
-        })
-        packagesCreated++
+        }
+
+        if (existing.length > 0) {
+          // Update existing package
+          await instance.update('package', existing[0].id, packageData)
+          packagesUpdated++
+        } else {
+          // Create new package
+          await instance.create('package', packageData)
+          packagesCreated++
+        }
       } catch (error) {
-        console.error(`[BFT Sync] Failed to create package ${pkg.name}:`, error)
+        console.error(`[BFT Sync] Failed to sync package ${pkg.name}:`, error)
       }
     }
-    console.log(`[BFT Sync] Created ${packagesCreated} packages`)
+    console.log(
+      `[BFT Sync] Packages: ${packagesCreated} created, ${packagesUpdated} updated`,
+    )
   }
 
-  // Create classes
+  // Sync classes (idempotent - check by name)
   let classesCreated = 0
+  let classesUpdated = 0
   if (syncClasses) {
     for (const cls of data.classes) {
       try {
-        await instance.create('class', {
+        // Check if class exists by name
+        const { data: existing } = await instance.list('class', {
+          filter: { name: cls.name },
+          limit: 1,
+        })
+
+        const classData = {
           name: cls.name,
           description: cls.description,
           duration: cls.duration,
           category: cls.category,
-        })
-        classesCreated++
+        }
+
+        if (existing.length > 0) {
+          // Update existing class
+          await instance.update('class', existing[0].id, classData)
+          classesUpdated++
+        } else {
+          // Create new class
+          await instance.create('class', classData)
+          classesCreated++
+        }
       } catch (error) {
-        console.error(`[BFT Sync] Failed to create class ${cls.name}:`, error)
+        console.error(`[BFT Sync] Failed to sync class ${cls.name}:`, error)
       }
     }
-    console.log(`[BFT Sync] Created ${classesCreated} classes`)
+    console.log(
+      `[BFT Sync] Classes: ${classesCreated} created, ${classesUpdated} updated`,
+    )
   }
 
   return {
     packagesCreated,
+    packagesUpdated,
     classesCreated,
+    classesUpdated,
     businessDetailsUpdated,
     scrapedData: data,
   }

@@ -8,6 +8,7 @@ const SyncPackagesOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   packagesCreated: z.number(),
+  packagesUpdated: z.number(),
 })
 
 type SyncPackagesInput = z.infer<typeof SyncPackagesInputSchema>
@@ -52,8 +53,9 @@ export const syncPackagesRegistry: ToolDefinition<
           success: true,
           message: 'Packages synced successfully',
           packagesCreated: result.packagesCreated,
+          packagesUpdated: result.packagesUpdated,
         },
-        message: `Synced ${result.packagesCreated} packages`,
+        message: `Synced packages: ${result.packagesCreated} created, ${result.packagesUpdated} updated`,
       })
     } catch (error) {
       return createToolResponse<SyncPackagesOutput>('sync_packages', {

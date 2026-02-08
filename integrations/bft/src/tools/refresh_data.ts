@@ -8,7 +8,9 @@ const RefreshDataOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   packagesCreated: z.number(),
+  packagesUpdated: z.number(),
   classesCreated: z.number(),
+  classesUpdated: z.number(),
   businessDetailsUpdated: z.boolean(),
 })
 
@@ -50,10 +52,12 @@ export const refreshDataRegistry: ToolDefinition<
           success: true,
           message: 'Data refreshed successfully',
           packagesCreated: result.packagesCreated,
+          packagesUpdated: result.packagesUpdated,
           classesCreated: result.classesCreated,
+          classesUpdated: result.classesUpdated,
           businessDetailsUpdated: result.businessDetailsUpdated,
         },
-        message: `Refreshed data: ${result.packagesCreated} packages, ${result.classesCreated} classes, business details updated`,
+        message: `Refreshed data: ${result.packagesCreated} packages created, ${result.packagesUpdated} packages updated, ${result.classesCreated} classes created, ${result.classesUpdated} classes updated, business details updated`,
       })
     } catch (error) {
       return createToolResponse<RefreshDataOutput>('refresh_data', {

@@ -8,6 +8,7 @@ const SyncClassesOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   classesCreated: z.number(),
+  classesUpdated: z.number(),
 })
 
 type SyncClassesInput = z.infer<typeof SyncClassesInputSchema>
@@ -52,8 +53,9 @@ export const syncClassesRegistry: ToolDefinition<
           success: true,
           message: 'Classes synced successfully',
           classesCreated: result.classesCreated,
+          classesUpdated: result.classesUpdated,
         },
-        message: `Synced ${result.classesCreated} classes`,
+        message: `Synced classes: ${result.classesCreated} created, ${result.classesUpdated} updated`,
       })
     } catch (error) {
       return createToolResponse<SyncClassesOutput>('sync_classes', {
