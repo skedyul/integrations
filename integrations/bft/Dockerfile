@@ -30,9 +30,33 @@ FROM node:22 AS dedicated
 
 WORKDIR /app
 
-# Copy built artifacts (including Playwright browser binaries from node_modules)
+# Install system dependencies required by Playwright on Debian
+RUN apt-get update && \
+    apt-get install -y \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built artifacts
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+
+# Install Playwright browser binaries for Debian
+# This must run in the dedicated stage because browser binaries are stored
+# in ~/.cache/ms-playwright, which isn't copied from the builder stage
+RUN npx playwright install chromium --with-deps || \
+    (echo "Warning: Playwright install failed, trying without deps" && \
+     npx playwright install chromium)
 
 # Allow overriding the baked-in MCP env at runtime
 ARG MCP_ENV_JSON="{}"
