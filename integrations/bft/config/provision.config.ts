@@ -196,6 +196,7 @@ const config: ProvisionConfig = {
           items: [
             { label: 'Packages', href: '/packages', icon: 'Package' },
             { label: 'Classes', href: '/classes', icon: 'BookOpen' },
+            { label: 'Settings', href: '/settings', icon: 'Settings' },
           ],
         },
       ],
@@ -217,6 +218,19 @@ const config: ProvisionConfig = {
           type: 'model-mapper',
           model: 'package',
         },
+        {
+          type: 'form',
+          title: 'Sync',
+          fields: [
+            {
+              handle: 'sync_packages',
+              type: 'FORM',
+              label: 'Sync Packages',
+              description: 'Refresh packages from BFT',
+              handler: 'sync_packages',
+            },
+          ],
+        },
       ],
     },
     {
@@ -228,6 +242,40 @@ const config: ProvisionConfig = {
         {
           type: 'model-mapper',
           model: 'class',
+        },
+        {
+          type: 'form',
+          title: 'Sync',
+          fields: [
+            {
+              handle: 'sync_classes',
+              type: 'FORM',
+              label: 'Sync Classes',
+              description: 'Refresh classes from BFT',
+              handler: 'sync_classes',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: 'INSTANCE',
+      title: 'Settings',
+      path: '/settings',
+      navigation: true,
+      blocks: [
+        {
+          type: 'form',
+          title: 'Data Sync',
+          fields: [
+            {
+              handle: 'sync_all',
+              type: 'FORM',
+              label: 'Sync All Data',
+              description: 'Refresh all data from BFT (packages, classes, and business details)',
+              handler: 'refresh_data',
+            },
+          ],
         },
       ],
     },

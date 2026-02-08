@@ -26,6 +26,8 @@ import { getPackagesRegistry } from './tools/get_packages'
 import { getIntroOfferRegistry } from './tools/get_intro_offer'
 import { getBusinessDetailsRegistry } from './tools/get_business_details'
 import { refreshDataRegistry } from './tools/refresh_data'
+import { syncPackagesRegistry } from './tools/sync_packages'
+import { syncClassesRegistry } from './tools/sync_classes'
 
 /**
  * Tool Registry
@@ -47,4 +49,10 @@ export const toolRegistry: ToolRegistry = {
 
   /** Re-scrapes the BFT website and updates Packages, Classes, and BusinessDetails models */
   refresh_data: refreshDataRegistry,
+
+  /** Re-scrapes the BFT website and updates only the Packages model */
+  sync_packages: syncPackagesRegistry,
+
+  /** Re-scrapes the BFT website and updates only the Classes model */
+  sync_classes: syncClassesRegistry,
 }

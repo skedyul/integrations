@@ -28,10 +28,15 @@ function parseClubName(url: string): string {
 export async function syncFromDiscovery(
   bftUrl: string,
   discovery: HapanaDiscoveryResult,
+  options?: {
+    syncPackages?: boolean
+    syncClasses?: boolean
+    syncBusinessDetails?: boolean
+  },
 ): Promise<SyncResult> {
   console.log(`[BFT Sync] Syncing from captured data...`)
   const data = buildFromDiscovery(bftUrl, discovery)
-  return syncData(bftUrl, data)
+  return syncData(bftUrl, data, options)
 }
 
 /**
@@ -42,85 +47,110 @@ export async function syncFromDiscovery(
 export async function scrapeAndSync(
   bftUrl: string,
   siteId: string,
+  options?: {
+    syncPackages?: boolean
+    syncClasses?: boolean
+    syncBusinessDetails?: boolean
+  },
 ): Promise<SyncResult> {
   console.log(`[BFT Sync] Scraping ${bftUrl} with siteID ${siteId}...`)
   const data = await scrapeBftWebsite(bftUrl, siteId)
-  return syncData(bftUrl, data)
+  return syncData(bftUrl, data, options)
 }
 
 /**
  * Write ScrapedData into Skedyul models.
+ * Supports selective syncing via options parameter.
  */
 async function syncData(
   bftUrl: string,
   data: ScrapedData,
+  options?: {
+    syncPackages?: boolean
+    syncClasses?: boolean
+    syncBusinessDetails?: boolean
+  },
 ): Promise<SyncResult> {
   const clubId = parseClubName(bftUrl)
+  
+  // Default to syncing everything if no options provided
+  const syncPackages = options?.syncPackages !== false
+  const syncClasses = options?.syncClasses !== false
+  const syncBusinessDetails = options?.syncBusinessDetails !== false
+
+  let businessDetailsUpdated = false
 
   // Update or create business details
-  const { data: existingBusinessDetails } = await instance.list(
-    'business_details',
-    { page: 1, limit: 1 },
-  )
-
-  const bdFields = {
-    name: data.businessDetails.name,
-    club_id: clubId,
-    address: data.businessDetails.address,
-    phone: data.businessDetails.phone,
-    email: data.businessDetails.email,
-    website_url: data.businessDetails.websiteUrl,
-  }
-
-  if (existingBusinessDetails.length > 0) {
-    await instance.update(
+  if (syncBusinessDetails) {
+    const { data: existingBusinessDetails } = await instance.list(
       'business_details',
-      existingBusinessDetails[0].id,
-      bdFields,
+      { page: 1, limit: 1 },
     )
-  } else {
-    await instance.create('business_details', bdFields)
+
+    const bdFields = {
+      name: data.businessDetails.name,
+      club_id: clubId,
+      address: data.businessDetails.address,
+      phone: data.businessDetails.phone,
+      email: data.businessDetails.email,
+      website_url: data.businessDetails.websiteUrl,
+    }
+
+    if (existingBusinessDetails.length > 0) {
+      await instance.update(
+        'business_details',
+        existingBusinessDetails[0].id,
+        bdFields,
+      )
+    } else {
+      await instance.create('business_details', bdFields)
+    }
+    businessDetailsUpdated = true
+    console.log(`[BFT Sync] Business details updated`)
   }
-  console.log(`[BFT Sync] Business details updated`)
 
   // Create packages
   let packagesCreated = 0
-  for (const pkg of data.packages) {
-    try {
-      await instance.create('package', {
-        name: pkg.name,
-        description: pkg.description,
-        price: pkg.price,
-        type: pkg.type,
-      })
-      packagesCreated++
-    } catch (error) {
-      console.error(`[BFT Sync] Failed to create package ${pkg.name}:`, error)
+  if (syncPackages) {
+    for (const pkg of data.packages) {
+      try {
+        await instance.create('package', {
+          name: pkg.name,
+          description: pkg.description,
+          price: pkg.price,
+          type: pkg.type,
+        })
+        packagesCreated++
+      } catch (error) {
+        console.error(`[BFT Sync] Failed to create package ${pkg.name}:`, error)
+      }
     }
+    console.log(`[BFT Sync] Created ${packagesCreated} packages`)
   }
-  console.log(`[BFT Sync] Created ${packagesCreated} packages`)
 
   // Create classes
   let classesCreated = 0
-  for (const cls of data.classes) {
-    try {
-      await instance.create('class', {
-        name: cls.name,
-        description: cls.description,
-        duration: cls.duration,
-        category: cls.category,
-      })
-      classesCreated++
-    } catch (error) {
-      console.error(`[BFT Sync] Failed to create class ${cls.name}:`, error)
+  if (syncClasses) {
+    for (const cls of data.classes) {
+      try {
+        await instance.create('class', {
+          name: cls.name,
+          description: cls.description,
+          duration: cls.duration,
+          category: cls.category,
+        })
+        classesCreated++
+      } catch (error) {
+        console.error(`[BFT Sync] Failed to create class ${cls.name}:`, error)
+      }
     }
+    console.log(`[BFT Sync] Created ${classesCreated} classes`)
   }
-  console.log(`[BFT Sync] Created ${classesCreated} classes`)
 
   return {
     packagesCreated,
     classesCreated,
-    businessDetailsUpdated: true,
+    businessDetailsUpdated,
     scrapedData: data,
   }
 }
