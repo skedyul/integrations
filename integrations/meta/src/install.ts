@@ -38,7 +38,9 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   // Construct OAuth redirect URI
   // This will be the oauth_callback endpoint on the Skedyul platform
   // The platform will route to our app's oauth_callback hook
-  const baseUrl = process.env.SKEDYUL_API_URL || ''
+  // Use ctx.env.SKEDYUL_API_URL (passed from workflow, derived from NGROK_DEVELOPER_URL if available)
+  // Fall back to process.env for backward compatibility
+  const baseUrl = ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || ''
   const redirectUri = `${baseUrl}/apps/${ctx.app.id}/versions/${ctx.app.versionId}/oauth_callback`
 
   // Encode state parameter with installation context
