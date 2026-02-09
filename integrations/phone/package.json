@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/phone",
-  "version": "1.1.102",
+  "version": "1.1.103",
   "private": true,
   "type": "module",
   "main": "./src/registry.ts",
