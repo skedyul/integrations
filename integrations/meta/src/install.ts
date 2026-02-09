@@ -1,4 +1,4 @@
-import type { InstallHandlerContext, InstallHandlerResult } from 'skedyul'
+import type { InstallHandlerContext, InstallHandlerResponseOAuth } from 'skedyul'
 
 /**
  * Install handler for the Meta app.
@@ -8,8 +8,10 @@ import type { InstallHandlerContext, InstallHandlerResult } from 'skedyul'
  * 1. Constructs the Meta OAuth URL with all required scopes (WhatsApp, Instagram, Messenger)
  * 2. Encodes the state parameter with installation context
  * 3. Returns redirect URL to trigger OAuth flow
+ * 
+ * Since this app has an oauth_callback hook, redirect is REQUIRED.
  */
-export default async function install(ctx: InstallHandlerContext): Promise<InstallHandlerResult> {
+export default async function install(ctx: InstallHandlerContext): Promise<InstallHandlerResponseOAuth> {
   // Provision-level env vars are baked into the container at provisioning time
   // Check process.env as fallback if not in ctx.env
   console.log('[Meta Install] Checking env vars...')
@@ -36,12 +38,12 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   console.log(`[Meta Install] Meta App ID: ${META_APP_ID?.slice(0, 4)}...`)
 
   // Construct OAuth redirect URI
-  // This will be the oauth_callback endpoint on the Skedyul platform
+  // Simplified format: /api/callbacks/oauth/<app_version_id>
   // The platform will route to our app's oauth_callback hook
   // Use ctx.env.SKEDYUL_API_URL (passed from workflow, derived from NGROK_DEVELOPER_URL if available)
   // Fall back to process.env for backward compatibility
   const baseUrl = ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || ''
-  const redirectUri = `${baseUrl}/apps/${ctx.app.id}/versions/${ctx.app.versionId}/oauth_callback`
+  const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.versionId}`
 
   // Encode state parameter with installation context
   // This will be decoded in the oauth_callback handler
