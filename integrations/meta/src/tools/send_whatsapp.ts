@@ -19,14 +19,19 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,
   handler: async (input, context) => {
-    const { META_APP_ID, META_APP_SECRET, META_ACCESS_TOKEN } = context.env
+    // Provision-level env vars are baked into the container at provisioning time
+    // Check process.env as fallback if not in context.env
+    const META_APP_ID = context.env.META_APP_ID || process.env.META_APP_ID
+    const META_APP_SECRET = context.env.META_APP_SECRET || process.env.META_APP_SECRET
+    // META_ACCESS_TOKEN is per-installation (from OAuth), so it should be in context.env
+    const META_ACCESS_TOKEN = context.env.META_ACCESS_TOKEN
 
     if (!META_ACCESS_TOKEN) {
       throw new Error('META_ACCESS_TOKEN is not configured. Please complete the OAuth flow.')
     }
 
     if (!META_APP_ID || !META_APP_SECRET) {
-      throw new Error('META_APP_ID and META_APP_SECRET must be configured')
+      throw new Error('META_APP_ID and META_APP_SECRET must be configured. Make sure they are set in the app version\'s provision-level environment variables.')
     }
 
     // Get the phone number ID from the channel identifier

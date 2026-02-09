@@ -57,8 +57,8 @@ const config: ProvisionConfig = {
       label: 'Meta Webhook Verify Token',
       required: true,
       visibility: 'encrypted',
-      description: 'Token for verifying webhook requests from Meta',
-      placeholder: 'Your webhook verify token',
+      description: 'A secret token you create to verify webhook requests from Meta. Generate a secure random string (e.g., using openssl rand -hex 32) and use the same value in your Meta app\'s webhook settings.',
+      placeholder: 'Generate a secure random token (e.g., openssl rand -hex 32)',
     },
   },
 

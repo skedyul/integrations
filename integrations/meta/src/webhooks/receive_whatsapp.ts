@@ -47,7 +47,10 @@ async function handleReceiveWhatsApp(
   context: WebhookContext,
 ): Promise<WebhookResponse> {
   const { method, query, body, headers } = request
-  const { META_WEBHOOK_VERIFY_TOKEN, META_APP_SECRET } = context.env
+  // Provision-level env vars are baked into the container at provisioning time
+  // Check process.env as fallback if not in context.env
+  const META_WEBHOOK_VERIFY_TOKEN = context.env.META_WEBHOOK_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN
+  const META_APP_SECRET = context.env.META_APP_SECRET || process.env.META_APP_SECRET
 
   // Handle webhook verification (GET request)
   if (method === 'GET') {

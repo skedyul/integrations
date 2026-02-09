@@ -10,10 +10,26 @@ import type { InstallHandlerContext, InstallHandlerResult } from 'skedyul'
  * 3. Returns redirect URL to trigger OAuth flow
  */
 export default async function install(ctx: InstallHandlerContext): Promise<InstallHandlerResult> {
-  const { META_APP_ID } = ctx.env
+  // Provision-level env vars are baked into the container at provisioning time
+  // Check process.env as fallback if not in ctx.env
+  console.log('[Meta Install] Checking env vars...')
+  console.log('[Meta Install] ctx.env keys:', Object.keys(ctx.env))
+  console.log('[Meta Install] ctx.env.META_APP_ID:', ctx.env.META_APP_ID ? 'present' : 'missing')
+  console.log('[Meta Install] process.env.META_APP_ID:', process.env.META_APP_ID ? 'present' : 'missing')
+  console.log('[Meta Install] process.env keys (sample):', Object.keys(process.env).slice(0, 10))
+  
+  const META_APP_ID = ctx.env.META_APP_ID || process.env.META_APP_ID
+  const META_APP_SECRET = ctx.env.META_APP_SECRET || process.env.META_APP_SECRET
 
   if (!META_APP_ID) {
-    throw new Error('META_APP_ID is required but not provided')
+    console.error('[Meta Install] META_APP_ID not found in ctx.env or process.env')
+    console.error('[Meta Install] Available process.env keys:', Object.keys(process.env).filter(k => k.includes('META')))
+    throw new Error('META_APP_ID is required but not provided. Make sure it is set in the app version\'s provision-level environment variables.')
+  }
+
+  if (!META_APP_SECRET) {
+    console.error('[Meta Install] META_APP_SECRET not found in ctx.env or process.env')
+    throw new Error('META_APP_SECRET is required but not provided. Make sure it is set in the app version\'s provision-level environment variables.')
   }
 
   console.log(`[Meta Install] Installing for workplace ${ctx.workplace.subdomain}`)

@@ -32,11 +32,13 @@ export default async function oauthCallback(
     throw new Error('Missing authorization code in OAuth callback')
   }
 
-  const META_APP_ID = env.META_APP_ID
-  const META_APP_SECRET = env.META_APP_SECRET
+  // Provision-level env vars are baked into the container at provisioning time
+  // Check process.env as fallback if not in env
+  const META_APP_ID = env.META_APP_ID || process.env.META_APP_ID
+  const META_APP_SECRET = env.META_APP_SECRET || process.env.META_APP_SECRET
 
   if (!META_APP_ID || !META_APP_SECRET) {
-    throw new Error('META_APP_ID and META_APP_SECRET must be configured')
+    throw new Error('META_APP_ID and META_APP_SECRET must be configured. Make sure they are set in the app version\'s provision-level environment variables.')
   }
 
   console.log(`[Meta OAuth] Processing callback for installation ${appInstallationId}`)
