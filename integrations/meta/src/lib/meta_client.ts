@@ -65,11 +65,14 @@ interface SendMessageResponse {
 export class MetaClient {
   private appId: string
   private appSecret: string
-  private baseUrl = 'https://graph.facebook.com/v21.0'
+  private baseUrl: string
 
-  constructor(appId: string, appSecret: string) {
+  constructor(appId: string, appSecret: string, apiVersion?: string) {
     this.appId = appId
     this.appSecret = appSecret
+    // Use provided apiVersion, or fall back to process.env, or default to v24.0
+    const version = apiVersion || process.env.GRAPH_API_VERSION || 'v24.0'
+    this.baseUrl = `https://graph.facebook.com/${version}`
   }
 
   /**

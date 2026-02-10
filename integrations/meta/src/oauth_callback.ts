@@ -1,4 +1,4 @@
-import { instance } from 'skedyul'
+import { instance, token, runWithConfig, getConfig } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import { MetaClient } from './lib/meta_client'
 
@@ -7,19 +7,21 @@ import { MetaClient } from './lib/meta_client'
  * Called when Meta redirects back after user authorization.
  * 
  * This handler:
- * 1. Extracts authorization code from query params
- * 2. Exchanges code for short-lived token
- * 3. Exchanges short-lived token for long-lived token (60 days)
- * 4. Fetches WABA details and phone numbers
- * 5. Fetches connected Facebook Pages and Instagram accounts
- * 6. Creates meta_connection instance
- * 7. Creates separate facebook_page, instagram_account, and whatsapp_phone_number instances
- * 8. Returns access token to be stored as env var
+ * 1. Decodes state parameter to extract appInstallationId
+ * 2. Exchanges provision token for installation-scoped token
+ * 3. Extracts authorization code from query params
+ * 4. Exchanges code for short-lived token
+ * 5. Exchanges short-lived token for long-lived token (60 days)
+ * 6. Fetches WABA details and phone numbers
+ * 7. Fetches connected Facebook Pages and Instagram accounts
+ * 8. Creates meta_connection instance (using scoped token)
+ * 9. Creates separate facebook_page, instagram_account, and whatsapp_phone_number instances
+ * 10. Returns appInstallationId and access token to be stored as env var
  */
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
 ): Promise<OAuthCallbackResult> {
-  const { query, env, appInstallationId } = ctx
+  const { query } = ctx
 
   // Check for OAuth error
   if (query.error) {
@@ -32,27 +34,62 @@ export default async function oauthCallback(
     throw new Error('Missing authorization code in OAuth callback')
   }
 
+  // Decode state parameter to extract appInstallationId and app info
+  let appInstallationId: string | undefined
+  let appHandle: string | undefined
+  let appVersionHandle: string | undefined
+
+  if (query.state) {
+    try {
+      const stateData = JSON.parse(
+        Buffer.from(query.state, 'base64').toString('utf-8'),
+      ) as {
+        appInstallationId?: string
+        app?: { handle?: string; versionHandle?: string }
+      }
+      appInstallationId = stateData.appInstallationId
+      appHandle = stateData.app?.handle
+      appVersionHandle = stateData.app?.versionHandle
+    } catch (err) {
+      throw new Error('Invalid state parameter: failed to decode')
+    }
+  }
+
+  if (!appInstallationId) {
+    throw new Error('Missing appInstallationId in state parameter')
+  }
+
   // Provision-level env vars are baked into the container at provisioning time
-  // Check process.env as fallback if not in env
-  const META_APP_ID = env.META_APP_ID || process.env.META_APP_ID
-  const META_APP_SECRET = env.META_APP_SECRET || process.env.META_APP_SECRET
+  const META_APP_ID = process.env.META_APP_ID
+  const META_APP_SECRET = process.env.META_APP_SECRET
+  const GRAPH_API_VERSION = process.env.GRAPH_API_VERSION
 
   if (!META_APP_ID || !META_APP_SECRET) {
     throw new Error('META_APP_ID and META_APP_SECRET must be configured. Make sure they are set in the app version\'s provision-level environment variables.')
   }
 
+  if (!GRAPH_API_VERSION) {
+    throw new Error('GRAPH_API_VERSION must be configured. Make sure it is set in the app version\'s provision-level environment variables.')
+  }
+
   console.log(`[Meta OAuth] Processing callback for installation ${appInstallationId}`)
+
+  // Exchange provision token for installation-scoped token
+  console.log(`[Meta OAuth] Exchanging token for installation: ${appInstallationId}`)
+  const { token: scopedToken } = await token.exchange(appInstallationId)
+  const currentConfig = getConfig()
 
   // Construct redirect URI (must match the one used in install.ts)
   // Stable format: /api/callbacks/oauth/<app-handle>/<app-version-handle>
   // This works even if the app is reprovisioned, as handles are stable
-  // Use ctx.env.SKEDYUL_API_URL (passed from workflow, derived from NGROK_DEVELOPER_URL if available)
-  // Fall back to process.env for backward compatibility (baked into container at provisioning time)
-  const baseUrl = ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || ''
-  const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.handle}/${ctx.app.versionHandle}`
+  const baseUrl = process.env.SKEDYUL_API_URL || ''
+  if (!appHandle || !appVersionHandle) {
+    throw new Error('Missing app handle or version handle in state parameter')
+  }
+  const redirectUri = `${baseUrl}/api/callbacks/oauth/${appHandle}/${appVersionHandle}`
 
   // Initialize Meta client
-  const client = new MetaClient(META_APP_ID, META_APP_SECRET)
+  const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
   try {
     // Step 1: Exchange code for short-lived token
@@ -96,140 +133,138 @@ export default async function oauthCallback(
       // Continue without Pages/Instagram - they're optional
     }
 
-    // Step 6: Create or update meta_connection instance
-    console.log('[Meta OAuth] Creating meta_connection instance...')
-    const existingConnections = await instance.list('meta_connection', {
-      filter: { waba_id: waba.id },
-      limit: 1,
-    })
-
-    let metaConnectionId: string
-    if (existingConnections.data.length > 0) {
-      // Update existing connection
-      const existing = existingConnections.data[0] as { id: string }
-      metaConnectionId = existing.id
-      await instance.update('meta_connection', metaConnectionId, {
-        business_name: waba.name,
-        waba_id: waba.id,
-        status: 'CONNECTED',
-      })
-      console.log(`[Meta OAuth] Updated existing meta_connection: ${metaConnectionId}`)
-    } else {
-      // Create new connection
-      const created = await instance.create('meta_connection', {
-        business_name: waba.name,
-        waba_id: waba.id,
-        status: 'CONNECTED',
-      })
-      metaConnectionId = created.id
-      console.log(`[Meta OAuth] Created new meta_connection: ${metaConnectionId}`)
-    }
-
-    // Step 7: Create or update facebook_page instances
-    console.log(`[Meta OAuth] Processing ${pages.length} Facebook Pages...`)
-    for (const pageData of pages) {
-      const existingPages = await instance.list('facebook_page', {
-        filter: { page_id: pageData.id },
-        limit: 1,
-      })
-
-      if (existingPages.data.length > 0) {
-        // Update existing
-        const existing = existingPages.data[0] as { id: string }
-        await instance.update('facebook_page', existing.id, {
-          page_id: pageData.id,
-          name: pageData.name,
-          access_token: pageData.access_token || null,
-          meta_connection: metaConnectionId,
+    // Step 6: Create or update instances using scoped token
+    // All instance operations need to run with the installation-scoped token
+    await runWithConfig(
+      { ...currentConfig, apiToken: scopedToken },
+      async () => {
+        // Create or update meta_connection instance
+        console.log('[Meta OAuth] Creating meta_connection instance...')
+        const existingConnections = await instance.list('meta_connection', {
+          filter: { waba_id: waba.id },
+          limit: 1,
         })
-      } else {
-        // Create new
-        await instance.create('facebook_page', {
-          page_id: pageData.id,
-          name: pageData.name,
-          access_token: pageData.access_token || null,
-          meta_connection: metaConnectionId,
-        })
-      }
-    }
 
-    // Step 8: Create or update instagram_account instances
-    console.log(`[Meta OAuth] Processing ${instagramAccounts.length} Instagram accounts...`)
-    for (const instagramData of instagramAccounts) {
-      const existingAccounts = await instance.list('instagram_account', {
-        filter: { instagram_account_id: instagramData.id },
-        limit: 1,
-      })
+        let metaConnectionId: string
+        if (existingConnections.data.length > 0) {
+          // Update existing connection
+          const existing = existingConnections.data[0] as { id: string }
+          metaConnectionId = existing.id
+          await instance.update('meta_connection', metaConnectionId, {
+            business_name: waba.name,
+            waba_id: waba.id,
+            status: 'CONNECTED',
+          })
+          console.log(`[Meta OAuth] Updated existing meta_connection: ${metaConnectionId}`)
+        } else {
+          // Create new connection
+          const created = await instance.create('meta_connection', {
+            business_name: waba.name,
+            waba_id: waba.id,
+            status: 'CONNECTED',
+          })
+          metaConnectionId = created.id
+          console.log(`[Meta OAuth] Created new meta_connection: ${metaConnectionId}`)
+        }
 
-      if (existingAccounts.data.length > 0) {
-        // Update existing
-        const existing = existingAccounts.data[0] as { id: string }
-        await instance.update('instagram_account', existing.id, {
-          instagram_account_id: instagramData.id,
-          username: instagramData.username,
-          name: instagramData.name || null,
-          profile_picture_url: instagramData.profile_picture_url || null,
-          meta_connection: metaConnectionId,
-        })
-      } else {
-        // Create new
-        await instance.create('instagram_account', {
-          instagram_account_id: instagramData.id,
-          username: instagramData.username,
-          name: instagramData.name || null,
-          profile_picture_url: instagramData.profile_picture_url || null,
-          meta_connection: metaConnectionId,
-        })
-      }
-    }
+        // Step 7: Create or update facebook_page instances
+        console.log(`[Meta OAuth] Processing ${pages.length} Facebook Pages...`)
+        for (const pageData of pages) {
+          const existingPages = await instance.list('facebook_page', {
+            filter: { page_id: pageData.id },
+            limit: 1,
+          })
 
-    // Step 9: Create or update whatsapp_phone_number instances
-    console.log(`[Meta OAuth] Processing ${phoneNumbersResponse.data.length} phone numbers...`)
-    for (const phoneData of phoneNumbersResponse.data) {
-      const existingPhones = await instance.list('whatsapp_phone_number', {
-        filter: { phone_number_id: phoneData.id },
-        limit: 1,
-      })
+          if (existingPages.data.length > 0) {
+            // Update existing
+            const existing = existingPages.data[0] as { id: string }
+            await instance.update('facebook_page', existing.id, {
+              page_id: pageData.id,
+              name: pageData.name,
+              access_token: pageData.access_token || null,
+              meta_connection: metaConnectionId,
+            })
+          } else {
+            // Create new
+            await instance.create('facebook_page', {
+              page_id: pageData.id,
+              name: pageData.name,
+              access_token: pageData.access_token || null,
+              meta_connection: metaConnectionId,
+            })
+          }
+        }
 
-      if (existingPhones.data.length > 0) {
-        // Update existing
-        const existing = existingPhones.data[0] as { id: string }
-        await instance.update('whatsapp_phone_number', existing.id, {
-          phone: phoneData.display_phone_number,
-          phone_number_id: phoneData.id,
-          display_name: phoneData.verified_name,
-          quality_rating: phoneData.quality_rating,
-          meta_connection: metaConnectionId,
-        })
-      } else {
-        // Create new
-        await instance.create('whatsapp_phone_number', {
-          phone: phoneData.display_phone_number,
-          phone_number_id: phoneData.id,
-          display_name: phoneData.verified_name,
-          quality_rating: phoneData.quality_rating,
-          meta_connection: metaConnectionId,
-        })
-      }
-    }
+        // Step 8: Create or update instagram_account instances
+        console.log(`[Meta OAuth] Processing ${instagramAccounts.length} Instagram accounts...`)
+        for (const instagramData of instagramAccounts) {
+          const existingAccounts = await instance.list('instagram_account', {
+            filter: { instagram_account_id: instagramData.id },
+            limit: 1,
+          })
+
+          if (existingAccounts.data.length > 0) {
+            // Update existing
+            const existing = existingAccounts.data[0] as { id: string }
+            await instance.update('instagram_account', existing.id, {
+              instagram_account_id: instagramData.id,
+              username: instagramData.username,
+              name: instagramData.name || null,
+              profile_picture_url: instagramData.profile_picture_url || null,
+              meta_connection: metaConnectionId,
+            })
+          } else {
+            // Create new
+            await instance.create('instagram_account', {
+              instagram_account_id: instagramData.id,
+              username: instagramData.username,
+              name: instagramData.name || null,
+              profile_picture_url: instagramData.profile_picture_url || null,
+              meta_connection: metaConnectionId,
+            })
+          }
+        }
+
+        // Step 9: Create or update whatsapp_phone_number instances
+        console.log(`[Meta OAuth] Processing ${phoneNumbersResponse.data.length} phone numbers...`)
+        for (const phoneData of phoneNumbersResponse.data) {
+          const existingPhones = await instance.list('whatsapp_phone_number', {
+            filter: { phone_number_id: phoneData.id },
+            limit: 1,
+          })
+
+          if (existingPhones.data.length > 0) {
+            // Update existing
+            const existing = existingPhones.data[0] as { id: string }
+            await instance.update('whatsapp_phone_number', existing.id, {
+              phone: phoneData.display_phone_number,
+              phone_number_id: phoneData.id,
+              display_name: phoneData.verified_name,
+              quality_rating: phoneData.quality_rating,
+              meta_connection: metaConnectionId,
+            })
+          } else {
+            // Create new
+            await instance.create('whatsapp_phone_number', {
+              phone: phoneData.display_phone_number,
+              phone_number_id: phoneData.id,
+              display_name: phoneData.verified_name,
+              quality_rating: phoneData.quality_rating,
+              meta_connection: metaConnectionId,
+            })
+          }
+        }
+      },
+    )
 
     console.log('[Meta OAuth] OAuth callback completed successfully')
 
-    // Return token to be stored as env var
+    // Return appInstallationId and token to be stored as env var
     return {
+      appInstallationId,
       env: {
         META_ACCESS_TOKEN: longLivedToken,
       },
-      html: `
-        <html>
-          <body style="font-family: system-ui; padding: 40px; text-align: center;">
-            <h1 style="color: #38a169;">✓ Meta Authorization Successful</h1>
-            <p>Your Meta account has been connected successfully.</p>
-            <p>Found ${phoneNumbersResponse.data.length} WhatsApp phone number(s), ${pages.length} Facebook Page(s), and ${instagramAccounts.length} Instagram account(s).</p>
-            <p>You can close this window and return to the app.</p>
-          </body>
-        </html>
-      `,
     }
   } catch (err) {
     console.error('[Meta OAuth] OAuth callback failed:', err)

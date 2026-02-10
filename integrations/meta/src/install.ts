@@ -22,6 +22,7 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   
   const META_APP_ID = ctx.env.META_APP_ID || process.env.META_APP_ID
   const META_APP_SECRET = ctx.env.META_APP_SECRET || process.env.META_APP_SECRET
+  const GRAPH_API_VERSION = ctx.env.GRAPH_API_VERSION || process.env.GRAPH_API_VERSION
 
   if (!META_APP_ID) {
     console.error('[Meta Install] META_APP_ID not found in ctx.env or process.env')
@@ -32,6 +33,11 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   if (!META_APP_SECRET) {
     console.error('[Meta Install] META_APP_SECRET not found in ctx.env or process.env')
     throw new Error('META_APP_SECRET is required but not provided. Make sure it is set in the app version\'s provision-level environment variables.')
+  }
+
+  if (!GRAPH_API_VERSION) {
+    console.error('[Meta Install] GRAPH_API_VERSION not found in ctx.env or process.env')
+    throw new Error('GRAPH_API_VERSION is required but not provided. Make sure it is set in the app version\'s provision-level environment variables.')
   }
 
   console.log(`[Meta Install] Installing for workplace ${ctx.workplace.subdomain}`)
@@ -70,7 +76,7 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
     'pages_read_engagement',
   ].join(',')
 
-  const oauthUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
+  const oauthUrl = new URL(`https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`)
   oauthUrl.searchParams.set('client_id', META_APP_ID)
   oauthUrl.searchParams.set('redirect_uri', redirectUri)
   oauthUrl.searchParams.set('scope', scopes)

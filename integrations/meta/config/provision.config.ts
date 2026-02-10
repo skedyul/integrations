@@ -60,6 +60,13 @@ const config: ProvisionConfig = {
       description: 'A secret token you create to verify webhook requests from Meta. Generate a secure random string (e.g., using openssl rand -hex 32) and use the same value in your Meta app\'s webhook settings.',
       placeholder: 'Generate a secure random token (e.g., openssl rand -hex 32)',
     },
+    GRAPH_API_VERSION: {
+      label: 'Graph API Version',
+      required: true,
+      visibility: 'visible',
+      description: 'Meta Graph API version to use (e.g., v21.0, v22.0). Check Meta\'s Graph API changelog for the latest stable version.',
+      placeholder: 'v21.0',
+    },
   },
 
   // ─────────────────────────────────────────────────────────────────────────
