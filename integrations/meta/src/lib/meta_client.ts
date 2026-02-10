@@ -59,6 +59,13 @@ interface TokenExchangeResponse {
   expires_in?: number
 }
 
+interface BusinessResponse {
+  data: Array<{
+    id: string
+    name: string
+  }>
+}
+
 interface WABAResponse {
   data: Array<{
     id: string
@@ -178,10 +185,48 @@ export class MetaClient {
   }
 
   /**
+   * Get businesses for the access token
+   */
+  async getBusinesses(accessToken: string): Promise<BusinessResponse> {
+    const url = new URL(`${this.baseUrl}/me/businesses`)
+    url.searchParams.set('access_token', accessToken)
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+    })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to fetch businesses: ${JSON.stringify(errorResponse)}`)
+    }
+
+    return (await response.json()) as BusinessResponse
+  }
+
+  /**
    * Get WhatsApp Business Accounts for the access token
+   * 
+   * According to Meta API docs, WABAs are accessed via business ID:
+   * https://developers.facebook.com/docs/marketing-api/reference/business/owned_whatsapp_business_accounts/
    */
   async getWABAs(accessToken: string): Promise<WABAResponse> {
-    const url = new URL(`${this.baseUrl}/me/owned_whatsapp_business_accounts`)
+    // First, get the user's businesses
+    const businessesResponse = await this.getBusinesses(accessToken)
+    
+    if (businessesResponse.data.length === 0) {
+      throw new Error('No businesses found. Please ensure the user has access to a Business Manager account.')
+    }
+
+    // Use the first business to fetch WABAs
+    // In most cases, users will have one primary business
+    const businessId = businessesResponse.data[0].id
+    
+    const url = new URL(`${this.baseUrl}/${businessId}/owned_whatsapp_business_accounts`)
     url.searchParams.set('access_token', accessToken)
 
     const response = await fetch(url.toString(), {
