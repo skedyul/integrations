@@ -181,7 +181,7 @@ export class MetaClient {
    * Get WhatsApp Business Accounts for the access token
    */
   async getWABAs(accessToken: string): Promise<WABAResponse> {
-    const url = new URL(`${this.baseUrl}/me/businesses`)
+    const url = new URL(`${this.baseUrl}/me/owned_whatsapp_business_accounts`)
     url.searchParams.set('access_token', accessToken)
 
     const response = await fetch(url.toString(), {
