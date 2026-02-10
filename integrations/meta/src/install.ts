@@ -62,6 +62,8 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   // Construct Meta OAuth URL with all scopes upfront
   // This requests permissions for WhatsApp, Instagram, and Messenger in one go
   const scopes = [
+    // Business management (required for accessing WABAs via business ID)
+    'business_management',
     // WhatsApp scopes
     'whatsapp_business_management',
     'whatsapp_business_messaging',
