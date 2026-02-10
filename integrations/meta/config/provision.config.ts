@@ -555,6 +555,9 @@ const config: ProvisionConfig = {
           model: 'whatsapp_phone_number',
           mode: 'many',
         },
+        registered_wa_numbers: {
+          tool: 'fetch_registered_wa_business_numbers',
+        },
       },
       blocks: [
         {
@@ -565,11 +568,125 @@ const config: ProvisionConfig = {
             id: 'whatsapp-numbers-list-form',
             fields: [
               {
-                component: 'List',
-                id: 'whatsapp_numbers_list',
+                component: 'FieldSetting',
+                id: 'new_whatsapp_number_form',
                 row: 0,
                 col: 0,
+                props: {
+                  label: 'WhatsApp Number',
+                  description: [
+                    "{%- if meta_connection == blank -%}",
+                    "Connect your Meta account to add WhatsApp numbers",
+                    "{%- elsif meta_connection.status != 'CONNECTED' -%}",
+                    "Meta account must be connected before adding WhatsApp numbers",
+                    "{%- else -%}",
+                    "Click to add a registered WhatsApp number to your business",
+                    "{%- endif -%}",
+                  ].join(''),
+                  mode: 'field',
+                  button: {
+                    label: 'Add WhatsApp Number',
+                    variant: 'outline',
+                    size: 'sm',
+                    isDisabled: [
+                      "{%- if meta_connection == blank -%}true",
+                      "{%- elsif meta_connection.status == 'CONNECTED' -%}false",
+                      "{%- else -%}true",
+                      "{%- endif -%}",
+                    ].join(''),
+                  },
+                },
+                // Nested modal form (handled by skedyul-web)
+                modalForm: {
+                  header: {
+                    title: 'Add WhatsApp Number',
+                    description: 'Select a registered WhatsApp business number to add to your installation.',
+                  },
+                  handler: 'add_whatsapp_number',
+                  fields: [
+                    {
+                      component: 'Alert',
+                      id: 'meta_connection_info',
+                      row: 0,
+                      col: 0,
+                      props: {
+                        title: 'Meta Account',
+                        description: [
+                          '{{ meta_connection.business_name }} • ',
+                          'WABA ID: {{ meta_connection.waba_id }}',
+                        ].join(''),
+                        icon: 'Building2',
+                        variant: 'default',
+                      },
+                    },
+                    // Select dropdown for registered WhatsApp numbers
+                    {
+                      component: 'Select',
+                      id: 'phone_number_id',
+                      row: 1,
+                      col: 0,
+                      iterable: '{{ registered_wa_numbers }}',
+                      itemTemplate: {
+                        value: '{{ item.id }}',
+                        label: '{{ item.display_phone_number }} ({{ item.verified_name }})',
+                      },
+                      props: {
+                        label: 'WhatsApp Number',
+                        placeholder: 'Select a phone number',
+                        helpText: 'Choose a registered WhatsApp business number from your Meta account',
+                        required: true,
+                      },
+                    },
+                    // Name input for the phone number
+                    {
+                      component: 'Input',
+                      id: 'name',
+                      row: 2,
+                      col: 0,
+                      props: {
+                        label: 'Phone Name',
+                        placeholder: 'e.g., Sales Line, Support Number',
+                        helpText: 'A friendly name to identify this phone number',
+                        required: false,
+                      },
+                    },
+                  ],
+                  layout: {
+                    type: 'form',
+                    rows: [
+                      { columns: [{ field: 'meta_connection_info', colSpan: 12 }] },
+                      { columns: [{ field: 'phone_number_id', colSpan: 12 }] },
+                      { columns: [{ field: 'name', colSpan: 12 }] },
+                    ],
+                  },
+                  // Modal footer actions
+                  actions: [
+                    {
+                      handle: 'add_whatsapp_number',
+                      label: 'Add WhatsApp Number',
+                      handler: 'add_whatsapp_number',
+                      icon: 'MessageSquare',
+                      variant: 'primary',
+                      isDisabled: [
+                        "{%- if meta_connection == blank -%}true",
+                        "{%- elsif meta_connection.status == 'CONNECTED' -%}false",
+                        "{%- else -%}true",
+                        "{%- endif -%}",
+                      ].join(''),
+                    },
+                  ],
+                },
+              },
+              // WhatsApp numbers list as a field in the same card
+              // Uses iterable + itemTemplate for server-side pre-rendering
+              {
+                component: 'List',
+                id: 'whatsapp_numbers_list',
+                row: 1,
+                col: 0,
+                // Iterate over whatsapp_phone_numbers from page context (mode: 'many')
                 iterable: '{{ whatsapp_phone_numbers }}',
+                // Template for each item - {{ item.xyz }} resolves to each phone number's fields
                 itemTemplate: {
                   component: 'ActionTile',
                   span: 12,
@@ -592,7 +709,124 @@ const config: ProvisionConfig = {
             layout: {
               type: 'form',
               rows: [
+                { columns: [{ field: 'new_whatsapp_number_form', colSpan: 12 }] },
                 { columns: [{ field: 'whatsapp_numbers_list', colSpan: 12 }] },
+              ],
+            },
+          },
+        },
+      ],
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // WhatsApp Number Detail Page
+    // ───────────────────────────────────────────────────────────────────────
+    // Detail view for a single WhatsApp phone number. Accessed via /whatsapp-numbers/[id].
+    // This page has a navigation override to show instance-specific sidebar.
+    //
+    {
+      type: 'INSTANCE',
+      title: 'WhatsApp Number',
+      path: '/whatsapp-numbers/[whatsapp_id]/overview',
+      // Navigation override: shows instance-specific navigation when on this page
+      navigation: {
+        sidebar: {
+          sections: [
+            {
+              title: '{{ whatsapp_phone_number.phone }}',
+              items: [
+                {
+                  label: 'Overview',
+                  href: '/whatsapp-numbers/{{ path_params.whatsapp_id }}/overview',
+                  icon: 'MessageSquare',
+                },
+              ],
+            },
+          ],
+        },
+        breadcrumb: {
+          items: [
+            { label: 'WhatsApp Numbers', href: '/whatsapp-numbers' },
+            { label: '{{ whatsapp_phone_number.phone }}' },
+          ],
+        },
+      },
+      context: {
+        whatsapp_phone_number: {
+          model: 'whatsapp_phone_number',
+          mode: 'first',
+          filters: {
+            id: { eq: '{{ path_params.whatsapp_id }}' },
+          },
+        },
+      },
+      blocks: [
+        {
+          type: 'card',
+          restructurable: false,
+          header: {
+            title: 'WhatsApp Number Details',
+            description: 'View and manage this WhatsApp phone number.',
+          },
+          form: {
+            formVersion: 'v2',
+            id: 'whatsapp-number-detail-form',
+            fields: [
+              {
+                component: 'Input',
+                id: 'phone',
+                row: 0,
+                col: 0,
+                props: {
+                  label: 'Phone Number',
+                  value: '{{ whatsapp_phone_number.phone }}',
+                  disabled: true,
+                },
+              },
+              {
+                component: 'Input',
+                id: 'display_name',
+                row: 1,
+                col: 0,
+                props: {
+                  label: 'Display Name',
+                  value: '{{ whatsapp_phone_number.display_name }}',
+                  disabled: true,
+                  helpText: 'Display name from Meta (read-only)',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'quality_rating',
+                row: 2,
+                col: 0,
+                props: {
+                  label: 'Quality Rating',
+                  value: '{{ whatsapp_phone_number.quality_rating }}',
+                  disabled: true,
+                  helpText: 'Meta quality rating for this number (read-only)',
+                },
+              },
+              {
+                component: 'Input',
+                id: 'name',
+                row: 3,
+                col: 0,
+                props: {
+                  label: 'Name',
+                  value: '{{ whatsapp_phone_number.name }}',
+                  placeholder: 'Enter a friendly name for this number',
+                  helpText: 'A friendly name to identify this WhatsApp number',
+                },
+              },
+            ],
+            layout: {
+              type: 'form',
+              rows: [
+                { columns: [{ field: 'phone', colSpan: 12 }] },
+                { columns: [{ field: 'display_name', colSpan: 12 }] },
+                { columns: [{ field: 'quality_rating', colSpan: 12 }] },
+                { columns: [{ field: 'name', colSpan: 12 }] },
               ],
             },
           },

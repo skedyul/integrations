@@ -29,6 +29,8 @@ import type { ToolRegistry, WebhookRegistry } from 'skedyul'
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { sendWhatsAppRegistry } from './tools/send_whatsapp'
+import { fetchRegisteredWABusinessNumbersRegistry } from './tools/fetch_registered_wa_business_numbers'
+import { addWhatsAppNumberRegistry } from './tools/add_whatsapp_number'
 
 /**
  * Tool Registry
@@ -38,6 +40,12 @@ import { sendWhatsAppRegistry } from './tools/send_whatsapp'
 export const toolRegistry: ToolRegistry = {
   /** Send a WhatsApp message via Meta Graph API. Used by the WhatsApp channel. */
   send_whatsapp: sendWhatsAppRegistry,
+
+  /** Fetch registered WhatsApp business numbers from Meta Graph API. Used in page context. */
+  fetch_registered_wa_business_numbers: fetchRegisteredWABusinessNumbersRegistry,
+
+  /** Add a registered WhatsApp business number to the installation. Creates instance and channel. */
+  add_whatsapp_number: addWhatsAppNumberRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
