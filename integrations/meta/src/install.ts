@@ -47,9 +47,7 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   // Stable format: /api/callbacks/oauth/<app-handle>/<app-version-handle>
   // This works even if the app is reprovisioned, as handles are stable
   // The platform will route to our app's oauth_callback hook
-  // Use ctx.env.SKEDYUL_API_URL (passed from workflow, derived from NGROK_DEVELOPER_URL if available)
-  // Fall back to process.env for backward compatibility
-  const baseUrl = ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || ''
+  const baseUrl = (ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || '').replace(/\/+$/, '')
   const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.handle}/${ctx.app.versionHandle}`
 
   // Encode state parameter with installation context

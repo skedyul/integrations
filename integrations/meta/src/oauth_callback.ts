@@ -81,8 +81,7 @@ export default async function oauthCallback(
 
   // Construct redirect URI (must match the one used in install.ts)
   // Stable format: /api/callbacks/oauth/<app-handle>/<app-version-handle>
-  // This works even if the app is reprovisioned, as handles are stable
-  const baseUrl = process.env.SKEDYUL_API_URL || ''
+  const baseUrl = (process.env.SKEDYUL_API_URL || '').replace(/\/+$/, '')
   if (!appHandle || !appVersionHandle) {
     throw new Error('Missing app handle or version handle in state parameter')
   }
