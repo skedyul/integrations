@@ -10,6 +10,49 @@
  * - Facebook Pages and Instagram account fetching
  */
 
+import { AppAuthInvalidError } from 'skedyul'
+
+interface MetaErrorResponse {
+  error?: {
+    code?: number
+    error_subcode?: number
+    type?: string
+    message?: string
+  }
+}
+
+/**
+ * Parse Meta API error response
+ */
+async function parseMetaError(response: Response): Promise<MetaErrorResponse> {
+  try {
+    const text = await response.text()
+    return JSON.parse(text) as MetaErrorResponse
+  } catch {
+    return { error: { message: `HTTP ${response.status}: ${response.statusText}` } }
+  }
+}
+
+/**
+ * Check if an error response indicates token invalidation
+ */
+function isTokenInvalidError(errorResponse: MetaErrorResponse): boolean {
+  const error = errorResponse.error
+  if (!error) return false
+
+  // Primary token error codes
+  if (error.code === 190) return true // Invalid OAuth 2.0 Access Token
+  if (error.code === 102) return true // Session key invalid/expired
+
+  // Token expired subcode
+  if (error.code === 190 && error.error_subcode === 463) return true
+
+  // Permission denied can sometimes indicate token issues
+  if (error.code === 10 && error.type === 'OAuthException') return true
+
+  return false
+}
+
 interface TokenExchangeResponse {
   access_token: string
   token_type: string
@@ -93,8 +136,13 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Token exchange failed: ${error}`)
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Token exchange failed: ${JSON.stringify(errorResponse)}`)
     }
 
     const data = (await response.json()) as TokenExchangeResponse
@@ -116,8 +164,13 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Long-lived token exchange failed: ${error}`)
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Long-lived token exchange failed: ${JSON.stringify(errorResponse)}`)
     }
 
     const data = (await response.json()) as TokenExchangeResponse
@@ -136,8 +189,13 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Failed to fetch WABAs: ${error}`)
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to fetch WABAs: ${JSON.stringify(errorResponse)}`)
     }
 
     return (await response.json()) as WABAResponse
@@ -158,8 +216,13 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Failed to fetch phone numbers: ${error}`)
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to fetch phone numbers: ${JSON.stringify(errorResponse)}`)
     }
 
     return (await response.json()) as PhoneNumberResponse
@@ -178,8 +241,13 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Failed to fetch pages: ${error}`)
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to fetch pages: ${JSON.stringify(errorResponse)}`)
     }
 
     return (await response.json()) as PageResponse
@@ -224,8 +292,20 @@ export class MetaClient {
               profile_picture_url: pageData.instagram_business_account.profile_picture_url,
             })
           }
+        } else {
+          // Check for token errors even in nested calls
+          const errorResponse = await parseMetaError(response)
+          if (isTokenInvalidError(errorResponse)) {
+            throw new AppAuthInvalidError(
+              errorResponse.error?.message || 'Meta access token is invalid or expired',
+            )
+          }
         }
       } catch (err) {
+        // Re-throw token errors
+        if (err instanceof AppAuthInvalidError) {
+          throw err
+        }
         // Skip pages that don't have Instagram accounts or fail to fetch
         console.warn(`[MetaClient] Failed to fetch Instagram account for page ${page.id}:`, err)
       }
@@ -262,8 +342,13 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Failed to send message: ${error}`)
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to send message: ${JSON.stringify(errorResponse)}`)
     }
 
     return (await response.json()) as SendMessageResponse

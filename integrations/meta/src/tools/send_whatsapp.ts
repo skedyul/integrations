@@ -4,6 +4,7 @@ import {
   MessageSendOutputSchema,
   type MessageSendInput,
   type MessageSendOutput,
+  AppAuthInvalidError,
 } from 'skedyul'
 import { instance } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
@@ -52,28 +53,44 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
       throw new Error(`WhatsApp phone number not found: ${channelIdentifier}`)
     }
 
-    const phoneNumber = phoneNumbers.data[0] as { phone_number_id: string }
-    const phoneNumberId = phoneNumber.phone_number_id
+    const phoneNumber = phoneNumbers.data[0]
+    const phoneNumberId = (phoneNumber as { phone_number_id?: string }).phone_number_id
+    if (!phoneNumberId) {
+      throw new Error(`WhatsApp phone number instance missing phone_number_id: ${channelIdentifier}`)
+    }
 
     // Initialize Meta client
     const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
-    // Send the message
-    const result = await client.sendMessage(
-      phoneNumberId,
-      input.subscription.identifierValue,
-      input.message.content,
-      META_ACCESS_TOKEN,
-    )
+    try {
+      // Send the message
+      const result = await client.sendMessage(
+        phoneNumberId,
+        input.subscription.identifierValue,
+        input.message.content,
+        META_ACCESS_TOKEN,
+      )
 
-    return {
-      output: {
-        status: 'sent',
-        remoteId: result.messages[0]?.id || '',
-      },
-      billing: {
-        credits: 1,
-      },
+      return {
+        output: {
+          status: 'sent',
+          remoteId: result.messages[0]?.id || '',
+        },
+        billing: {
+          credits: 1,
+        },
+        meta: {
+          success: true,
+          message: 'Message sent successfully',
+          toolName: 'send_whatsapp',
+        },
+      }
+    } catch (error) {
+      if (error instanceof AppAuthInvalidError) {
+        // Clean: just re-throw, server handles formatting, workflow handles redirect
+        throw error
+      }
+      throw error // Re-throw other errors
     }
   },
 }

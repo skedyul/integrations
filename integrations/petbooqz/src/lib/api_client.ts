@@ -1,3 +1,5 @@
+import { AppAuthInvalidError } from 'skedyul'
+
 export interface ApiClientConfig {
   rootUrl: string
   username: string
@@ -110,6 +112,12 @@ export class PetbooqzApiClient {
 
     if (!response.ok) {
       const errorText = await response.text()
+      // Intercept 401/403 as auth invalid — credentials are expired or revoked
+      if (response.status === 401 || response.status === 403) {
+        throw new AppAuthInvalidError(
+          `Petbooqz API authentication failed (${response.status}). Please re-authorize the app.`,
+        )
+      }
       throw new Error(
         `API request failed: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''}`,
       )

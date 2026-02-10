@@ -7,7 +7,7 @@ import {
   type MessageSendOutput,
 } from 'skedyul'
 
-import { createTwilioClient } from '../lib/twilio_client'
+import { createTwilioClient, withTwilioAuth } from '../lib/twilio_client'
 
 /**
  * Send an SMS message via Twilio.
@@ -22,11 +22,13 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
   handler: async (input, context) => {
     const client = createTwilioClient(context.env)
 
-    const message = await client.messages.create({
-      to: input.subscription.identifierValue,
-      from: input.channel.identifierValue,
-      body: input.message.content,
-    })
+    const message = await withTwilioAuth(() =>
+      client.messages.create({
+        to: input.subscription.identifierValue,
+        from: input.channel.identifierValue,
+        body: input.message.content,
+      }),
+    )
 
     return {
       output: {

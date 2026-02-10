@@ -1,8 +1,39 @@
 import twilio from 'twilio'
+import { AppAuthInvalidError } from 'skedyul'
 
 export type TwilioEnv = {
   TWILIO_ACCOUNT_SID?: string
   TWILIO_AUTH_TOKEN?: string
+}
+
+/**
+ * Check if a Twilio error indicates invalid authentication (401/403).
+ * Twilio SDK errors include a `status` property with the HTTP status code.
+ */
+export function isTwilioAuthError(error: unknown): boolean {
+  if (error && typeof error === 'object') {
+    const errObj = error as Record<string, unknown>
+    const status = (errObj.status ?? errObj.code) as number | undefined
+    return status === 401 || status === 403 || status === 20003
+    // 20003 = Twilio "Authentication Error" code
+  }
+  return false
+}
+
+/**
+ * Wraps a Twilio SDK call and converts 401/403 errors to AppAuthInvalidError.
+ */
+export async function withTwilioAuth<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (error) {
+    if (isTwilioAuthError(error)) {
+      throw new AppAuthInvalidError(
+        `Twilio API authentication failed. Please re-authorize the app.`,
+      )
+    }
+    throw error
+  }
 }
 
 /**
@@ -112,14 +143,16 @@ export const createAddress = async (
   client: ReturnType<typeof twilio>,
   params: CreateAddressParams,
 ) => {
-  return client.addresses.create({
-    customerName: params.customerName,
-    street: params.street,
-    city: params.city,
-    region: params.region,
-    postalCode: params.postalCode,
-    isoCountry: params.isoCountry,
-  })
+  return withTwilioAuth(() =>
+    client.addresses.create({
+      customerName: params.customerName,
+      street: params.street,
+      city: params.city,
+      region: params.region,
+      postalCode: params.postalCode,
+      isoCountry: params.isoCountry,
+    }),
+  )
 }
 
 /**
@@ -129,11 +162,13 @@ export const createEndUser = async (
   client: ReturnType<typeof twilio>,
   params: CreateEndUserParams,
 ) => {
-  return client.numbers.v2.regulatoryCompliance.endUsers.create({
-    friendlyName: params.friendlyName,
-    type: params.type,
-    attributes: params.attributes,
-  })
+  return withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance.endUsers.create({
+      friendlyName: params.friendlyName,
+      type: params.type,
+      attributes: params.attributes,
+    }),
+  )
 }
 
 /**
@@ -169,7 +204,9 @@ export const createSupportingDocument = async (
     createParams.file = params.file
   }
 
-  return client.numbers.v2.regulatoryCompliance.supportingDocuments.create(createParams)
+  return withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance.supportingDocuments.create(createParams),
+  )
 }
 
 /**
@@ -179,15 +216,17 @@ export const createBundle = async (
   client: ReturnType<typeof twilio>,
   params: CreateComplianceBundleParams,
 ) => {
-  return client.numbers.v2.regulatoryCompliance.bundles.create({
-    friendlyName: params.friendlyName,
-    email: params.email,
-    statusCallback: params.statusCallback,
-    regulationSid: params.regulationSid,
-    isoCountry: params.isoCountry,
-    endUserType: params.endUserType,
-    numberType: params.numberType,
-  })
+  return withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance.bundles.create({
+      friendlyName: params.friendlyName,
+      email: params.email,
+      statusCallback: params.statusCallback,
+      regulationSid: params.regulationSid,
+      isoCountry: params.isoCountry,
+      endUserType: params.endUserType,
+      numberType: params.numberType,
+    }),
+  )
 }
 
 /**
@@ -198,9 +237,11 @@ export const assignItemToBundle = async (
   bundleSid: string,
   objectSid: string,
 ) => {
-  return client.numbers.v2.regulatoryCompliance
-    .bundles(bundleSid)
-    .itemAssignments.create({ objectSid })
+  return withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance
+      .bundles(bundleSid)
+      .itemAssignments.create({ objectSid }),
+  )
 }
 
 /**
@@ -210,9 +251,11 @@ export const submitBundleForReview = async (
   client: ReturnType<typeof twilio>,
   bundleSid: string,
 ) => {
-  return client.numbers.v2.regulatoryCompliance.bundles(bundleSid).update({
-    status: 'pending-review',
-  })
+  return withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance.bundles(bundleSid).update({
+      status: 'pending-review',
+    }),
+  )
 }
 
 /**
@@ -222,7 +265,9 @@ export const fetchBundleStatus = async (
   client: ReturnType<typeof twilio>,
   bundleSid: string,
 ) => {
-  return client.numbers.v2.regulatoryCompliance.bundles(bundleSid).fetch()
+  return withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance.bundles(bundleSid).fetch(),
+  )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -292,14 +337,20 @@ export const searchAvailablePhoneNumbers = async (
 
   switch (numberType) {
     case 'local':
-      numbers = await client.availablePhoneNumbers(countryCode).local.list(filterOptions)
+      numbers = await withTwilioAuth(() =>
+        client.availablePhoneNumbers(countryCode).local.list(filterOptions),
+      )
       break
     case 'tollFree':
-      numbers = await client.availablePhoneNumbers(countryCode).tollFree.list(filterOptions)
+      numbers = await withTwilioAuth(() =>
+        client.availablePhoneNumbers(countryCode).tollFree.list(filterOptions),
+      )
       break
     case 'mobile':
     default:
-      numbers = await client.availablePhoneNumbers(countryCode).mobile.list(filterOptions)
+      numbers = await withTwilioAuth(() =>
+        client.availablePhoneNumbers(countryCode).mobile.list(filterOptions),
+      )
       break
   }
 
@@ -373,7 +424,9 @@ export const purchasePhoneNumber = async (
   if (params.addressSid) createParams.addressSid = params.addressSid
   if (params.bundleSid) createParams.bundleSid = params.bundleSid
 
-  const purchased = await client.incomingPhoneNumbers.create(createParams)
+  const purchased = await withTwilioAuth(() =>
+    client.incomingPhoneNumbers.create(createParams),
+  )
 
   return {
     sid: purchased.sid,

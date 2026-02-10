@@ -11,6 +11,7 @@ import crypto from 'crypto'
 import Mailgun from 'mailgun.js'
 import formData from 'form-data'
 import type { WebhookRequest } from 'skedyul'
+import { AppAuthInvalidError } from 'skedyul'
 import type {
   EmailProvider,
   EmailEnv,
@@ -106,12 +107,16 @@ export class MailgunProvider implements EmailProvider {
     } catch (error) {
       console.error('[MailgunProvider] Mailgun API error:', error)
 
-      // Log full error object
-      console.error('[MailgunProvider] Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
-
-      // Log more details if available
+      // Intercept 401/403 as auth invalid — API key is expired or revoked
       if (error && typeof error === 'object') {
         const errObj = error as Record<string, unknown>
+        const status = (errObj.status ?? errObj.statusCode) as number | undefined
+        if (status === 401 || status === 403) {
+          throw new AppAuthInvalidError(
+            `Mailgun API authentication failed (${status}). Please re-authorize the app.`,
+          )
+        }
+
         console.error('[MailgunProvider] Error details:', {
           message: errObj.message,
           status: errObj.status,
