@@ -38,12 +38,13 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   console.log(`[Meta Install] Meta App ID: ${META_APP_ID?.slice(0, 4)}...`)
 
   // Construct OAuth redirect URI
-  // Simplified format: /api/callbacks/oauth/<app_version_id>
+  // Stable format: /api/callbacks/oauth/<app-handle>/<app-version-handle>
+  // This works even if the app is reprovisioned, as handles are stable
   // The platform will route to our app's oauth_callback hook
   // Use ctx.env.SKEDYUL_API_URL (passed from workflow, derived from NGROK_DEVELOPER_URL if available)
   // Fall back to process.env for backward compatibility
   const baseUrl = ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || ''
-  const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.versionId}`
+  const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.handle}/${ctx.app.versionHandle}`
 
   // Encode state parameter with installation context
   // This will be decoded in the oauth_callback handler

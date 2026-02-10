@@ -44,11 +44,12 @@ export default async function oauthCallback(
   console.log(`[Meta OAuth] Processing callback for installation ${appInstallationId}`)
 
   // Construct redirect URI (must match the one used in install.ts)
-  // Simplified format: /api/callbacks/oauth/<app_version_id>
+  // Stable format: /api/callbacks/oauth/<app-handle>/<app-version-handle>
+  // This works even if the app is reprovisioned, as handles are stable
   // Use ctx.env.SKEDYUL_API_URL (passed from workflow, derived from NGROK_DEVELOPER_URL if available)
   // Fall back to process.env for backward compatibility (baked into container at provisioning time)
   const baseUrl = ctx.env.SKEDYUL_API_URL || process.env.SKEDYUL_API_URL || ''
-  const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.versionId}`
+  const redirectUri = `${baseUrl}/api/callbacks/oauth/${ctx.app.handle}/${ctx.app.versionHandle}`
 
   // Initialize Meta client
   const client = new MetaClient(META_APP_ID, META_APP_SECRET)
