@@ -21,7 +21,8 @@ import { MetaClient } from './lib/meta_client'
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
 ): Promise<OAuthCallbackResult> {
-  const { query } = ctx
+  const { request } = ctx
+  const query = request.query
 
   // Check for OAuth error
   if (query.error) {
