@@ -51,6 +51,11 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
       return {
         output: [],
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'fetch_registered_wa_business_numbers',
+        },
       }
     }
 
@@ -91,6 +96,11 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
       return {
         output: [],
         billing: { credits: 0 },
+        meta: {
+          success: true,
+          message: 'No meta connection found',
+          toolName: 'fetch_registered_wa_business_numbers',
+        },
       }
     }
 
@@ -104,6 +114,11 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
       return {
         output: [],
         billing: { credits: 0 },
+        meta: {
+          success: true,
+          message: 'Meta connection missing WABA ID',
+          toolName: 'fetch_registered_wa_business_numbers',
+        },
       }
     }
 
@@ -128,6 +143,11 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
       return {
         output: phoneNumbers,
         billing: { credits: 1 },
+        meta: {
+          success: true,
+          message: 'Successfully fetched registered WhatsApp business numbers',
+          toolName: 'fetch_registered_wa_business_numbers',
+        },
       }
     } catch (error) {
       if (error instanceof AppAuthInvalidError) {
@@ -142,6 +162,11 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
       return {
         output: [],
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: `Failed to fetch phone numbers: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          toolName: 'fetch_registered_wa_business_numbers',
+        },
       }
     }
   },
