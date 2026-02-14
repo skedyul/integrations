@@ -3,12 +3,12 @@ import type { InstallHandlerContext, InstallHandlerResponseOAuth } from 'skedyul
 /**
  * Install handler for the Meta app.
  * Called when a user clicks "Install" after providing preInstall env variables.
- * 
+ *
  * This handler:
  * 1. Constructs the Meta OAuth URL with all required scopes (WhatsApp, Instagram, Messenger)
  * 2. Encodes the state parameter with installation context
  * 3. Returns redirect URL to trigger OAuth flow
- * 
+ *
  * Since this app has an oauth_callback hook, redirect is REQUIRED.
  */
 export default async function install(ctx: InstallHandlerContext): Promise<InstallHandlerResponseOAuth> {
@@ -19,7 +19,7 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   console.log('[Meta Install] ctx.env.META_APP_ID:', ctx.env.META_APP_ID ? 'present' : 'missing')
   console.log('[Meta Install] process.env.META_APP_ID:', process.env.META_APP_ID ? 'present' : 'missing')
   console.log('[Meta Install] process.env keys (sample):', Object.keys(process.env).slice(0, 10))
-  
+
   const META_APP_ID = ctx.env.META_APP_ID || process.env.META_APP_ID
   const META_APP_SECRET = ctx.env.META_APP_SECRET || process.env.META_APP_SECRET
   const GRAPH_API_VERSION = ctx.env.GRAPH_API_VERSION || process.env.GRAPH_API_VERSION

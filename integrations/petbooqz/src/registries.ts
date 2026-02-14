@@ -22,6 +22,7 @@ import type { ToolRegistry } from 'skedyul'
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { appointmentTypesListRegistry } from './tools/appointment_types_list'
+import { asapOrdersGetRegistry } from './tools/asap_orders_get'
 import { calendarSlotsAvailabilityListRegistry } from './tools/calendar_slots_availability_list'
 import { calendarSlotsBookRegistry } from './tools/calendar_slots_book'
 import { calendarSlotsCancelRegistry } from './tools/calendar_slots_cancel'
@@ -45,6 +46,9 @@ import { verifyCredentialsRegistry } from './tools/verify_credentials'
 export const toolRegistry: ToolRegistry = {
   /** List all appointment types available in Petbooqz */
   appointment_types_list: appointmentTypesListRegistry,
+
+  /** Get ASAP order information by ID */
+  asap_orders_get: asapOrdersGetRegistry,
 
   /** List available calendar slots for given calendars and dates */
   calendar_slots_availability_list: calendarSlotsAvailabilityListRegistry,

@@ -66,9 +66,6 @@ export default defineConfig({
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * Install/uninstall lifecycle hooks (tool names from registry):
-   *   - onInstall: Creates {subdomain}@skedyul.app email address
-   *   - onUninstall: Removes the email address
    */
   install: import('./config/install.config'),
 })

@@ -1,7 +1,7 @@
 import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
-import installHandler from '../install'
-import oauthCallbackHandler from '../oauth_callback'
+import installHandler from './hooks/install'
+import oauthCallbackHandler from './hooks/oauth_callback'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues

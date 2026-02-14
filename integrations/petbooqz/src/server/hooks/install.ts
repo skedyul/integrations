@@ -4,7 +4,7 @@ import {
   InvalidConfigurationError,
   AuthenticationError,
 } from 'skedyul'
-import { PetbooqzApiClient } from './lib/api_client'
+import { PetbooqzApiClient } from '../../lib/api_client'
 
 /**
  * Normalizes a Petbooqz base URL to just the protocol://host:port format.

@@ -1,11 +1,11 @@
 import { instance, token, runWithConfig, getConfig } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
-import { MetaClient } from './lib/meta_client'
+import { MetaClient } from '../../lib/meta_client'
 
 /**
  * OAuth callback handler for the Meta app.
  * Called when Meta redirects back after user authorization.
- * 
+ *
  * This handler:
  * 1. Decodes state parameter to extract appInstallationId
  * 2. Exchanges provision token for installation-scoped token

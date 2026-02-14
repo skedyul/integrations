@@ -3,13 +3,15 @@ import type { InstallHandlerContext, InstallHandlerResult } from 'skedyul'
 /**
  * Install handler for the Phone app.
  * Called when a user clicks "Install" after providing preInstall env variables.
- * 
+ *
  * This handler can:
  * - Validate the provided credentials (e.g., test Twilio API connection)
  * - Compute additional env variables
  * - Return an OAuth redirect URL if further authentication is needed
  */
-export default async function install(ctx: InstallHandlerContext): Promise<InstallHandlerResult> {
+export default async function install(
+  ctx: InstallHandlerContext,
+): Promise<InstallHandlerResult> {
   const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN } = ctx.env
 
   // TODO: Validate Twilio credentials by making an API call

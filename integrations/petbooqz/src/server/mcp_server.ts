@@ -1,6 +1,6 @@
 import { server } from 'skedyul'
 import { toolRegistry } from '../registries'
-import installHandler from '../install'
+import installHandler from './hooks/install'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues

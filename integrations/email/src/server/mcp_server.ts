@@ -1,6 +1,6 @@
 import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
-import installHandler from '../install'
+import installHandler from './hooks/install'
 import provisionHandler from '../provision'
 import pkg from '../../package.json'
 

@@ -3,8 +3,8 @@ import {
   MissingRequiredFieldError,
   InvalidConfigurationError,
 } from 'skedyul'
-import { discoverHapanaData } from './lib/hapana'
-import { syncFromDiscovery } from './lib/sync'
+import { discoverHapanaData } from '../../lib/hapana'
+import { syncFromDiscovery } from '../../lib/sync'
 
 /**
  * Parses the club name from a BFT URL.

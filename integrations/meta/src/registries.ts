@@ -18,7 +18,7 @@
  * --------
  * HTTP endpoints that receive requests from external services:
  *   - PROVISION Level: Shared across all installations, auto-created on deploy
- *   - INSTALL Level: Per-installation, created in onInstall/onUninstall hooks
+ *   - INSTALL Level: Per-installation
  *   - ACTION Level: Dynamic, created by tool handlers (e.g., OAuth callbacks)
  */
 

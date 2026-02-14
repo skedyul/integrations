@@ -1,5 +1,7 @@
 import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
+import installHandler from './hooks/install'
+import { uninstallHandler } from './hooks/uninstall'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues
@@ -43,6 +45,10 @@ const skedyulServer = server.create(
     metadata: {
       name: 'Phone',
       version: pkg.version,
+    },
+    hooks: {
+      install: installHandler,
+      uninstall: uninstallHandler,
     },
   },
   toolRegistry,
