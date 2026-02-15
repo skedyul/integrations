@@ -1,7 +1,7 @@
 import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
-import provisionHandler from '../provision'
+import provisionHandler from './hooks/provision'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues
