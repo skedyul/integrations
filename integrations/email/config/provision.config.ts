@@ -83,7 +83,8 @@ const config: ProvisionConfig = {
           type: 'STRING',
           required: true,
           unique: true,
-          system: true,
+          // Note: Don't use system: true here - that's reserved for created_at/updated_at
+          // Use owner: 'APP' to indicate this field is managed by the app
           description: 'The email domain (e.g., skedyul.app)',
           owner: 'APP',
         },
@@ -92,7 +93,7 @@ const config: ProvisionConfig = {
           label: 'Type',
           type: 'STRING',
           required: true,
-          system: true,
+          // Note: Don't use system: true here - that's reserved for created_at/updated_at
           description: 'Domain type: system (skedyul.app) or custom',
           owner: 'APP',
           defaultValue: { value: 'SYSTEM' },
@@ -109,8 +110,8 @@ const config: ProvisionConfig = {
           label: 'Status',
           type: 'STRING',
           required: true,
-          system: true,
           defaultValue: { value: 'ACTIVE' },
+          // Note: Don't use system: true here - that's reserved for created_at/updated_at
           description: 'Domain verification status',
           owner: 'APP',
           definition: {
@@ -165,7 +166,7 @@ const config: ProvisionConfig = {
           label: 'Default Address',
           type: 'BOOLEAN',
           required: false,
-          system: true,
+          // Note: Don't use system: true here - that's reserved for created_at/updated_at
           defaultValue: { value: false },
           description: 'Whether this is the default sending address',
           owner: 'APP',
