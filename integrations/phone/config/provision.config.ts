@@ -74,6 +74,13 @@ const config: ProvisionConfig = {
       description: 'Google Maps API key for geocoding addresses (enable Geocoding API)',
       placeholder: 'AIzaSy...',
     },
+    ENABLE_TEST_COMPLIANCE_AND_NUMBER: {
+      label: 'Enable Test Mode',
+      required: false,
+      visibility: 'visible',
+      description: 'When set to "true", uses hardcoded test responses instead of real Twilio API calls for compliance and phone number operations',
+      placeholder: 'true',
+    },
   },
 
   // ─────────────────────────────────────────────────────────────────────────

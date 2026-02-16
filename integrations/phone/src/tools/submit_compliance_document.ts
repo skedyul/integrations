@@ -9,6 +9,7 @@ import {
   assignItemToBundle,
   submitBundleForReview,
 } from '../lib/twilio_client'
+import testData from '../test-data.json'
 
 const { z } = skedyul
 
@@ -285,66 +286,68 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     })
 
     // Update the compliance record with all form data
-    const updateData = {
-      business_name,
-      business_email,
-      business_id,
-      country: isoCountry,
-      address, // Store the original address input
-      file: fileId, // Store only the file ID, not the S3 path
-      status: 'PENDING_REVIEW', // Mark as pending review
-      rejection_reason: '', // Reset rejection reason on new submission
-      // Hardcoded Twilio SIDs for now to avoid spamming Twilio
-      bundle_sid: 'BUf7c04b1d019a9c67844976fea763f351',
-      end_user_sid: 'IT482fcb7ee070cfbc260c0d53c6c66aa5',
-      document_sid: 'RDb9eb3fcc11d5d53a64b994075af2b6fe',
-      address_sid: 'AD1234567890abcdef1234567890abcdef', // Required for AU phone purchases
-    }
-    
-    console.log('[Compliance] Updating compliance record with data:', {
-      recordId: complianceRecord.id,
-      updateData,
-    })
+    // Check if test mode is enabled
+    const isTestMode = env.ENABLE_TEST_COMPLIANCE_AND_NUMBER === 'true'
 
-    try {
-      const updatedInstance = await instance.update(
-        'compliance_record',
-        complianceRecord.id,
+    if (isTestMode) {
+      // ══════════════════════════════════════════════════════════════════════════
+      // TEST MODE: Use hardcoded test data instead of real Twilio API calls
+      // ══════════════════════════════════════════════════════════════════════════
+      console.log('[Compliance] Test mode enabled - using hardcoded test data')
+
+      const updateData = {
+        business_name,
+        business_email,
+        business_id,
+        country: isoCountry,
+        address,
+        file: fileId,
+        status: 'PENDING_REVIEW',
+        rejection_reason: '',
+        bundle_sid: testData.compliance.bundleSid,
+        end_user_sid: testData.compliance.endUserSid,
+        document_sid: testData.compliance.documentSid,
+        address_sid: testData.compliance.addressSid,
+      }
+
+      console.log('[Compliance] Updating compliance record with test data:', {
+        recordId: complianceRecord.id,
         updateData,
-      )
-      console.log('[Compliance] Instance updated successfully:', JSON.stringify(updatedInstance, null, 2))
-    } catch (updateError) {
-      console.error('[Compliance] Failed to update instance:', updateError)
-      // Still return success for now since we're in test mode
+      })
+
+      try {
+        const updatedInstance = await instance.update(
+          'compliance_record',
+          complianceRecord.id,
+          updateData,
+        )
+        console.log('[Compliance] Instance updated successfully:', JSON.stringify(updatedInstance, null, 2))
+      } catch (updateError) {
+        console.error('[Compliance] Failed to update instance:', updateError)
+      }
+
+      return {
+        output: {
+          status: 'pending_review',
+          bundleSid: testData.compliance.bundleSid,
+          endUserSid: testData.compliance.endUserSid,
+          documentSid: testData.compliance.documentSid,
+          message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
+        },
+        billing: { credits: 0 },
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // TEMPORARY: Return hardcoded response to avoid spamming Twilio
-    // Remove this block and uncomment the actual Twilio submission below once
-    // the instance saving issue is fixed
+    // PRODUCTION MODE: Real Twilio API calls
     // ══════════════════════════════════════════════════════════════════════════
-    return {
-      output: {
-        status: 'pending_review',
-        bundleSid: 'BUf7c04b1d019a9c67844976fea763f351',
-        endUserSid: 'IT482fcb7ee070cfbc260c0d53c6c66aa5',
-        documentSid: 'RDb9eb3fcc11d5d53a64b994075af2b6fe',
-        message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
-      },
-      billing: { credits: 0 },
-    }
-    // ══════════════════════════════════════════════════════════════════════════
-
-    /* COMMENTED OUT: Actual Twilio submission - uncomment when ready
+    console.log('[Compliance] Production mode - submitting to Twilio')
 
     try {
       // Create Twilio client
       const twilioClient = createTwilioClient(env)
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 1: Create Address (required for business compliance)
-      // Using parsed address components from Google Geocoding API
-      // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Creating Twilio Address with parsed components:', parsedAddress)
       const twilioAddress = await createAddress(twilioClient, {
         customerName: business_name,
@@ -356,9 +359,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       })
       console.log('[Compliance] Created Address:', twilioAddress.sid)
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 2: Create End-User (business entity)
-      // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Creating Twilio End-User...')
       const endUser = await createEndUser(twilioClient, {
         friendlyName: business_name,
@@ -369,13 +370,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       })
       console.log('[Compliance] Created End-User:', endUser.sid)
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 3: Fetch file content and create Supporting Document
-      // Twilio requires actual file content for document uploads, not URLs.
-      // We fetch the file from S3 and pass the buffer to Twilio.
-      // Using 'commercial_registrar_excerpt' for Australian business compliance.
-      // @see https://www.twilio.com/docs/phone-numbers/regulatory/api/supporting-documents
-      // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Getting file URL for download...')
       const fileUrlResponse = await file.getUrl(fileId)
       console.log('[Compliance] File URL obtained, expires at:', fileUrlResponse.expiresAt)
@@ -392,15 +387,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       console.log('[Compliance] Creating Twilio Supporting Document...')
       const supportingDoc = await createSupportingDocument(twilioClient, {
         friendlyName: `${business_name} - Commercial Register Excerpt`,
-        // Use commercial_registrar_excerpt for Australian business compliance
         type: 'commercial_registrar_excerpt',
-        // Pass the actual file content to Twilio
         file: fileBuffer,
-        // Attributes required per Twilio evaluation:
-        // - business_name: for business_name_info requirement
-        // - document_number: for business_id_no_info requirement
-        // - address_sids: for business_address_proof_of_address_info requirement
-        // @see https://www.twilio.com/docs/phone-numbers/regulatory/getting-started/create-new-bundle-public-rest-apis
         attributes: {
           business_name: business_name,
           document_number: business_id,
@@ -409,16 +397,10 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       })
       console.log('[Compliance] Created Supporting Document:', supportingDoc.sid)
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 4: Create Regulatory Bundle with dynamic webhook callback
-      // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Creating Twilio Regulatory Bundle...')
-      
-      // Create a dynamic webhook registration for Twilio status callbacks
-      // This webhook will be called by Twilio when the bundle status changes
       console.log('[Compliance] Creating webhook registration for status callbacks...')
       const webhookResult = await webhook.create('compliance_status', {
-        // Context passed to the webhook handler when called
         complianceRecordId: complianceRecord.id,
         businessName: business_name,
       })
@@ -427,32 +409,26 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       const bundle = await createBundle(twilioClient, {
         friendlyName: `${business_name} Compliance Bundle`,
         email: business_email,
-        statusCallback: webhookResult.url, // Use the dynamic webhook URL
+        statusCallback: webhookResult.url,
         endUserType: 'business',
-        isoCountry: isoCountry, // Use the country from user input
+        isoCountry: isoCountry,
         numberType: 'mobile',
       })
       console.log('[Compliance] Created Bundle:', bundle.sid)
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 5: Assign Items to Bundle
-      // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Assigning End-User to Bundle...')
       await assignItemToBundle(twilioClient, bundle.sid, endUser.sid)
 
       console.log('[Compliance] Assigning Supporting Document to Bundle...')
       await assignItemToBundle(twilioClient, bundle.sid, supportingDoc.sid)
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 6: Submit Bundle for Review
-      // ─────────────────────────────────────────────────────────────────────────
       console.log('[Compliance] Submitting Bundle for review...')
       await submitBundleForReview(twilioClient, bundle.sid)
       console.log('[Compliance] Bundle submitted for review')
 
-      // ─────────────────────────────────────────────────────────────────────────
       // Step 7: Update compliance_record with Twilio resource SIDs
-      // ─────────────────────────────────────────────────────────────────────────
       await instance.update(
         'compliance_record',
         complianceRecord.id,
@@ -460,7 +436,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           bundle_sid: bundle.sid,
           end_user_sid: endUser.sid,
           document_sid: supportingDoc.sid,
-          address_sid: twilioAddress.sid, // Required for AU phone purchases
+          address_sid: twilioAddress.sid,
           status: 'PENDING_REVIEW',
         },
       )
@@ -472,8 +448,6 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         documentSid: supportingDoc.sid,
       })
 
-      // Note: addressSid is stored in the compliance record for phone number purchases
-
       return {
         output: {
           status: 'pending_review',
@@ -482,9 +456,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           documentSid: supportingDoc.sid,
           message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
         },
-        billing: {
-          credits: 0,
-        },
+        billing: { credits: 0 },
       }
     } catch (err) {
       console.error('[Compliance] Failed to submit to Twilio:', err)
@@ -507,6 +479,5 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         billing: { credits: 0 },
       }
     }
-    END COMMENTED OUT */
   },
 }

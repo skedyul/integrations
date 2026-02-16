@@ -5,6 +5,7 @@ import {
   searchAvailablePhoneNumbers,
   purchasePhoneNumber,
 } from '../lib/twilio_client'
+import testData from '../test-data.json'
 
 const { z } = skedyul
 
@@ -125,50 +126,21 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
-    // TEMPORARY: Hardcoded Twilio response to avoid spamming Twilio API
-    // Remove this block and uncomment the actual Twilio calls below when ready
-    // ══════════════════════════════════════════════════════════════════════════
-    console.log('[PhoneNumber] Using hardcoded Twilio response (test mode)')
-    const purchasedNumber = {
-      sid: 'PN9a5882f95d0f57b86fea2972c7c6fc01',
-      phoneNumber: '+61468092925',
-      friendlyName: `Skedyul - ${complianceRecord.business_name ?? 'Test Business'}`,
-      capabilities: { voice: true, sms: true, mms: true },
+    // Check if test mode is enabled
+    const isTestMode = env.ENABLE_TEST_COMPLIANCE_AND_NUMBER === 'true'
+
+    // Type for purchased number data
+    type PurchasedNumber = {
+      sid: string
+      phoneNumber: string
+      friendlyName: string
+      capabilities: { voice: boolean; sms: boolean; mms: boolean }
     }
-    console.log('[PhoneNumber] Hardcoded purchased number:', JSON.stringify(purchasedNumber, null, 2))
 
-    // Register webhook for receiving SMS and attach to Twilio phone number
-    console.log('[PhoneNumber] Registering receive_sms webhook...')
-    let smsWebhookUrl: string | null = null
-    try {
-      const webhookResult = await webhook.create('receive_sms', {
-        phoneNumber: purchasedNumber.phoneNumber,
-        phoneNumberSid: purchasedNumber.sid,
-      })
-      smsWebhookUrl = webhookResult.url
-      console.log('[PhoneNumber] Webhook registered:', JSON.stringify(webhookResult, null, 2))
-
-      // Update Twilio phone number with the SMS webhook URL
-      // Note: Using hardcoded phone number SID - assumes the number exists in Twilio
-      console.log('[PhoneNumber] Updating Twilio phone number with SMS webhook URL...')
-      const twilioClient = createTwilioClient(env)
-      await twilioClient.incomingPhoneNumbers(purchasedNumber.sid).update({
-        smsUrl: smsWebhookUrl,
-        smsMethod: 'POST',
-      })
-      console.log('[PhoneNumber] Twilio phone number updated with SMS webhook URL')
-    } catch (webhookErr) {
-      console.error('[PhoneNumber] Failed to register webhook or update Twilio:', webhookErr)
-      // Continue even if webhook registration fails - the phone number was already created
-      // The webhook can be configured later via communication channel lifecycle hooks
-    }
-    // ══════════════════════════════════════════════════════════════════════════
-
-    /* COMMENTED OUT: Actual Twilio API calls - uncomment when ready
-    
-    // 3. Create Twilio client
+    let purchasedNumber: PurchasedNumber
     let twilioClient: ReturnType<typeof createTwilioClient>
+
+    // Create Twilio client (needed for both modes to update webhook URL)
     try {
       twilioClient = createTwilioClient(env)
     } catch (err) {
@@ -182,110 +154,135 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // 4. Search for available AU mobile numbers with Voice, SMS, and MMS capabilities
-    console.log('[PhoneNumber] Searching for available AU mobile numbers...')
-    let availableNumbers: Awaited<ReturnType<typeof searchAvailablePhoneNumbers>>
-
-    try {
-      availableNumbers = await searchAvailablePhoneNumbers(twilioClient, {
-        countryCode: 'AU',
-        numberType: 'mobile',
-        smsEnabled: true,
-        voiceEnabled: true,
-        mmsEnabled: true,
-        limit: 1,
-      })
-    } catch (err) {
-      console.error('[PhoneNumber] Failed to search available numbers:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to search for available phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
+    if (isTestMode) {
+      // ══════════════════════════════════════════════════════════════════════════
+      // TEST MODE: Use hardcoded test data instead of real Twilio API calls
+      // ══════════════════════════════════════════════════════════════════════════
+      console.log('[PhoneNumber] Test mode enabled - using hardcoded test data')
+      purchasedNumber = {
+        sid: testData.phoneNumber.sid,
+        phoneNumber: testData.phoneNumber.phoneNumber,
+        friendlyName: `Skedyul - ${complianceRecord.business_name ?? 'Test Business'}`,
+        capabilities: { voice: true, sms: true, mms: true },
       }
+      console.log('[PhoneNumber] Test mode purchased number:', JSON.stringify(purchasedNumber, null, 2))
+    } else {
+      // ══════════════════════════════════════════════════════════════════════════
+      // PRODUCTION MODE: Real Twilio API calls
+      // ══════════════════════════════════════════════════════════════════════════
+      console.log('[PhoneNumber] Production mode - purchasing from Twilio')
+
+      // Search for available AU mobile numbers with Voice, SMS, and MMS capabilities
+      console.log('[PhoneNumber] Searching for available AU mobile numbers...')
+      let availableNumbers: Awaited<ReturnType<typeof searchAvailablePhoneNumbers>>
+
+      try {
+        availableNumbers = await searchAvailablePhoneNumbers(twilioClient, {
+          countryCode: 'AU',
+          numberType: 'mobile',
+          smsEnabled: true,
+          voiceEnabled: true,
+          mmsEnabled: true,
+          limit: 1,
+        })
+      } catch (err) {
+        console.error('[PhoneNumber] Failed to search available numbers:', err)
+        return {
+          output: {
+            status: 'error',
+            message: `Failed to search for available phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          },
+          billing: { credits: 0 },
+        }
+      }
+
+      if (availableNumbers.length === 0) {
+        return {
+          output: {
+            status: 'error',
+            message: 'No available Australian mobile phone numbers found with the required capabilities (Voice, SMS, MMS). Please try again later.',
+          },
+          billing: { credits: 0 },
+        }
+      }
+
+      const selectedNumber = availableNumbers[0]
+      console.log('[PhoneNumber] Found available number:', selectedNumber.phoneNumber)
+
+      // Validate we have the required Twilio SIDs for AU phone numbers
+      const bundleSid = complianceRecord.bundle_sid
+      const addressSid = complianceRecord.address_sid
+
+      if (!bundleSid) {
+        return {
+          output: {
+            status: 'error',
+            message: 'Compliance record is missing bundle_sid. Please resubmit your compliance documents.',
+          },
+          billing: { credits: 0 },
+        }
+      }
+
+      if (!addressSid) {
+        return {
+          output: {
+            status: 'error',
+            message: 'Compliance record is missing address_sid. Please resubmit your compliance documents.',
+          },
+          billing: { credits: 0 },
+        }
+      }
+
+      // Purchase the phone number with compliance bundle and address
+      console.log('[PhoneNumber] Purchasing phone number:', selectedNumber.phoneNumber)
+      console.log('[PhoneNumber] Using bundleSid:', bundleSid)
+      console.log('[PhoneNumber] Using addressSid:', addressSid)
+
+      try {
+        const businessName = complianceRecord.business_name ?? 'Skedyul'
+        const purchased = await purchasePhoneNumber(twilioClient, {
+          phoneNumber: selectedNumber.phoneNumber,
+          friendlyName: `Skedyul - ${businessName}`,
+          bundleSid,
+          addressSid,
+        })
+        purchasedNumber = {
+          sid: purchased.sid,
+          phoneNumber: purchased.phoneNumber,
+          friendlyName: purchased.friendlyName,
+          capabilities: purchased.capabilities,
+        }
+      } catch (err) {
+        console.error('[PhoneNumber] Failed to purchase phone number:', err)
+        return {
+          output: {
+            status: 'error',
+            message: `Failed to purchase phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          },
+          billing: { credits: 0 },
+        }
+      }
+
+      console.log('[PhoneNumber] Purchased number:', JSON.stringify(purchasedNumber, null, 2))
     }
 
-    if (availableNumbers.length === 0) {
-      return {
-        output: {
-          status: 'error',
-          message: 'No available Australian mobile phone numbers found with the required capabilities (Voice, SMS, MMS). Please try again later.',
-        },
-        billing: { credits: 0 },
-      }
-    }
-
-    const selectedNumber = availableNumbers[0]
-    console.log('[PhoneNumber] Found available number:', selectedNumber.phoneNumber)
-
-    // 5. Validate we have the required Twilio SIDs for AU phone numbers
-    const bundleSid = complianceRecord.bundle_sid
-    const addressSid = complianceRecord.address_sid
-
-    if (!bundleSid) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Compliance record is missing bundle_sid. Please resubmit your compliance documents.',
-        },
-        billing: { credits: 0 },
-      }
-    }
-
-    if (!addressSid) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Compliance record is missing address_sid. Please resubmit your compliance documents.',
-        },
-        billing: { credits: 0 },
-      }
-    }
-
-    // 6. Purchase the phone number with compliance bundle and address
-    console.log('[PhoneNumber] Purchasing phone number:', selectedNumber.phoneNumber)
-    console.log('[PhoneNumber] Using bundleSid:', bundleSid)
-    console.log('[PhoneNumber] Using addressSid:', addressSid)
-    let purchasedNumber: Awaited<ReturnType<typeof purchasePhoneNumber>>
-
-    try {
-      const businessName = complianceRecord.business_name ?? 'Skedyul'
-      purchasedNumber = await purchasePhoneNumber(twilioClient, {
-        phoneNumber: selectedNumber.phoneNumber,
-        friendlyName: `Skedyul - ${businessName}`,
-        // Required for AU and other regulated countries
-        bundleSid,
-        addressSid,
-      })
-    } catch (err) {
-      console.error('[PhoneNumber] Failed to purchase phone number:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to purchase phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-      }
-    }
-
-    console.log('[PhoneNumber] Purchased number:', JSON.stringify(purchasedNumber, null, 2))
+    // ══════════════════════════════════════════════════════════════════════════
+    // COMMON CODE PATH: Webhook registration, instance creation, channel creation
+    // ══════════════════════════════════════════════════════════════════════════
 
     // Register webhook for receiving SMS and attach to Twilio phone number
     console.log('[PhoneNumber] Registering receive_sms webhook...')
-    let smsWebhookUrl: string | null = null
     try {
       const webhookResult = await webhook.create('receive_sms', {
         phoneNumber: purchasedNumber.phoneNumber,
         phoneNumberSid: purchasedNumber.sid,
       })
-      smsWebhookUrl = webhookResult.url
       console.log('[PhoneNumber] Webhook registered:', JSON.stringify(webhookResult, null, 2))
 
       // Update Twilio phone number with the SMS webhook URL
       console.log('[PhoneNumber] Updating Twilio phone number with SMS webhook URL...')
       await twilioClient.incomingPhoneNumbers(purchasedNumber.sid).update({
-        smsUrl: smsWebhookUrl,
+        smsUrl: webhookResult.url,
         smsMethod: 'POST',
       })
       console.log('[PhoneNumber] Twilio phone number updated with SMS webhook URL')
@@ -295,9 +292,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       // The webhook can be configured later via communication channel lifecycle hooks
     }
 
-    END COMMENTED OUT */
-
-    // 7. Create phone_number instance and link to compliance record
+    // Create phone_number instance and link to compliance record
     console.log('[PhoneNumber] Creating phone_number instance...')
     
     // Prepare the data for instance creation

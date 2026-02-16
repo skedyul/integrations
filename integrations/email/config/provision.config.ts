@@ -289,7 +289,7 @@ const config: ProvisionConfig = {
     //
     {
       type: 'INSTANCE',
-      title: 'Email',
+      title: 'Setup',
       path: '/email',
       default: true,
       navigation: true,
