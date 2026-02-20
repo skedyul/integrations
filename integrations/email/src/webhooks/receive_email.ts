@@ -77,7 +77,7 @@ async function handleReceiveEmail(
   }
 
   // Create provider instance
-  const provider = createEmailProvider(env)
+  const provider = createEmailProvider(env, context.log)
 
   // Verify webhook signature
   const isValid = await provider.verifyWebhook(request, signingSecret)
