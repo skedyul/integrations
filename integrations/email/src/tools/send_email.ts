@@ -32,21 +32,21 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
     const env = context.env as EmailEnv
 
     // Log environment configuration (mask sensitive values)
-    console.log('[send_email] Environment configuration:', {
+    context.log('[send_email] Environment configuration:', {
       EMAIL_PROVIDER: env.EMAIL_PROVIDER ?? '(not set, defaulting to mailgun)',
       MAILGUN_DOMAIN: env.MAILGUN_DOMAIN ?? '(not set)',
       MAILGUN_API_KEY: env.MAILGUN_API_KEY ? `${env.MAILGUN_API_KEY.slice(0, 8)}...` : '(not set)',
       MAILGUN_SIGNING_SECRET: env.MAILGUN_SIGNING_SECRET ? '(set)' : '(not set)',
     })
 
-    console.log('[send_email] Context:', {
+    context.log('[send_email] Context:', {
       appInstallationId: context.appInstallationId,
       workplace: context.workplace.subdomain,
       envKeys: Object.keys(env),
     })
 
     const provider = createEmailProvider(env)
-    console.log('[send_email] Provider created:', provider.name)
+    context.log('[send_email] Provider created:', provider.name)
 
     const fallbackFromEmail = `${context.workplace.subdomain}@skedyul.app`
     const fromEmail = input.channel.identifierValue?.trim() || fallbackFromEmail
@@ -59,7 +59,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
       html: input.message.contentRaw,
     }
 
-    console.log('[send_email] Sending email with params:', {
+    context.log('[send_email] Sending email with params:', {
       from: emailParams.from,
       to: emailParams.to,
       subject: emailParams.subject,
@@ -70,7 +70,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
     try {
       const result = await provider.send(emailParams)
 
-      console.log('[send_email] Email sent successfully:', {
+      context.log('[send_email] Email sent successfully:', {
         messageId: result.messageId,
         provider: result.provider,
       })
@@ -105,7 +105,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
         if ('details' in errObj) errorDetails.details = errObj.details
       }
 
-      console.error('[send_email] Failed to send email via Mailgun', {
+      context.log.error('[send_email] Failed to send email via Mailgun', {
         ...errorDetails,
         emailParams: {
           from: emailParams.from,
