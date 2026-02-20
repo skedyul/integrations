@@ -45,7 +45,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
       envKeys: Object.keys(env),
     })
 
-    const provider = createEmailProvider(env)
+    const provider = createEmailProvider(env, context.log)
     context.log('[send_email] Provider created:', provider.name)
 
     const fallbackFromEmail = `${context.workplace.subdomain}@skedyul.app`

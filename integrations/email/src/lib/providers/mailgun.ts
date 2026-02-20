@@ -10,7 +10,7 @@
 import crypto from 'crypto'
 import Mailgun from 'mailgun.js'
 import formData from 'form-data'
-import type { WebhookRequest } from 'skedyul'
+import type { WebhookRequest, ContextLogger } from 'skedyul'
 import { AppAuthInvalidError } from 'skedyul'
 import type {
   EmailProvider,
@@ -31,8 +31,11 @@ export class MailgunProvider implements EmailProvider {
   private readonly apiKey: string
   private readonly client: ReturnType<Mailgun['client']>
   private readonly domain: string
+  private readonly log: ContextLogger
 
-  constructor(env: EmailEnv) {
+  constructor(env: EmailEnv, log: ContextLogger) {
+    this.log = log
+
     if (!env.MAILGUN_API_KEY) {
       throw new Error('MAILGUN_API_KEY is required')
     }
@@ -43,7 +46,7 @@ export class MailgunProvider implements EmailProvider {
     this.domain = env.MAILGUN_DOMAIN
     this.apiKey = env.MAILGUN_API_KEY
 
-    console.log('[MailgunProvider] Initializing with domain:', this.domain)
+    this.log('[MailgunProvider] Initializing with domain:', this.domain)
 
     // Follow npm docs exactly: https://www.npmjs.com/package/mailgun.js
     const mailgun = new Mailgun(formData)
@@ -54,7 +57,7 @@ export class MailgunProvider implements EmailProvider {
       key: env.MAILGUN_API_KEY,
     })
 
-    console.log('[MailgunProvider] Client initialized successfully')
+    this.log('[MailgunProvider] Client initialized successfully')
   }
 
   async send(params: SendEmailParams): Promise<SendEmailResult> {
@@ -65,7 +68,7 @@ export class MailgunProvider implements EmailProvider {
     // Per npm docs, 'to' should be an array: https://www.npmjs.com/package/mailgun.js
     const toArray = Array.isArray(params.to) ? params.to : [params.to]
 
-    console.log('[MailgunProvider] Sending email:', {
+    this.log('[MailgunProvider] Sending email:', {
       domain: this.domain,
       from: fromAddress,
       to: toArray,
@@ -87,7 +90,7 @@ export class MailgunProvider implements EmailProvider {
       messageData.html = params.html
     }
 
-    console.log('[MailgunProvider] Message data:', JSON.stringify(messageData, null, 2))
+    this.log('[MailgunProvider] Message data:', JSON.stringify(messageData, null, 2))
 
     try {
       const response = await this.client.messages.create(this.domain, messageData as {
@@ -98,14 +101,14 @@ export class MailgunProvider implements EmailProvider {
         html?: string
       })
 
-      console.log('[MailgunProvider] Mailgun response:', JSON.stringify(response, null, 2))
+      this.log('[MailgunProvider] Mailgun response:', JSON.stringify(response, null, 2))
 
       return {
         messageId: response.id,
         provider: this.name,
       }
     } catch (error) {
-      console.error('[MailgunProvider] Mailgun API error:', error)
+      this.log.error('[MailgunProvider] Mailgun API error:', error)
 
       // Intercept 401/403 as auth invalid — API key is expired or revoked
       if (error && typeof error === 'object') {
@@ -117,7 +120,7 @@ export class MailgunProvider implements EmailProvider {
           )
         }
 
-        console.error('[MailgunProvider] Error details:', {
+        this.log.error('[MailgunProvider] Error details:', {
           message: errObj.message,
           status: errObj.status,
           statusCode: errObj.statusCode,

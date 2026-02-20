@@ -102,6 +102,7 @@ export interface EmailProvider {
 // Provider Factory
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { ContextLogger } from 'skedyul'
 import { MailgunProvider } from './providers/mailgun'
 
 export type SupportedProvider = 'mailgun'
@@ -109,19 +110,19 @@ export type SupportedProvider = 'mailgun'
 /**
  * Create an email provider instance based on environment configuration.
  */
-export function createEmailProvider(env: EmailEnv): EmailProvider {
+export function createEmailProvider(env: EmailEnv, log: ContextLogger): EmailProvider {
   const providerName = (env.EMAIL_PROVIDER ?? 'mailgun') as SupportedProvider
 
   switch (providerName) {
     case 'mailgun':
-      return new MailgunProvider(env)
+      return new MailgunProvider(env, log)
     // Future providers:
     // case 'resend':
-    //   return new ResendProvider(env)
+    //   return new ResendProvider(env, log)
     // case 'sendgrid':
-    //   return new SendGridProvider(env)
+    //   return new SendGridProvider(env, log)
     // case 'ses':
-    //   return new SESProvider(env)
+    //   return new SESProvider(env, log)
     default:
       throw new Error(`Unknown email provider: ${providerName}`)
   }
