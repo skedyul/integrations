@@ -89,12 +89,22 @@ try {
   throw err
 }
 
+console.log('[MCP Server] Checking skedyulServer type...')
+console.log('[MCP Server] Has handler:', 'handler' in skedyulServer)
+console.log('[MCP Server] Has listen:', 'listen' in skedyulServer)
+
 // Export Lambda handler for serverless mode
+console.log('[MCP Server] Exporting handler...')
 export const handler =
   'handler' in skedyulServer ? skedyulServer.handler : undefined
+
+console.log('[MCP Server] Handler exported:', typeof handler)
 
 // Start HTTP server if running in dedicated mode (local Docker)
 if (computeLayer === 'dedicated' && 'listen' in skedyulServer) {
   const port = parseInt(process.env.PORT || '3000', 10)
+  console.log('[MCP Server] Starting HTTP server on port', port)
   skedyulServer.listen(port)
 }
+
+console.log('[MCP Server] Module initialization complete!')
