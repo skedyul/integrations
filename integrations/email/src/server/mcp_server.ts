@@ -4,6 +4,17 @@ import installHandler from './hooks/install'
 import provisionHandler from './hooks/provision'
 import pkg from '../../package.json'
 
+// Global error handlers to catch any unhandled errors during initialization
+process.on('uncaughtException', (err) => {
+  console.error('[MCP Server] UNCAUGHT EXCEPTION:', err)
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[MCP Server] UNHANDLED REJECTION:', reason)
+  process.exit(1)
+})
+
 // Early startup log to help debug container issues
 console.log('[MCP Server] Starting Email app...')
 console.log('[MCP Server] NODE_ENV:', process.env.NODE_ENV)
@@ -45,7 +56,13 @@ function getComputeLayer(): 'serverless' | 'dedicated' {
 const computeLayer = getComputeLayer()
 console.log(`[MCP Server] Final compute layer: ${computeLayer}`)
 
-const skedyulServer = server.create(
+console.log('[MCP Server] About to call server.create()...')
+console.log('[MCP Server] Tool registry keys:', Object.keys(toolRegistry))
+console.log('[MCP Server] Webhook registry keys:', Object.keys(webhookRegistry))
+
+let skedyulServer: ReturnType<typeof server.create>
+try {
+  skedyulServer = server.create(
   {
     computeLayer,
     metadata: {
@@ -66,6 +83,11 @@ const skedyulServer = server.create(
   toolRegistry,
   webhookRegistry,
 )
+  console.log('[MCP Server] server.create() completed successfully')
+} catch (err) {
+  console.error('[MCP Server] server.create() FAILED:', err)
+  throw err
+}
 
 // Export Lambda handler for serverless mode
 export const handler =
