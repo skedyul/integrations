@@ -56,6 +56,9 @@ function getComputeLayer(): 'serverless' | 'dedicated' {
 const computeLayer = getComputeLayer()
 console.log(`[MCP Server] Final compute layer: ${computeLayer}`)
 
+// Build timestamp to verify fresh deployment
+console.log('[MCP Server] BUILD_ID: 2026-02-21-v3')
+
 console.log('[MCP Server] About to call server.create()...')
 console.log('[MCP Server] Tool registry keys:', Object.keys(toolRegistry))
 console.log('[MCP Server] Webhook registry keys:', Object.keys(webhookRegistry))
@@ -90,15 +93,19 @@ try {
 }
 
 console.log('[MCP Server] Checking skedyulServer type...')
+console.log('[MCP Server] skedyulServer keys:', Object.keys(skedyulServer))
 console.log('[MCP Server] Has handler:', 'handler' in skedyulServer)
 console.log('[MCP Server] Has listen:', 'listen' in skedyulServer)
 
 // Export Lambda handler for serverless mode
-console.log('[MCP Server] Exporting handler...')
-export const handler =
-  'handler' in skedyulServer ? skedyulServer.handler : undefined
+console.log('[MCP Server] Extracting handler...')
+const extractedHandler = 'handler' in skedyulServer ? skedyulServer.handler : undefined
+console.log('[MCP Server] Handler type:', typeof extractedHandler)
+console.log('[MCP Server] Handler is function:', typeof extractedHandler === 'function')
 
-console.log('[MCP Server] Handler exported:', typeof handler)
+export const handler = extractedHandler
+
+console.log('[MCP Server] Handler exported successfully')
 
 // Start HTTP server if running in dedicated mode (local Docker)
 if (computeLayer === 'dedicated' && 'listen' in skedyulServer) {
