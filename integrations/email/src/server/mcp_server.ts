@@ -26,7 +26,7 @@ console.log(
   '[MCP Server] SKEDYUL_COMPUTE_LAYER:',
   process.env.SKEDYUL_COMPUTE_LAYER || '(not set)',
 )
-console.log('[MCP Server] PORT::', process.env.PORT || '3000')
+console.log('[MCP Server] PORT::--', process.env.PORT || '3000')
 
 /**
  * Determine compute layer based on environment:
