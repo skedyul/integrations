@@ -7,7 +7,7 @@
  *
  * Sections:
  *   - env:           Environment variables (API keys, credentials)
- *   - models:        Data models with INTERNAL or SHARED scope
+ *   - models:        INTERNAL data models (app-owned)
  *   - relationships: Links between models (one-to-many, etc.)
  *   - channels:      Communication channels (email)
  *   - pages:         UI screens for the installed app
@@ -73,7 +73,6 @@ const config: ProvisionConfig = {
       handle: 'email_domain',
       name: 'Email Domain',
       namePlural: 'Email Domains',
-      scope: 'INTERNAL',
       labelTemplate: '{{ domain }}',
       description: 'Email domains for sending and receiving',
       fields: [
@@ -137,7 +136,6 @@ const config: ProvisionConfig = {
       handle: 'email_address',
       name: 'Email Address',
       namePlural: 'Email Addresses',
-      scope: 'INTERNAL',
       labelTemplate: '{{ email }}',
       description: 'Email addresses for communication',
       fields: [

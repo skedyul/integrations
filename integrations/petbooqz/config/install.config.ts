@@ -2,8 +2,10 @@
  * Install Configuration
  * =====================
  *
- * Defines per-install environment variables.
- * - env: Collected from user during install, passed at runtime (NOT baked into container)
+ * Defines per-install configuration including:
+ * - env: Environment variables collected from user during install
+ * - models: SHARED models mapped to user's existing data during installation
+ * - relationships: Links between SHARED models
  *
  * Note: The install.ts handler validates credentials and normalizes the base URL.
  */
@@ -53,7 +55,106 @@ const config: InstallConfig = {
     },
   },
 
-  // Note: Credential verification and URL normalization is handled by install.ts
+  // ─────────────────────────────────────────────────────────────────────────
+  // SHARED Models
+  // ─────────────────────────────────────────────────────────────────────────
+  //
+  // SHARED models are mapped to user's existing data during installation.
+  //
+  models: [
+    {
+      handle: 'client',
+      name: 'Client',
+      namePlural: 'Clients',
+      labelTemplate: '{{ first_name }} {{ last_name }}',
+      description: 'Client/Owner records from Petbooqz',
+      fields: [
+        {
+          handle: 'petbooqz_id',
+          label: 'Petbooqz ID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'External ID from Petbooqz system',
+          owner: 'APP',
+        },
+      ],
+    },
+    {
+      handle: 'patient',
+      name: 'Patient',
+      namePlural: 'Patients',
+      labelTemplate: '{{ name }}',
+      description: 'Patient/Pet records from Petbooqz',
+      fields: [
+        {
+          handle: 'petbooqz_id',
+          label: 'Petbooqz ID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'External ID from Petbooqz system',
+          owner: 'APP',
+        },
+      ],
+    },
+    {
+      handle: 'appointment',
+      name: 'Appointment',
+      namePlural: 'Appointments',
+      labelTemplate: '{{ title }}',
+      description: 'Appointment records from Petbooqz',
+      fields: [
+        {
+          handle: 'petbooqz_id',
+          label: 'Petbooqz ID',
+          type: 'STRING',
+          required: false,
+          system: true,
+          description: 'External ID from Petbooqz system',
+          owner: 'APP',
+        },
+      ],
+    },
+  ],
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Relationships
+  // ─────────────────────────────────────────────────────────────────────────
+  relationships: [
+    {
+      source: {
+        model: 'patient',
+        field: 'owner',
+        label: 'Owner',
+        cardinality: 'MANY_TO_ONE',
+        onDelete: 'RESTRICT',
+      },
+      target: {
+        model: 'client',
+        field: 'patients',
+        label: 'Patients',
+        cardinality: 'ONE_TO_MANY',
+        onDelete: 'NONE',
+      },
+    },
+    {
+      source: {
+        model: 'appointment',
+        field: 'patient',
+        label: 'Patient',
+        cardinality: 'MANY_TO_ONE',
+        onDelete: 'RESTRICT',
+      },
+      target: {
+        model: 'patient',
+        field: 'appointments',
+        label: 'Appointments',
+        cardinality: 'ONE_TO_MANY',
+        onDelete: 'NONE',
+      },
+    },
+  ],
 }
 
 export default config

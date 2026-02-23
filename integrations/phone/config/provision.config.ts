@@ -8,18 +8,12 @@
  *
  * Sections:
  *   - env:           Environment variables (API keys, credentials)
- *   - models:        Data models with INTERNAL or SHARED scope
+ *   - models:        INTERNAL data models (app-owned)
  *   - relationships: Links between models (one-to-many, etc.)
  *   - channels:      Communication channels (SMS, email, etc.)
  *   - workflows:     Automation templates
  *   - pages:         UI screens for the installed app
  *   - webhooks:      Provision-level webhook handlers
- *
- * Model Scopes:
- *   - INTERNAL: App owns this model. Data is created/managed by the app.
- *               Example: compliance_record, phone_number
- *   - SHARED:   User maps to their existing model during installation.
- *               Example: contact (maps to their Clients, Leads, etc.)
  *
  * Field Ownership:
  *   - APP:       App controls this field (e.g., status set by webhook)
@@ -87,9 +81,7 @@ const config: ProvisionConfig = {
   // Models
   // ─────────────────────────────────────────────────────────────────────────
   //
-  // Data models used by this app.
-  // INTERNAL models are created and owned by the app.
-  // SHARED models are mapped to user's existing data during installation.
+  // INTERNAL data models created and owned by the app.
   //
   models: [
     // ───────────────────────────────────────────────────────────────────────
@@ -102,7 +94,6 @@ const config: ProvisionConfig = {
       handle: 'compliance_record',
       name: 'Compliance Record',
       namePlural: 'Compliance Records',
-      scope: 'INTERNAL',
       labelTemplate: '{{ business_name }}',
       description: 'Regulatory compliance records for SMS/voice communication',
       fields: [
@@ -247,7 +238,6 @@ const config: ProvisionConfig = {
       handle: 'phone_number',
       name: 'Phone Number',
       namePlural: 'Phone Numbers',
-      scope: 'INTERNAL',
       labelTemplate: '{{ phone }}',
       description: 'Phone numbers for SMS/voice communication',
       // Dependency: requires approved compliance record

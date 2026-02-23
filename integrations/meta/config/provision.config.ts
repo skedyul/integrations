@@ -8,18 +8,12 @@
  *
  * Sections:
  *   - env:           Environment variables (API keys, credentials)
- *   - models:        Data models with INTERNAL or SHARED scope
+ *   - models:        INTERNAL data models (app-owned)
  *   - relationships: Links between models (one-to-many, etc.)
  *   - channels:      Communication channels (WhatsApp, Instagram, Messenger)
  *   - workflows:     Automation templates
  *   - pages:         UI screens for the installed app
  *   - webhooks:      Provision-level webhook handlers
- *
- * Model Scopes:
- *   - INTERNAL: App owns this model. Data is created/managed by the app.
- *               Example: meta_connection, whatsapp_phone_number, facebook_page, instagram_account
- *   - SHARED:   User maps to their existing model during installation.
- *               Example: contact (maps to their Clients, Leads, etc.)
  *
  * Field Ownership:
  *   - APP:       App controls this field (e.g., status set by webhook)
@@ -88,7 +82,6 @@ const config: ProvisionConfig = {
       handle: 'meta_connection',
       name: 'Meta Connection',
       namePlural: 'Meta Connections',
-      scope: 'INTERNAL',
       labelTemplate: '{{ business_name || "Meta Connection" }}',
       description: 'OAuth connection to Meta (WhatsApp Business Account, Facebook Pages, Instagram)',
       fields: [
@@ -141,7 +134,6 @@ const config: ProvisionConfig = {
       handle: 'facebook_page',
       name: 'Facebook Page',
       namePlural: 'Facebook Pages',
-      scope: 'INTERNAL',
       labelTemplate: '{{ name }}',
       description: 'Connected Facebook Pages for Messenger',
       // Dependency: requires meta connection
@@ -202,7 +194,6 @@ const config: ProvisionConfig = {
       handle: 'instagram_account',
       name: 'Instagram Account',
       namePlural: 'Instagram Accounts',
-      scope: 'INTERNAL',
       labelTemplate: '{{ username }}',
       description: 'Connected Instagram Business accounts for Direct Messages',
       // Dependency: requires meta connection
@@ -263,7 +254,6 @@ const config: ProvisionConfig = {
       handle: 'whatsapp_phone_number',
       name: 'WhatsApp Phone Number',
       namePlural: 'WhatsApp Phone Numbers',
-      scope: 'INTERNAL',
       labelTemplate: '{{ phone }}',
       description: 'WhatsApp phone numbers for messaging',
       // Dependency: requires meta connection
