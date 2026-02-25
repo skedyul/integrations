@@ -9,19 +9,17 @@ import type { RelationshipDefinition } from 'skedyul'
 const relationships: RelationshipDefinition[] = [
   {
     source: {
-      model: 'email_address',
-      field: 'domain',
-      label: 'Domain',
-      cardinality: 'many_to_one',
-      onDelete: 'restrict',
-    },
-    target: {
       model: 'email_domain',
       field: 'addresses',
       label: 'Addresses',
-      cardinality: 'one_to_many',
-      onDelete: 'none',
     },
+    target: {
+      model: 'email_address',
+      field: 'domain',
+      label: 'Domain',
+    },
+    cardinality: 'one_to_many',
+    onDelete: 'restrict',
   },
 ]
 
