@@ -16,7 +16,7 @@ export default defineChannel({
       handle: 'phone',
       label: 'Phone',
       identifier: true,
-      definitionHandle: 'phone',
+      definition: 'phone',
       visibility: {
         data: true,
         list: true,
@@ -26,7 +26,7 @@ export default defineChannel({
     {
       handle: 'opt_in',
       label: 'Opt In',
-      definitionHandle: 'system/opt_in',
+      definition: 'system/opt_in',
       required: false,
       default: ['OPT_IN'],
       visibility: { data: true, list: true, filters: true },
@@ -35,7 +35,7 @@ export default defineChannel({
     {
       handle: 'last_contacted_at',
       label: 'Last Contacted At',
-      definitionHandle: 'system/last_contacted_at',
+      definition: 'system/last_contacted_at',
       required: false,
       visibility: { data: false, list: true, filters: true },
       permissions: { read: true, write: false },

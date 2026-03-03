@@ -20,7 +20,7 @@ export default defineModel({
       handle: 'email',
       label: 'Email Address',
       type: 'string',
-      definitionHandle: 'email',
+      definition: 'email',
       required: true,
       unique: true,
       system: false,

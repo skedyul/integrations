@@ -27,7 +27,7 @@ export default defineModel({
       handle: 'phone',
       label: 'Phone Number',
       type: 'string',
-      definitionHandle: 'phone',
+      definition: 'phone',
       required: true,
       unique: true,
       system: false,
