@@ -24,7 +24,7 @@ export default defineModel({
       required: true,
       system: false,
       description: 'Legal name of the business',
-      owner: 'workplace',
+      owner: 'shared',
     },
     {
       handle: 'business_email',
@@ -33,7 +33,7 @@ export default defineModel({
       required: true,
       system: false,
       description: 'Email address for compliance notifications',
-      owner: 'workplace',
+      owner: 'shared',
     },
     {
       handle: 'business_id',
@@ -42,7 +42,7 @@ export default defineModel({
       required: true,
       system: false,
       description: 'Business registration or tax ID number',
-      owner: 'workplace',
+      owner: 'shared',
     },
     {
       handle: 'country',
@@ -51,7 +51,7 @@ export default defineModel({
       required: true,
       system: false,
       description: 'Country where the business is registered',
-      owner: 'workplace',
+      owner: 'shared',
       definition: {
         limitChoices: 1,
         options: [{ label: 'Australia', value: 'AU' }],
@@ -64,7 +64,7 @@ export default defineModel({
       required: true,
       system: false,
       description: 'Full business address (will be parsed automatically)',
-      owner: 'workplace',
+      owner: 'shared',
     },
     {
       handle: 'file',
@@ -73,7 +73,7 @@ export default defineModel({
       required: true,
       system: false,
       description: 'Upload business registration documentation',
-      owner: 'workplace',
+      owner: 'shared',
     },
 
     // App-managed fields (app owner) - set by webhooks/tools

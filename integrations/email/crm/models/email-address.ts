@@ -34,7 +34,7 @@ export default defineModel({
       required: false,
       system: false,
       description: 'Friendly name shown in email From field',
-      owner: 'workplace',
+      owner: 'shared',
     },
     {
       handle: 'is_default',

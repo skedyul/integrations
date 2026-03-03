@@ -41,7 +41,7 @@ export default defineModel({
       required: false,
       system: false,
       description: 'A friendly name for this phone number',
-      owner: 'workplace',
+      owner: 'shared',
     },
     {
       handle: 'forwarding_phone_number',
@@ -51,7 +51,7 @@ export default defineModel({
       required: false,
       system: false,
       description: 'Phone number to forward incoming calls to',
-      owner: 'workplace',
+      owner: 'shared',
     },
   ],
 })

@@ -68,7 +68,7 @@ export default defineModel({
       required: false,
       system: false,
       description: 'A friendly name for this phone number',
-      owner: 'workplace',
+      owner: 'shared',
     },
   ],
 })
