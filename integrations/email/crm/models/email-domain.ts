@@ -33,7 +33,7 @@ export default defineModel({
       description: 'Domain type: system (skedyul.app) or custom',
       owner: 'app',
       default: 'system',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'System', value: 'system' },
@@ -49,7 +49,7 @@ export default defineModel({
       default: 'active',
       description: 'Domain verification status',
       owner: 'app',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'Pending', value: 'pending', color: 'yellow' },

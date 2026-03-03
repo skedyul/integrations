@@ -24,7 +24,7 @@ export default defineModel({
       description: 'Current stage in the sales cadence',
       owner: 'app',
       default: 'new_lead',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'New Lead', value: 'new_lead', color: 'blue' },
@@ -45,7 +45,7 @@ export default defineModel({
       system: false,
       description: 'How the prospect found us',
       owner: 'app',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'Walk-in', value: 'walk_in' },
@@ -66,7 +66,7 @@ export default defineModel({
       system: false,
       description: 'What the prospect is interested in',
       owner: 'app',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'Membership', value: 'membership' },

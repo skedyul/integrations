@@ -52,7 +52,7 @@ export default defineModel({
       system: false,
       description: 'Country where the business is registered',
       owner: 'workplace',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [{ label: 'Australia', value: 'AU' }],
       },
@@ -86,7 +86,7 @@ export default defineModel({
       default: 'pending',
       description: 'Approval status of the compliance record',
       owner: 'app',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'Pending', value: 'pending', color: 'yellow' },

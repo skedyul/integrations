@@ -43,7 +43,7 @@ export default defineModel({
       default: 'pending',
       description: 'Connection status of the Meta account',
       owner: 'app',
-      constraints: {
+      definition: {
         limitChoices: 1,
         options: [
           { label: 'Pending', value: 'pending', color: 'yellow' },
