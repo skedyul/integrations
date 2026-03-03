@@ -33,7 +33,6 @@ import { submitComplianceDocumentRegistry } from './tools/submit_compliance_docu
 import { checkComplianceStatusRegistry } from './tools/check_compliance_status'
 import { submitNewPhoneNumberRegistry } from './tools/submit_new_phone_number'
 import { removePhoneNumberRegistry } from './tools/remove_phone_number'
-import { createContactAssociationLinkRegistry } from './tools/create_contact_association_link'
 import { updatePhoneDetailsRegistry } from './tools/update_phone_details'
 import { updateForwardingNumberRegistry } from './tools/update_forwarding_number'
 
@@ -63,13 +62,6 @@ export const toolRegistry: ToolRegistry = {
 
   /** Update the forwarding_phone_number for a phone number instance. */
   update_forwarding_number: updateForwardingNumberRegistry,
-
-  /**
-   * Create a contact association link between a channel and a model.
-   * @deprecated Use the system-provided contact association link flow instead.
-   * This is kept for backwards compatibility and will be removed in a future version.
-   */
-  create_contact_association_link: createContactAssociationLinkRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
