@@ -43,8 +43,10 @@ export default definePage({
             row: 0,
             col: 0,
             label: 'Call Forwarding Number',
+            leftIcon: 'PhoneForwarded',
             value: '{{ phone_number.forwarding_phone_number }}',
-            placeholder: 'Enter the number to forward calls to',
+            placeholder: '+1 (555) 123-4567',
+            helpText: 'Incoming calls will be forwarded to this number',
           },
         ],
         layout: {

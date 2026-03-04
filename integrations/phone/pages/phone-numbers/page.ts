@@ -87,6 +87,7 @@ export default definePage({
                   row: 1,
                   col: 0,
                   label: 'Phone Name',
+                  leftIcon: 'Tag',
                   placeholder: 'e.g., Sales Line, Support Number',
                   helpText: 'A friendly name to identify this phone number',
                   required: false,
