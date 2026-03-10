@@ -53,8 +53,8 @@ export default async function provision(
   } else {
     const domain = await instance.create('email_domain', {
       domain: 'skedyul.app',
-      type: 'SYSTEM',
-      status: 'ACTIVE',
+      type: 'system',
+      status: 'active',
     })
     domainId = (domain as { id: string }).id
     console.log(`[Email Provision] Created domain: ${domainId}`)
