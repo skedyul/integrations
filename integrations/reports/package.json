@@ -1,16 +1,14 @@
 {
-  "name": "@skedyul-integrations/bft",
-  "version": "1.0.84",
+  "name": "@skedyul-integrations/reports",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "main": "./src/registries.ts",
   "scripts": {
-    "postinstall": "npx playwright install --with-deps chromium",
     "build": "tsup"
   },
   "dependencies": {
-    "skedyul": "latest",
-    "playwright": "^1.40.0"
+    "skedyul": "latest"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
