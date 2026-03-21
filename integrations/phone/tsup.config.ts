@@ -5,7 +5,6 @@ export default defineConfig({
   format: ['cjs'],
   target: 'node22',
   outDir: 'dist/server',
-  outExtension: () => ({ js: '.js' }),
   clean: true,
   splitting: false,
   sourcemap: false,
