@@ -4,6 +4,16 @@ import installHandler from './hooks/install'
 import { uninstallHandler } from './hooks/uninstall'
 import pkg from '../../package.json'
 
+// Global error handlers to catch unhandled errors during initialization
+// Important: Do NOT call process.exit() in Lambda - let Lambda handle the error
+process.on('uncaughtException', (err) => {
+  console.error('[MCP Server] UNCAUGHT EXCEPTION:', err)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[MCP Server] UNHANDLED REJECTION:', reason)
+})
+
 // Early startup log to help debug container issues
 console.log('[MCP Server] Starting...')
 console.log('[MCP Server] NODE_ENV:', process.env.NODE_ENV)
@@ -56,7 +66,17 @@ const skedyulServer = server.create(
 )
 
 // Export Lambda handler for serverless mode
-export const handler = 'handler' in skedyulServer ? skedyulServer.handler : undefined
+// Add defensive logging to verify handler is exported correctly
+const extractedHandler = 'handler' in skedyulServer ? skedyulServer.handler : undefined
+console.log('[MCP Server] Handler extracted:', typeof extractedHandler)
+console.log('[MCP Server] Handler is function:', typeof extractedHandler === 'function')
+
+if (computeLayer === 'serverless' && typeof extractedHandler !== 'function') {
+  console.error('[MCP Server] ERROR: Handler is not a function! Lambda will fail to invoke.')
+  console.error('[MCP Server] skedyulServer keys:', Object.keys(skedyulServer))
+}
+
+export const handler = extractedHandler
 
 // Start HTTP server if running in dedicated mode (local Docker)
 if (computeLayer === 'dedicated' && 'listen' in skedyulServer) {
