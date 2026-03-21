@@ -2,9 +2,7 @@ import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import { uninstallHandler } from './hooks/uninstall'
-
-// Version is injected at build time or read from env
-const VERSION = '1.2.2'
+import pkg from '../../package.json'
 
 // Global error handlers to catch unhandled errors during initialization
 // Important: Do NOT call process.exit() in Lambda - let Lambda handle the error
@@ -56,7 +54,7 @@ const skedyulServer = server.create(
     computeLayer,
     metadata: {
       name: 'Phone',
-      version: VERSION,
+      version: pkg.version,
     },
     hooks: {
       install: installHandler,
