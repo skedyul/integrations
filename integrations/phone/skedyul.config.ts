@@ -24,6 +24,9 @@ export default defineConfig({
   version: pkg.version,
   description: 'SMS and voice communication via Twilio',
   computeLayer: 'serverless',
+  build: {
+    external: ['twilio'],
+  },
 
   // Dynamic imports for tools and webhooks (resolved at build time)
   tools: import('./src/registries'),

@@ -1,4 +1,4 @@
-import { server } from 'skedyul'
+import { server } from 'skedyul/serverless'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import { uninstallHandler } from './hooks/uninstall'
