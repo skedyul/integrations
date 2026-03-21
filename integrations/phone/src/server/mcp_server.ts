@@ -2,7 +2,9 @@ import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import { uninstallHandler } from './hooks/uninstall'
-import pkg from '../../package.json'
+
+// Version is injected at build time or read from env
+const VERSION = '1.2.2'
 
 // Global error handlers to catch unhandled errors during initialization
 // Important: Do NOT call process.exit() in Lambda - let Lambda handle the error
@@ -54,7 +56,7 @@ const skedyulServer = server.create(
     computeLayer,
     metadata: {
       name: 'Phone',
-      version: pkg.version,
+      version: VERSION,
     },
     hooks: {
       install: installHandler,
@@ -65,8 +67,7 @@ const skedyulServer = server.create(
   webhookRegistry,
 )
 
-// Export Lambda handler for serverless mode
-// Add defensive logging to verify handler is exported correctly
+// Extract Lambda handler for serverless mode
 const extractedHandler = 'handler' in skedyulServer ? skedyulServer.handler : undefined
 console.log('[MCP Server] Handler extracted:', typeof extractedHandler)
 console.log('[MCP Server] Handler is function:', typeof extractedHandler === 'function')
@@ -76,6 +77,7 @@ if (computeLayer === 'serverless' && typeof extractedHandler !== 'function') {
   console.error('[MCP Server] skedyulServer keys:', Object.keys(skedyulServer))
 }
 
+// Export handler - use named export for TypeScript, tsup will convert to CJS
 export const handler = extractedHandler
 
 // Start HTTP server if running in dedicated mode (local Docker)
@@ -83,3 +85,5 @@ if (computeLayer === 'dedicated' && 'listen' in skedyulServer) {
   const port = parseInt(process.env.PORT || '3000', 10)
   skedyulServer.listen(port)
 }
+
+console.log('[MCP Server] Module initialization complete')
