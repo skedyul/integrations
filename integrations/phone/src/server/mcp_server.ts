@@ -85,3 +85,11 @@ if (computeLayer === 'dedicated' && 'listen' in skedyulServer) {
 }
 
 console.log('[MCP Server] Module initialization complete')
+
+// For serverless mode, keep the event loop alive briefly to allow Lambda RIC to register the handler
+// This is a workaround for ESM module loading timing issues
+if (computeLayer === 'serverless') {
+  setImmediate(() => {
+    console.log('[MCP Server] Event loop tick - handler should be registered')
+  })
+}
