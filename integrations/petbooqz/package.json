@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/petbooqz",
-  "version": "2.0.129",
+  "version": "2.0.130",
   "private": true,
   "type": "module",
   "main": "./src/registries.ts",
