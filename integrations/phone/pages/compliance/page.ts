@@ -153,11 +153,11 @@ export default definePage({
                   row: 3,
                   col: 0,
                   label: 'Business Registration Document',
-                  description: 'Upload your commercial register excerpt or equivalent (PDF, JPG, or PNG)',
+                  description: 'Required for regulatory compliance. Upload a clear copy of your official business registration certificate, commercial register excerpt, or equivalent government-issued document that verifies your business identity. Accepted formats: PDF, JPG, or PNG (max 10MB).',
                   accept: '.pdf,.jpg,.jpeg,.png',
                   required: true,
                   button: {
-                    label: 'Upload Document',
+                    label: 'Choose File',
                     variant: 'outline',
                     size: 'sm',
                     leftIcon: 'Upload',
