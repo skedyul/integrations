@@ -115,8 +115,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
 
     console.log('[PhoneNumber] Compliance record:', JSON.stringify(complianceRecord, null, 2))
 
-    // 2. Validate compliance record is approved
-    if (complianceRecord.status !== 'approved') {
+    // Check if test mode is enabled (check early to bypass compliance validation)
+    const isTestMode = env.ENABLE_TEST_COMPLIANCE_AND_NUMBER === 'true'
+
+    // 2. Validate compliance record is approved (skip in test mode)
+    if (!isTestMode && complianceRecord.status !== 'approved') {
       return {
         output: {
           status: 'error',
@@ -126,8 +129,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       }
     }
 
-    // Check if test mode is enabled
-    const isTestMode = env.ENABLE_TEST_COMPLIANCE_AND_NUMBER === 'true'
+    if (isTestMode) {
+      console.log('[PhoneNumber] Test mode enabled - bypassing compliance approval check')
+    }
 
     // Type for purchased number data
     type PurchasedNumber = {
