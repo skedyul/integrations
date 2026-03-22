@@ -35,11 +35,11 @@ type CheckComplianceStatusOutput = ZodType.infer<typeof CheckComplianceStatusOut
  * Status messages for each compliance status.
  */
 const STATUS_MESSAGES: Record<string, string> = {
-  PENDING: 'No compliance documents have been submitted yet.',
-  SUBMITTED: 'Documents are being submitted to Twilio.',
-  PENDING_REVIEW: 'Your compliance documents are under review. This typically takes 1-3 business days.',
-  APPROVED: 'Your compliance documents have been approved! You can now provision phone numbers.',
-  REJECTED: 'Your compliance documents were rejected. Please review the rejection reason and resubmit.',
+  pending: 'No compliance documents have been submitted yet.',
+  submitted: 'Documents are being submitted to Twilio.',
+  pending_review: 'Your compliance documents are under review. This typically takes 1-3 business days.',
+  approved: 'Your compliance documents have been approved! You can now provision phone numbers.',
+  rejected: 'Your compliance documents were rejected. Please review the rejection reason and resubmit.',
 }
 
 export const checkComplianceStatusRegistry: ToolDefinition<
@@ -75,9 +75,9 @@ export const checkComplianceStatusRegistry: ToolDefinition<
     if (!complianceRecord) {
       return {
         output: {
-          status: 'PENDING',
+          status: 'pending',
           lastUpdated: new Date().toISOString(),
-          message: STATUS_MESSAGES.PENDING,
+          message: STATUS_MESSAGES.pending,
         },
         billing: { credits: 0 },
       }
@@ -90,9 +90,9 @@ export const checkComplianceStatusRegistry: ToolDefinition<
     if (!bundleSid) {
       return {
         output: {
-          status: currentStatus || 'PENDING',
+          status: currentStatus || 'pending',
           lastUpdated: new Date().toISOString(),
-          message: STATUS_MESSAGES[currentStatus] || STATUS_MESSAGES.PENDING,
+          message: STATUS_MESSAGES[currentStatus] || STATUS_MESSAGES.pending,
         },
         billing: { credits: 0 },
       }
@@ -152,7 +152,7 @@ export const checkComplianceStatusRegistry: ToolDefinition<
       // Return current local status on error
       return {
         output: {
-          status: currentStatus || 'PENDING',
+          status: currentStatus || 'pending',
           lastUpdated: new Date().toISOString(),
           message: `Unable to fetch latest status from Twilio. Current status: ${currentStatus}`,
       },

@@ -236,7 +236,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           country: isoCountry,
           address, // Store the original address input
           file: fileId, // Store only the file ID, not the S3 path
-          status: 'PENDING',
+          status: 'pending',
         },
       )
       console.log('[Compliance] Created new record:', JSON.stringify(complianceRecord, null, 2))
@@ -249,8 +249,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     const existingBundleSid = complianceRecord.bundle_sid as string | undefined
     const currentStatus = complianceRecord.status as string | undefined
     
-    // Allow resubmission if status is REJECTED - user is trying again with new documents
-    const isRejected = currentStatus === 'REJECTED'
+    // Allow resubmission if status is rejected - user is trying again with new documents
+    const isRejected = currentStatus === 'rejected'
     const canResubmit = !existingBundleSid || isRejected
     
     if (!canResubmit) {
@@ -302,7 +302,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         country: isoCountry,
         address,
         file: fileId,
-        status: 'PENDING_REVIEW',
+        status: 'pending_review',
         rejection_reason: '',
         bundle_sid: testData.compliance.bundleSid,
         end_user_sid: testData.compliance.endUserSid,
@@ -437,7 +437,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           end_user_sid: endUser.sid,
           document_sid: supportingDoc.sid,
           address_sid: twilioAddress.sid,
-          status: 'PENDING_REVIEW',
+          status: 'pending_review',
         },
       )
 
@@ -461,12 +461,12 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     } catch (err) {
       console.error('[Compliance] Failed to submit to Twilio:', err)
 
-      // Revert status back to PENDING on error
+      // Revert status back to pending on error
       await instance.update(
         'compliance_record',
         complianceRecord.id,
         {
-          status: 'PENDING',
+          status: 'pending',
           rejection_reason: err instanceof Error ? err.message : 'Unknown error during submission',
         },
       )

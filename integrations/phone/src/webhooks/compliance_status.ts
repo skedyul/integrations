@@ -5,11 +5,11 @@ import { instance, isRuntimeWebhookContext, type WebhookContext, type WebhookReq
  * Maps Twilio status values to our internal status values.
  */
 const TWILIO_STATUS_MAP: Record<string, string> = {
-  'twilio-approved': 'APPROVED',
-  'twilio-rejected': 'REJECTED',
-  'pending-review': 'PENDING_REVIEW',
-  'draft': 'PENDING',
-  'in-review': 'PENDING_REVIEW',
+  'twilio-approved': 'approved',
+  'twilio-rejected': 'rejected',
+  'pending-review': 'pending_review',
+  'draft': 'pending',
+  'in-review': 'pending_review',
 }
 
 /**

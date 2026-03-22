@@ -116,11 +116,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     console.log('[PhoneNumber] Compliance record:', JSON.stringify(complianceRecord, null, 2))
 
     // 2. Validate compliance record is approved
-    if (complianceRecord.status !== 'APPROVED') {
+    if (complianceRecord.status !== 'approved') {
       return {
         output: {
           status: 'error',
-          message: `Compliance record is not approved. Current status: ${complianceRecord.status ?? 'PENDING'}. Please wait for Twilio to approve your compliance documents before purchasing a phone number.`,
+          message: `Compliance record is not approved. Current status: ${complianceRecord.status ?? 'pending'}. Please wait for Twilio to approve your compliance documents before purchasing a phone number.`,
         },
         billing: { credits: 0 },
       }

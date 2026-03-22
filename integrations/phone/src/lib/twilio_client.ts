@@ -71,11 +71,11 @@ export type TwilioBundleStatus =
  * Internal compliance status values.
  */
 export type ComplianceStatus =
-  | 'PENDING'
-  | 'SUBMITTED'
-  | 'PENDING_REVIEW'
-  | 'APPROVED'
-  | 'REJECTED'
+  | 'pending'
+  | 'submitted'
+  | 'pending_review'
+  | 'approved'
+  | 'rejected'
 
 /**
  * Map Twilio bundle status to internal compliance status.
@@ -84,14 +84,14 @@ export const mapTwilioStatusToInternal = (
   twilioStatus: TwilioBundleStatus,
 ): ComplianceStatus => {
   const statusMap: Record<TwilioBundleStatus, ComplianceStatus> = {
-    draft: 'PENDING',
-    'pending-review': 'PENDING_REVIEW',
-    'in-review': 'PENDING_REVIEW',
-    'twilio-rejected': 'REJECTED',
-    'twilio-approved': 'APPROVED',
+    draft: 'pending',
+    'pending-review': 'pending_review',
+    'in-review': 'pending_review',
+    'twilio-rejected': 'rejected',
+    'twilio-approved': 'approved',
   }
 
-  return statusMap[twilioStatus] ?? 'PENDING'
+  return statusMap[twilioStatus] ?? 'pending'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
