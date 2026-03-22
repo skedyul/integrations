@@ -8,10 +8,10 @@
     "skipLibCheck": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*", "config/**/*", "skedyul.config.ts"],
+  "include": ["src/**/*", "config/**/*", "skedyul.config.ts", "package.json"],
   "exclude": ["node_modules", "dist"]
 }

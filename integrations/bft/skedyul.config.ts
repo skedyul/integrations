@@ -6,6 +6,9 @@ export default defineConfig({
   version: pkg.version,
   description: 'Body Fit Training website scraper integration',
   computeLayer: 'serverless',
+  build: {
+    external: ['playwright'],
+  },
 
   tools: import('./src/registries'),
 
