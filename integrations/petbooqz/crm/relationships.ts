@@ -21,20 +21,6 @@ const relationships: RelationshipDefinition[] = [
     cardinality: 'one_to_many',
     onDelete: 'restrict',
   },
-  {
-    source: {
-      model: 'patient',
-      field: 'appointments',
-      label: 'Appointments',
-    },
-    target: {
-      model: 'appointment',
-      field: 'patient',
-      label: 'Patient',
-    },
-    cardinality: 'one_to_many',
-    onDelete: 'restrict',
-  },
 ]
 
 export default relationships
