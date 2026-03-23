@@ -6,4 +6,3 @@
 
 export { default as clients } from './clients/page'
 export { default as patients } from './patients/page'
-export { default as appointments } from './appointments/page'
