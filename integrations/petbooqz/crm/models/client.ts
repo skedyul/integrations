@@ -20,7 +20,7 @@ export default defineModel({
       handle: 'petbooqz_id',
       label: 'Petbooqz ID',
       type: 'string',
-      required: false,
+      requirement: 'optional',
       system: true,
       description: 'External ID from Petbooqz system',
       owner: 'app',
