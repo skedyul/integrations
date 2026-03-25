@@ -33,5 +33,5 @@ export default defineConfig({
   webhooks: import('./src/registries'),
 
   // Provision config imports the modular files
-  provision: import('./provision'),
+  provision: import('./src/provision'),
 })

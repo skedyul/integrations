@@ -12,5 +12,5 @@ export default defineConfig({
 
   tools: import('./src/registries'),
 
-  provision: import('./provision'),
+  provision: import('./src/provision'),
 })
