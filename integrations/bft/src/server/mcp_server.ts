@@ -1,7 +1,6 @@
 import { server } from 'skedyul'
 import { toolRegistry } from '../registries'
 import installHandler from './hooks/install'
-import provisionConfig from '../../provision'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues
@@ -45,7 +44,6 @@ const skedyulServer = server.create({
   description: 'BFT integration',
   computeLayer,
   tools: toolRegistry,
-  provision: provisionConfig,
   hooks: {
     install: {
       handler: installHandler,
