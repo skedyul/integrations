@@ -83,6 +83,11 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
         billing: {
           credits: 1,
         },
+        meta: {
+          success: true,
+          message: 'Email sent successfully',
+          toolName: 'send_email',
+        },
       }
     } catch (error) {
       const errorMessage =

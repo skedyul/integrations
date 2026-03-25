@@ -48,6 +48,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
 
@@ -62,6 +67,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: 'Missing required field: compliance_record',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Missing required field: compliance_record',
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
 
@@ -80,6 +90,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: `Failed to fetch compliance record: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: `Failed to fetch compliance record: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
 
@@ -110,6 +125,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: `Compliance record not found. Searched for id=${complianceRecordId} with appInstallationId=${appInstallationId}. The record may belong to a different installation.`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Compliance record not found',
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
 
@@ -126,6 +146,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: `Compliance record is not approved. Current status: ${complianceRecord.status ?? 'pending'}. Please wait for Twilio to approve your compliance documents before purchasing a phone number.`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Compliance record is not approved',
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
 
@@ -155,6 +180,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: `Failed to initialize Twilio client: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to initialize Twilio client',
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
 
@@ -197,6 +227,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
             message: `Failed to search for available phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Failed to search for available phone numbers',
+            toolName: 'submit_new_phone_number',
+          },
         }
       }
 
@@ -207,6 +242,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
             message: 'No available Australian mobile phone numbers found with the required capabilities (Voice, SMS, MMS). Please try again later.',
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'No available phone numbers found',
+            toolName: 'submit_new_phone_number',
+          },
         }
       }
 
@@ -224,6 +264,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
             message: 'Compliance record is missing bundle_sid. Please resubmit your compliance documents.',
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Compliance record is missing bundle_sid',
+            toolName: 'submit_new_phone_number',
+          },
         }
       }
 
@@ -234,6 +279,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
             message: 'Compliance record is missing address_sid. Please resubmit your compliance documents.',
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Compliance record is missing address_sid',
+            toolName: 'submit_new_phone_number',
+          },
         }
       }
 
@@ -264,6 +314,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
             message: `Failed to purchase phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Failed to purchase phone number',
+            toolName: 'submit_new_phone_number',
+          },
         }
       }
 
@@ -329,6 +384,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
             message: 'Failed to create phone number record - no instance ID returned',
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Failed to create phone number record',
+            toolName: 'submit_new_phone_number',
+          },
         }
       }
 
@@ -357,6 +417,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         effect: {
           redirect: `/phone-numbers/${phoneNumberInstance.id}/overview`,
         },
+        meta: {
+          success: true,
+          message: 'Phone number purchased successfully',
+          toolName: 'submit_new_phone_number',
+        },
       }
     } catch (err) {
       console.error('[PhoneNumber] Failed to create phone_number instance:', err)
@@ -372,6 +437,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           message: `Phone number purchased but failed to save to database: ${err instanceof Error ? err.message : 'Unknown error'}. Please contact support with phone number SID: ${purchasedNumber.sid}`,
         },
         billing: { credits: 1 },
+        meta: {
+          success: false,
+          message: 'Phone number purchased but failed to save to database',
+          toolName: 'submit_new_phone_number',
+        },
       }
     }
   },

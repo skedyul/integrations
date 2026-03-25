@@ -48,6 +48,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -62,6 +67,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
           message: 'Missing required field: phone_number_id',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Missing required field: phone_number_id',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -78,6 +88,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
           message: 'META_ACCESS_TOKEN is not configured. Please complete the OAuth flow.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'META_ACCESS_TOKEN is not configured',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -89,6 +104,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
             'META_APP_ID and META_APP_SECRET must be configured. Make sure they are set in the app version\'s provision-level environment variables.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'META_APP_ID and META_APP_SECRET must be configured',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -100,6 +120,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
             'GRAPH_API_VERSION must be configured. Make sure it is set in the app version\'s provision-level environment variables.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'GRAPH_API_VERSION must be configured',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -118,6 +143,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
             'Meta connection not found. Please complete the OAuth flow first.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Meta connection not found',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -133,6 +163,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
           message: 'Meta connection is missing WABA ID. Please reconnect your Meta account.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Meta connection is missing WABA ID',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -164,6 +199,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
             message: `Phone number ${phone_number_id} not found in WABA`,
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Phone number not found in WABA',
+            toolName: 'add_whatsapp_number',
+          },
         }
       }
 
@@ -187,6 +227,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
           message: `Failed to fetch phone number details: ${error instanceof Error ? error.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to fetch phone number details',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -207,6 +252,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
         billing: { credits: 0 },
         effect: {
           redirect: `/whatsapp-numbers/${existing.id}/overview`,
+        },
+        meta: {
+          success: false,
+          message: 'Phone number is already added',
+          toolName: 'add_whatsapp_number',
         },
       }
     }
@@ -247,6 +297,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
               'Failed to create WhatsApp phone number record - no instance ID returned',
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Failed to create WhatsApp phone number record',
+            toolName: 'add_whatsapp_number',
+          },
         }
       }
     } catch (err) {
@@ -260,6 +315,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
           message: `Failed to create WhatsApp phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to create WhatsApp phone number',
+          toolName: 'add_whatsapp_number',
+        },
       }
     }
 
@@ -293,6 +353,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       billing: { credits: 1 },
       effect: {
         redirect: `/whatsapp-numbers/${phoneNumberInstance.id}/overview`,
+      },
+      meta: {
+        success: true,
+        message: 'WhatsApp number added successfully',
+        toolName: 'add_whatsapp_number',
       },
     }
   },

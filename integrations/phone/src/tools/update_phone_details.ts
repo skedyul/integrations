@@ -40,6 +40,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -55,6 +60,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: 'Missing required field: phone_id',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Missing required field: phone_id',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -66,6 +76,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: 'No fields to update. Provide a name.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'No fields to update',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -85,6 +100,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to fetch phone number',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -95,6 +115,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: `Phone number not found: ${phoneNumberId}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Phone number not found',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -106,6 +131,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: 'Phone number instance is missing the phone field',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Phone number instance is missing the phone field',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -121,6 +151,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
           message: `Failed to update phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to update phone number record',
+          toolName: 'update_phone_details',
+        },
       }
     }
 
@@ -156,6 +191,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
             message: `Phone number name updated, but failed to update channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Phone number updated but failed to update channel',
+            toolName: 'update_phone_details',
+          },
         }
       }
     } else {
@@ -168,6 +208,11 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
         message: `Successfully updated phone number name to "${name}"`,
       },
       billing: { credits: 0 },
+      meta: {
+        success: true,
+        message: 'Phone number details updated successfully',
+        toolName: 'update_phone_details',
+      },
     }
   },
 }

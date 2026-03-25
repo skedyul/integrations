@@ -40,6 +40,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -69,6 +74,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: 'No email address found. Please ensure the app is installed correctly.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'No email address found',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -80,6 +90,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: 'No fields to update. Provide a name.',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'No fields to update',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -99,6 +114,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: `Failed to fetch email address: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to fetch email address',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -109,6 +129,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: `Email address not found: ${emailAddressId}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Email address not found',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -120,6 +145,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: 'Email address instance is missing the email field',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Email address instance is missing the email field',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -135,6 +165,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
           message: `Failed to update email address record: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to update email address record',
+          toolName: 'update_email_address',
+        },
       }
     }
 
@@ -170,6 +205,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
             message: `Email address name updated, but failed to update channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Email address updated but failed to update channel',
+            toolName: 'update_email_address',
+          },
         }
       }
     } else {
@@ -182,6 +222,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
         message: `Successfully updated email address name to "${name}"`,
       },
       billing: { credits: 0 },
+      meta: {
+        success: true,
+        message: 'Email address details updated successfully',
+        toolName: 'update_email_address',
+      },
     }
   },
 }

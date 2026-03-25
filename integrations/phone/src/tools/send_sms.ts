@@ -38,6 +38,11 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
       billing: {
         credits: 1,
       },
+      meta: {
+        success: true,
+        message: 'SMS sent successfully',
+        toolName: 'send_sms',
+      },
     }
   },
 }

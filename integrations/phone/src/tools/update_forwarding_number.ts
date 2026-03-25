@@ -35,6 +35,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'update_forwarding_number',
+        },
       }
     }
 
@@ -48,6 +53,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
           message: 'Missing phone_id',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Missing phone_id',
+          toolName: 'update_forwarding_number',
+        },
       }
     }
 
@@ -63,6 +73,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
           message: 'Failed to fetch phone number record',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to fetch phone number record',
+          toolName: 'update_forwarding_number',
+        },
       }
     }
 
@@ -73,6 +88,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
           message: 'Phone number not found',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Phone number not found',
+          toolName: 'update_forwarding_number',
+        },
       }
     }
 
@@ -91,6 +111,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
           }`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to save forwarding number',
+          toolName: 'update_forwarding_number',
+        },
       }
     }
 
@@ -111,6 +136,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
             message: 'Forwarding number saved, but phone number not found in Twilio account',
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Phone number not found in Twilio account',
+            toolName: 'update_forwarding_number',
+          },
         }
       }
 
@@ -172,6 +202,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
             : 'Forwarding number cleared and Twilio updated',
         },
         billing: { credits: 0 },
+        meta: {
+          success: true,
+          message: forwardingValue ? 'Forwarding number configured' : 'Forwarding number cleared',
+          toolName: 'update_forwarding_number',
+        },
       }
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to configure Twilio', error)
@@ -184,6 +219,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
           }`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Forwarding number saved but failed to configure Twilio',
+          toolName: 'update_forwarding_number',
+        },
       }
     }
   },

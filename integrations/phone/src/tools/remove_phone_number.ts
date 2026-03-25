@@ -44,6 +44,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -60,6 +65,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: 'Missing required context: appInstallationId or workplace',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Missing required context',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -71,6 +81,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: 'Missing required field: phone_number_id, instance_id, or phone_id',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Missing required field: phone_number_id',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -89,6 +104,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to fetch phone number',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -99,6 +119,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: `Phone number not found: ${phoneNumberId}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Phone number not found',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -110,6 +135,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: 'Phone number instance is missing the phone field',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Phone number instance is missing the phone field',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -146,6 +176,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
             message: `Failed to delete communication channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
           },
           billing: { credits: 0 },
+          meta: {
+            success: false,
+            message: 'Failed to delete communication channel',
+            toolName: 'remove_phone_number',
+          },
         }
       }
     } else {
@@ -166,6 +201,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
           message: `Failed to delete phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to delete phone number record',
+          toolName: 'remove_phone_number',
+        },
       }
     }
 
@@ -179,6 +219,11 @@ export const removePhoneNumberRegistry: ToolDefinition<
       billing: { credits: 0 },
       effect: {
         redirect: `/phone-numbers`,
+      },
+      meta: {
+        success: true,
+        message: 'Phone number removed successfully',
+        toolName: 'remove_phone_number',
       },
     }
   },

@@ -60,6 +60,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           message: 'This tool can only be called in a runtime context',
         },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'This tool can only be called in a runtime context',
+          toolName: 'check_compliance_status',
+        },
       }
     }
 
@@ -80,6 +85,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           message: STATUS_MESSAGES.pending,
         },
         billing: { credits: 0 },
+        meta: {
+          success: true,
+          message: 'No compliance record found',
+          toolName: 'check_compliance_status',
+        },
       }
     }
 
@@ -95,6 +105,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           message: STATUS_MESSAGES[currentStatus] || STATUS_MESSAGES.pending,
         },
         billing: { credits: 0 },
+        meta: {
+          success: true,
+          message: 'Compliance status retrieved',
+          toolName: 'check_compliance_status',
+        },
       }
     }
 
@@ -145,6 +160,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           rejectionReason: bundle.failureReason || undefined,
         },
         billing: { credits: 0 },
+        meta: {
+          success: true,
+          message: 'Compliance status retrieved from Twilio',
+          toolName: 'check_compliance_status',
+        },
       }
     } catch (err) {
       console.error('[Compliance] Failed to check Twilio status:', err)
@@ -157,6 +177,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           message: `Unable to fetch latest status from Twilio. Current status: ${currentStatus}`,
       },
         billing: { credits: 0 },
+        meta: {
+          success: false,
+          message: 'Failed to fetch status from Twilio',
+          toolName: 'check_compliance_status',
+        },
       }
     }
   },
