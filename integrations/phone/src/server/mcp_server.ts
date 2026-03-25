@@ -49,22 +49,18 @@ function getComputeLayer(): 'serverless' | 'dedicated' {
 const computeLayer = getComputeLayer()
 console.log(`[MCP Server] Final compute layer: ${computeLayer}`)
 
-const skedyulServer = server.create(
-  {
-    computeLayer,
-    metadata: {
-      name: 'Phone',
-      version: pkg.version,
-    },
-    appConfigLoader: () => import('../../skedyul.config'),
-    hooks: {
-      install: installHandler,
-      uninstall: uninstallHandler,
-    },
+const skedyulServer = server.create({
+  name: 'Phone',
+  version: pkg.version,
+  description: 'SMS and voice communication via Twilio',
+  computeLayer,
+  tools: toolRegistry,
+  webhooks: webhookRegistry,
+  hooks: {
+    install: installHandler,
+    uninstall: uninstallHandler,
   },
-  toolRegistry,
-  webhookRegistry,
-)
+})
 
 // Extract Lambda handler for serverless mode
 const extractedHandler = 'handler' in skedyulServer ? skedyulServer.handler : undefined

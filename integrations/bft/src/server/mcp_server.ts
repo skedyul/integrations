@@ -38,23 +38,19 @@ function getComputeLayer(): 'serverless' | 'dedicated' {
 const computeLayer = getComputeLayer()
 console.log(`[MCP Server] Final compute layer: ${computeLayer}`)
 
-const skedyulServer = server.create(
-  {
-    computeLayer,
-    metadata: {
-      name: 'BFT',
-      version: pkg.version,
-    },
-    appConfigLoader: () => import('../../skedyul.config'),
-    hooks: {
-      install: {
-        handler: installHandler,
-        timeout: 60000, // 1 minute default
-      },
+const skedyulServer = server.create({
+  name: 'BFT',
+  version: pkg.version,
+  description: 'BFT integration',
+  computeLayer,
+  tools: toolRegistry,
+  hooks: {
+    install: {
+      handler: installHandler,
+      timeout: 60000,
     },
   },
-  toolRegistry,
-)
+})
 
 // Export Lambda handler for serverless mode
 export const handler = 'handler' in skedyulServer ? skedyulServer.handler : undefined

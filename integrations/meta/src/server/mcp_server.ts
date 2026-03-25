@@ -39,28 +39,24 @@ function getComputeLayer(): 'serverless' | 'dedicated' {
 const computeLayer = getComputeLayer()
 console.log(`[MCP Server] Final compute layer: ${computeLayer}`)
 
-const skedyulServer = server.create(
-  {
-    computeLayer,
-    metadata: {
-      name: 'Meta',
-      version: pkg.version,
+const skedyulServer = server.create({
+  name: 'Meta',
+  version: pkg.version,
+  description: 'Meta (Facebook/Instagram/WhatsApp) integration',
+  computeLayer,
+  tools: toolRegistry,
+  webhooks: webhookRegistry,
+  hooks: {
+    install: {
+      handler: installHandler,
+      timeout: 30000,
     },
-    appConfigLoader: () => import('../../skedyul.config'),
-    hooks: {
-      install: {
-        handler: installHandler,
-        timeout: 30000, // 30 seconds
-      },
-      oauth_callback: {
-        handler: oauthCallbackHandler,
-        timeout: 60000, // 1 minute
-      },
+    oauth_callback: {
+      handler: oauthCallbackHandler,
+      timeout: 60000,
     },
   },
-  toolRegistry,
-  webhookRegistry,
-)
+})
 
 // Export Lambda handler for serverless mode
 export const handler = 'handler' in skedyulServer ? skedyulServer.handler : undefined

@@ -65,28 +65,24 @@ console.log('[MCP Server] Webhook registry keys:', Object.keys(webhookRegistry))
 
 let skedyulServer: ReturnType<typeof server.create>
 try {
-  skedyulServer = server.create(
-  {
+  skedyulServer = server.create({
+    name: 'Email',
+    version: pkg.version,
+    description: 'Email communication integration',
     computeLayer,
-    metadata: {
-      name: 'Email',
-      version: pkg.version,
-    },
-    appConfigLoader: () => import('../../skedyul.config'),
+    tools: toolRegistry,
+    webhooks: webhookRegistry,
     hooks: {
       install: {
         handler: installHandler,
-        timeout: 60000, // 1 minute default
+        timeout: 60000,
       },
       provision: {
         handler: provisionHandler,
-        timeout: 300000, // 5 minutes default
+        timeout: 300000,
       },
     },
-  },
-  toolRegistry,
-  webhookRegistry,
-)
+  })
   console.log('[MCP Server] server.create() completed successfully')
 } catch (err) {
   console.error('[MCP Server] server.create() FAILED:', err)
