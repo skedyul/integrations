@@ -2,6 +2,7 @@ import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import oauthCallbackHandler from './hooks/oauth_callback'
+import provisionConfig from '../../provision'
 import pkg from '../../package.json'
 
 // Early startup log to help debug container issues
@@ -46,6 +47,7 @@ const skedyulServer = server.create({
   computeLayer,
   tools: toolRegistry,
   webhooks: webhookRegistry,
+  provision: provisionConfig,
   hooks: {
     install: {
       handler: installHandler,

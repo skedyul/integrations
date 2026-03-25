@@ -2,6 +2,7 @@ import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import provisionHandler from './hooks/provision'
+import provisionConfig from '../../provision'
 import pkg from '../../package.json'
 
 // Global error handlers to catch any unhandled errors during initialization
@@ -72,6 +73,7 @@ try {
     computeLayer,
     tools: toolRegistry,
     webhooks: webhookRegistry,
+    provision: provisionConfig,
     hooks: {
       install: {
         handler: installHandler,

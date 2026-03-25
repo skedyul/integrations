@@ -2,6 +2,7 @@ import { server } from 'skedyul/serverless'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import { uninstallHandler } from './hooks/uninstall'
+import provisionConfig from '../../provision'
 import pkg from '../../package.json'
 
 // Global error handlers to catch unhandled errors during initialization
@@ -56,6 +57,7 @@ const skedyulServer = server.create({
   computeLayer,
   tools: toolRegistry,
   webhooks: webhookRegistry,
+  provision: provisionConfig,
   hooks: {
     install: installHandler,
     uninstall: uninstallHandler,
