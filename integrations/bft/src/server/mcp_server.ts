@@ -2,7 +2,6 @@ import { server } from 'skedyul'
 import { toolRegistry } from '../registries'
 import installHandler from './hooks/install'
 import pkg from '../../package.json'
-import appConfig from '../../skedyul.config'
 
 // Early startup log to help debug container issues
 console.log('[MCP Server] Starting...')
@@ -43,10 +42,10 @@ const skedyulServer = server.create(
   {
     computeLayer,
     metadata: {
-      name: appConfig.name,
+      name: 'BFT',
       version: pkg.version,
     },
-    appConfig,
+    appConfigLoader: () => import('../../skedyul.config'),
     hooks: {
       install: {
         handler: installHandler,
