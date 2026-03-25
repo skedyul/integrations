@@ -1,5 +1,5 @@
 import { defineConfig } from 'skedyul'
-import pkg from './package.json'
+import pkg from './package.json' with { type: 'json' }
 
 export default defineConfig({
   name: 'BFT',
@@ -7,7 +7,7 @@ export default defineConfig({
   description: 'Body Fit Training website scraper integration',
   computeLayer: 'serverless',
   build: {
-    external: ['playwright'],
+    external: ['playwright'], 
   },
 
   tools: import('./src/registries'),

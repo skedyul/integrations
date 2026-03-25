@@ -17,7 +17,7 @@
  */
 
 import { defineConfig } from 'skedyul'
-import pkg from './package.json'
+import pkg from './package.json' with { type: 'json' }
 
 export default defineConfig({
   name: 'Phone',
