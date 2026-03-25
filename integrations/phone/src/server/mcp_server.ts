@@ -3,6 +3,7 @@ import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import { uninstallHandler } from './hooks/uninstall'
 import pkg from '../../package.json'
+import appConfig from '../../skedyul.config'
 
 // Global error handlers to catch unhandled errors during initialization
 // Important: Do NOT call process.exit() in Lambda - let Lambda handle the error
@@ -53,9 +54,10 @@ const skedyulServer = server.create(
   {
     computeLayer,
     metadata: {
-      name: 'Phone',
+      name: appConfig.name,
       version: pkg.version,
     },
+    appConfig,
     hooks: {
       install: installHandler,
       uninstall: uninstallHandler,

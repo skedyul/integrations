@@ -3,6 +3,7 @@ import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import provisionHandler from './hooks/provision'
 import pkg from '../../package.json'
+import appConfig from '../../skedyul.config'
 
 // Global error handlers to catch any unhandled errors during initialization
 process.on('uncaughtException', (err) => {
@@ -69,9 +70,10 @@ try {
   {
     computeLayer,
     metadata: {
-      name: 'Email',
+      name: appConfig.name,
       version: pkg.version,
     },
+    appConfig,
     hooks: {
       install: {
         handler: installHandler,
