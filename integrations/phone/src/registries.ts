@@ -35,6 +35,7 @@ import { submitNewPhoneNumberRegistry } from './tools/submit_new_phone_number'
 import { removePhoneNumberRegistry } from './tools/remove_phone_number'
 import { updatePhoneDetailsRegistry } from './tools/update_phone_details'
 import { updateForwardingNumberRegistry } from './tools/update_forwarding_number'
+import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
 
 /**
  * Tool Registry
@@ -62,6 +63,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Update the forwarding_phone_number for a phone number instance. */
   update_forwarding_number: updateForwardingNumberRegistry,
+
+  /** Sync the SMS webhook URL to Twilio for a given phone number. */
+  sync_twilio_webhook: syncTwilioWebhookRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
