@@ -20,6 +20,42 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,
   handler: async (input, context) => {
+    // Validate that we have a valid recipient phone number
+    if (!input.subscription.identifierValue?.trim()) {
+      return {
+        output: {
+          status: 'failed' as const,
+          remoteId: undefined,
+        },
+        billing: {
+          credits: 0,
+        },
+        meta: {
+          success: false,
+          message: 'Cannot send SMS: subscription.identifierValue (recipient phone number) is empty or missing',
+          toolName: 'send_sms',
+        },
+      }
+    }
+
+    // Validate that we have a valid sender phone number
+    if (!input.channel.identifierValue?.trim()) {
+      return {
+        output: {
+          status: 'failed' as const,
+          remoteId: undefined,
+        },
+        billing: {
+          credits: 0,
+        },
+        meta: {
+          success: false,
+          message: 'Cannot send SMS: channel.identifierValue (sender phone number) is empty or missing',
+          toolName: 'send_sms',
+        },
+      }
+    }
+
     const client = createTwilioClient(context.env)
 
     const message = await withTwilioAuth(() =>
