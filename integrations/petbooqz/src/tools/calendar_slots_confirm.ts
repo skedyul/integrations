@@ -21,6 +21,7 @@ const CalendarSlotsConfirmInputSchema = z.object({
   appointment_note: z.string().optional(),
   client_id: z.string().optional(),
   patient_id: z.string().optional(),
+  datetime: z.string().optional().describe('The datetime of the appointment (passed from reserve step)'),
 }).refine((input) => Boolean(input.appointment_type || input.reason), {
   message: 'Either appointment_type or reason is required',
   path: ['appointment_type'],
@@ -29,6 +30,8 @@ const CalendarSlotsConfirmInputSchema = z.object({
 const CalendarSlotsConfirmOutputSchema = z.object({
   client_id: z.string().nullable(),
   patient_id: z.string().nullable(),
+  datetime: z.string().nullable().describe('The confirmed appointment datetime'),
+  calendar_id: z.string().nullable().describe('The calendar ID'),
 })
 
 type CalendarSlotsConfirmInput = z.infer<typeof CalendarSlotsConfirmInputSchema>
@@ -88,8 +91,12 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
         data: {
           client_id: response.clientid,
           patient_id: response.patientid,
+          datetime: input.datetime ?? null,
+          calendar_id: input.calendar_id,
         },
-        message: 'Slot confirmed',
+        message: input.datetime 
+          ? `Appointment confirmed for ${input.datetime}` 
+          : 'Appointment confirmed',
       })
     } catch (error) {
       return createToolResponse<CalendarSlotsConfirmOutput>('calendar_slots_confirm', {
