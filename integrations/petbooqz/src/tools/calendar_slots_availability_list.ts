@@ -36,6 +36,7 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
   inputSchema: CalendarSlotsAvailabilityListInputSchema,
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
+  timeout: 55000,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
     
@@ -61,9 +62,17 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
         message: `Found ${totalSlots} available slot${totalSlots !== 1 ? 's' : ''} across ${availableSlots.length} calendar${availableSlots.length !== 1 ? 's' : ''}`,
       })
     } catch (error) {
+      let errorMessage = 'Failed to list available slots'
+      if (error instanceof Error) {
+        if (error.name === 'TimeoutError' || error.message.includes('aborted')) {
+          errorMessage = 'Request to Petbooqz API timed out. The external service may be slow or unresponsive.'
+        } else {
+          errorMessage = error.message
+        }
+      }
       return createToolResponse<CalendarSlotsAvailabilityListOutput>('calendar_slots_availability_list', {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to list available slots',
+        error: errorMessage,
       })
     }
   },

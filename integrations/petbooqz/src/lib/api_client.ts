@@ -6,7 +6,10 @@ export interface ApiClientConfig {
   password: string
   apiKey?: string
   clientPractice?: string
+  timeoutMs?: number
 }
+
+const DEFAULT_TIMEOUT_MS = 50000 // 50 seconds - leaves headroom for Lambda's 60s timeout
 
 export type ApiVersion = 'Skedyul/v1' | 'Vetstoria/v1' | 'Vetstoria/v2'
 
@@ -61,6 +64,7 @@ export class PetbooqzApiClient {
   private authHeader: string
   private apiKey?: string
   private clientPractice?: string
+  private timeoutMs: number
 
   constructor(config: ApiClientConfig) {
     this.rootUrl = config.rootUrl.replace(/\/$/, '') // Remove trailing slash
@@ -68,6 +72,7 @@ export class PetbooqzApiClient {
     this.authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
     this.apiKey = config.apiKey
     this.clientPractice = config.clientPractice
+    this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS
   }
 
   private async request<T>(
@@ -108,6 +113,7 @@ export class PetbooqzApiClient {
         ...headers,
         ...options.headers,
       },
+      signal: AbortSignal.timeout(this.timeoutMs),
     })
 
     if (!response.ok) {
