@@ -79,6 +79,7 @@ export class PetbooqzApiClient {
     endpoint: string,
     options: RequestInit = {},
     apiVersionOverride?: ApiVersion,
+    externalSignal?: AbortSignal,
   ): Promise<T> {
     // Determine API version based on endpoint
     const apiVersion = apiVersionOverride ?? getApiVersion(endpoint)
@@ -101,20 +102,22 @@ export class PetbooqzApiClient {
       headers['CLIENT_PRACTICE'] = this.clientPractice
     }
 
-    // Debug logging
-    if (process.env.DEBUG_PETBOOQZ === 'true') {
-      console.error(`[DEBUG] ${options.method || 'GET'} ${url}`)
-      console.error(`[DEBUG] Headers: Authorization: Basic *****, APIKEY: ${this.apiKey ? '***' : 'NOT SET'}`)
-    }
+    // Use external signal if provided, otherwise use default timeout
+    const signal = externalSignal ?? AbortSignal.timeout(this.timeoutMs)
 
+    console.log(`[PetbooqzApiClient] ${options.method || 'GET'} ${url}`)
+
+    const startTime = Date.now()
     const response = await fetch(url, {
       ...options,
       headers: {
         ...headers,
         ...options.headers,
       },
-      signal: AbortSignal.timeout(this.timeoutMs),
+      signal,
     })
+    
+    console.log(`[PetbooqzApiClient] Response received in ${Date.now() - startTime}ms, status: ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -160,6 +163,7 @@ export class PetbooqzApiClient {
     data?: unknown,
     params?: Record<string, string>,
     apiVersionOverride?: ApiVersion,
+    signal?: AbortSignal,
   ): Promise<T> {
     let url = endpoint
     if (params) {
@@ -169,7 +173,7 @@ export class PetbooqzApiClient {
     return this.request<T>(url, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    }, apiVersionOverride)
+    }, apiVersionOverride, signal)
   }
 
   async delete<T>(
