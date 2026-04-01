@@ -9,7 +9,7 @@ export interface ApiClientConfig {
   timeoutMs?: number
 }
 
-const DEFAULT_TIMEOUT_MS = 50000 // 50 seconds - leaves headroom for Lambda's 60s timeout
+const DEFAULT_TIMEOUT_MS = 600000 // 10 minutes
 
 export type ApiVersion = 'Skedyul/v1' | 'Vetstoria/v1' | 'Vetstoria/v2'
 

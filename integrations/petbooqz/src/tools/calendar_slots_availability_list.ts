@@ -36,7 +36,7 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
   inputSchema: CalendarSlotsAvailabilityListInputSchema,
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
-  timeout: 55000,
+  timeout: 600000,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
     
