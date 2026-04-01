@@ -9,10 +9,29 @@ export interface AvailableSlot {
   slots: string[]
 }
 
+function convertTo24Hour(timeStr: string): string {
+  if (!timeStr || typeof timeStr !== 'string') return '09:00'
+  const parts = timeStr.trim().split(' ')
+  if (parts.length !== 2) return timeStr
+  const [timePart, meridiem] = parts
+  const timeParts = timePart.split(':')
+  let hour = Number(timeParts[0])
+  const minute = (timeParts[1] || '00').padStart(2, '0')
+  if (Number.isNaN(hour)) return '09:00'
+  if (meridiem.toUpperCase() === 'PM' && hour !== 12) hour += 12
+  else if (meridiem.toUpperCase() === 'AM' && hour === 12) hour = 0
+  return `${String(hour).padStart(2, '0')}:${minute}`
+}
+
+function normalizeSlotToDatetime(date: string, timeStr: string): string {
+  const time24 = convertTo24Hour(timeStr)
+  return `${date} ${time24}:00`
+}
+
 const AvailableSlotSchema = z.object({
   calendar: z.string(),
   date: z.string(),
-  slots: z.array(z.string()),
+  slots: z.array(z.string()).describe('Array of full datetime strings (YYYY-MM-DD HH:mm:ss)'),
 })
 
 const CalendarSlotsAvailabilityListInputSchema = z.object({
@@ -53,9 +72,13 @@ async function fetchSlotsForDate(
       return { date, slots: [], error: getErrorMessage(response) }
     }
 
-    const slots = Array.isArray(response) ? response : []
-    console.log(`[calendar_slots_availability_list] Date ${date} returned ${slots.length} calendar(s) with slots`)
-    return { date, slots }
+    const rawSlots = Array.isArray(response) ? response : []
+    const normalizedSlots = rawSlots.map(slot => ({
+      ...slot,
+      slots: slot.slots.map(timeStr => normalizeSlotToDatetime(slot.date, timeStr)),
+    }))
+    console.log(`[calendar_slots_availability_list] Date ${date} returned ${rawSlots.length} calendar(s) with slots`)
+    return { date, slots: normalizedSlots }
   } catch (error) {
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')
     const errorMsg = isTimeout 
