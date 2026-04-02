@@ -1,6 +1,13 @@
 import skedyul, { type z as ZodType, communicationChannel, webhook, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import twilio from 'twilio'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createAuthError,
+  createNotFoundError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -35,35 +42,13 @@ export const syncTwilioWebhookRegistry: ToolDefinition<
   outputSchema: SyncTwilioWebhookOutputSchema,
   handler: async (input, context) => {
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const { phone_number } = input
 
     if (!phone_number) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required field: phone_number',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required field: phone_number',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createValidationError('Missing required field: phone_number')
     }
 
     console.log('[SyncTwilioWebhook] Syncing webhook for phone number:', phone_number)
@@ -72,19 +57,7 @@ export const syncTwilioWebhookRegistry: ToolDefinition<
     const authToken = context.env.TWILIO_AUTH_TOKEN
 
     if (!accountSid || !authToken) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing Twilio credentials (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)',
-          phone_number,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing Twilio credentials',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createAuthError('Missing Twilio credentials (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)')
     }
 
     // Get or create the receive_sms webhook URL
@@ -105,19 +78,9 @@ export const syncTwilioWebhookRegistry: ToolDefinition<
       }
     } catch (err) {
       console.error('[SyncTwilioWebhook] Failed to get/create webhook:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to get/create webhook: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          phone_number,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to get/create webhook',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createPhoneError(
+        `Failed to get/create webhook: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     // Initialize Twilio client
@@ -131,36 +94,14 @@ export const syncTwilioWebhookRegistry: ToolDefinition<
       })
     } catch (err) {
       console.error('[SyncTwilioWebhook] Failed to list Twilio phone numbers:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to list Twilio phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          phone_number,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to list Twilio phone numbers',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createPhoneError(
+        `Failed to list Twilio phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     if (phoneNumbers.length === 0) {
       console.log(`[SyncTwilioWebhook] Phone number ${phone_number} not found in Twilio account`)
-      return {
-        output: {
-          status: 'error',
-          message: `Phone number ${phone_number} not found in Twilio account`,
-          phone_number,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Phone number not found in Twilio',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createNotFoundError('Phone number', phone_number)
     }
 
     const twilioPhoneNumber = phoneNumbers[0]
@@ -177,37 +118,18 @@ export const syncTwilioWebhookRegistry: ToolDefinition<
 
       console.log(`[SyncTwilioWebhook] Successfully updated SMS webhook for ${phone_number}`)
 
-      return {
-        output: {
-          status: 'success',
-          message: `Successfully synced SMS webhook for ${phone_number}`,
-          phone_number,
-          webhook_url: webhookUrl,
-          phone_number_sid: updated.sid,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'SMS webhook synced successfully',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createSuccessResponse({
+        status: 'success',
+        message: `Successfully synced SMS webhook for ${phone_number}`,
+        phone_number,
+        webhook_url: webhookUrl,
+        phone_number_sid: updated.sid,
+      })
     } catch (err) {
       console.error('[SyncTwilioWebhook] Failed to update Twilio phone number:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to update Twilio phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          phone_number,
-          webhook_url: webhookUrl,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to update Twilio phone number',
-          toolName: 'sync_twilio_webhook',
-        },
-      }
+      return createPhoneError(
+        `Failed to update Twilio phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
   },
 }

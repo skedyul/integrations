@@ -7,6 +7,7 @@ import {
   type MessageSendOutput,
 } from 'skedyul'
 import { createEmailProvider, type EmailEnv } from '../lib/email_provider'
+import { createSuccessResponse, createEmailError } from '../lib/response'
 
 /**
  * Send an email message.
@@ -75,20 +76,13 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
         provider: result.provider,
       })
 
-      return {
-        output: {
+      return createSuccessResponse(
+        {
           status: 'sent',
           remoteId: result.messageId,
         },
-        billing: {
-          credits: 1,
-        },
-        meta: {
-          success: true,
-          message: 'Email sent successfully',
-          toolName: 'send_email',
-        },
-      }
+        { billing: { credits: 1 } },
+      )
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : JSON.stringify(error, null, 2)
@@ -127,7 +121,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
         },
       })
 
-      throw error
+      return createEmailError(errorMessage)
     }
   },
 }

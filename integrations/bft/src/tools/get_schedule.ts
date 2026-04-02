@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { fetchLiveSchedule } from '../lib/scraper'
-import { createToolResponse } from '../lib/response'
 
 const GetScheduleInputSchema = z.object({
   daysAhead: z.number().optional(),
@@ -43,18 +42,12 @@ export const getScheduleRegistry: ToolDefinition<
     const { BFT_URL, HAPANA_SITE_ID } = context.env
 
     if (!BFT_URL) {
-      return createToolResponse<GetScheduleOutput>('get_schedule', {
-        success: false,
-        error: 'BFT_URL environment variable is not set',
-      })
+      return createValidationError('BFT_URL environment variable is not set')
     }
 
     try {
       if (!HAPANA_SITE_ID) {
-        return createToolResponse<GetScheduleOutput>('get_schedule', {
-          success: false,
-          error: 'HAPANA_SITE_ID is not set. Please re-install the app.',
-        })
+        return createValidationError('HAPANA_SITE_ID is not set. Please re-install the app.')
       }
 
       const siteId = HAPANA_SITE_ID
@@ -62,23 +55,12 @@ export const getScheduleRegistry: ToolDefinition<
 
       const schedule = await fetchLiveSchedule(BFT_URL, siteId, daysAhead)
 
-      const totalSessions = Object.values(schedule).reduce(
-        (sum, day) => sum + day.length,
-        0,
-      )
-
-      return createToolResponse('get_schedule', {
-        success: true,
-        data: { schedule },
-        message: `Found ${totalSessions} sessions across ${Object.keys(schedule).length} days`,
-      })
+      return createSuccessResponse({ schedule })
     } catch (error) {
-      return createToolResponse<GetScheduleOutput>('get_schedule', {
-        success: false,
-        error: error instanceof Error
-          ? error.message
-          : 'Failed to fetch schedule',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to fetch schedule',
+      )
     }
   },
 }

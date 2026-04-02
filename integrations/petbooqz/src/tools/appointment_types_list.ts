@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface AppointmentType {
@@ -37,7 +36,7 @@ export const appointmentTypesListRegistry: ToolDefinition<
   outputSchema: AppointmentTypesListOutputSchema,
   handler: async (_input, context) => {
     const client = createClientFromEnv(context.env)
-    
+
     try {
       const response = await client.get<
         AppointmentType[] | { appointmentTypes: AppointmentType[] } | PetbooqzErrorResponse
@@ -46,26 +45,19 @@ export const appointmentTypesListRegistry: ToolDefinition<
       console.log('response', response)
 
       if (isPetbooqzError(response)) {
-        return createToolResponse<AppointmentTypesListOutput>('appointment_types_list', {
-          success: false,
-          error: getErrorMessage(response),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(response))
       }
 
       const appointmentTypes = Array.isArray(response)
         ? response
         : response.appointmentTypes ?? []
 
-      return createToolResponse('appointment_types_list', {
-        success: true,
-        data: { appointmentTypes },
-        message: `Found ${appointmentTypes.length} appointment type${appointmentTypes.length !== 1 ? 's' : ''}`,
-      })
+      return createSuccessResponse({ appointmentTypes })
     } catch (error) {
-      return createToolResponse<AppointmentTypesListOutput>('appointment_types_list', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to list appointment types',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to list appointment types',
+      )
     }
   },
 }

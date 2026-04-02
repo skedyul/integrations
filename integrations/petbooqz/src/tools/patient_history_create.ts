@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 const PatientHistorySchema = z.object({
@@ -35,14 +34,14 @@ export const patientHistoryCreateRegistry: ToolDefinition<
   outputSchema: PatientHistoryCreateOutputSchema,
   handler: async (input, context) => {
     const apiClient = createClientFromEnv(context.env)
-    
+
     console.log('[patient_history_create] Starting with input:', JSON.stringify({
       title: input.title,
       client_id: input.client_id,
       patient_id: input.patient_id,
       notes_length: input.notes?.length ?? 0,
     }))
-    
+
     try {
       const response = await apiClient.post<Record<string, unknown> | PetbooqzErrorResponse>(
         '/newHistory',
@@ -60,39 +59,32 @@ export const patientHistoryCreateRegistry: ToolDefinition<
 
       if (isPetbooqzError(response)) {
         console.log('[patient_history_create] Detected error response')
-        return createToolResponse<PatientHistoryCreateOutput>('patient_history_create', {
-          success: false,
-          error: getErrorMessage(response),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(response))
       }
 
-      const result = createToolResponse('patient_history_create', {
-        success: true,
-        data: {
-          history: {
-            title: input.title,
-            client_id: input.client_id,
-            patient_id: input.patient_id,
-            notes: '[content sent to Petbooqz]',
-            ...(response && typeof response === 'object' ? response : {}),
-          },
+      const result = createSuccessResponse({
+        history: {
+          title: input.title,
+          client_id: input.client_id,
+          patient_id: input.patient_id,
+          notes: '[content sent to Petbooqz]',
+          ...(response && typeof response === 'object' ? response : {}),
         },
-        message: 'Patient history created',
       })
-      
+
       console.log('[patient_history_create] Returning result:', JSON.stringify({
         hasOutput: !!result.output,
         outputKeys: result.output ? Object.keys(result.output) : [],
-        meta: result.meta,
+        success: result.success,
       }))
-      
+
       return result
     } catch (error) {
       console.error('[patient_history_create] Error:', error instanceof Error ? error.message : String(error))
-      return createToolResponse<PatientHistoryCreateOutput>('patient_history_create', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create patient history',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to create patient history',
+      )
     }
   },
 }

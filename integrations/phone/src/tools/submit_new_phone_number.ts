@@ -6,6 +6,12 @@ import {
   purchasePhoneNumber,
 } from '../lib/twilio_client'
 import testData from '../test-data.json'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createNotFoundError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -42,18 +48,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit)
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const { compliance_record: complianceRecordId, name } = input
@@ -61,18 +56,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
 
     // Validate compliance record ID is provided
     if (!complianceRecordId) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required field: compliance_record',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required field: compliance_record',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createValidationError('Missing required field: compliance_record')
     }
 
     // 1. Fetch the compliance record and validate it's approved
@@ -84,18 +68,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       console.log('[PhoneNumber] instance.get result:', JSON.stringify(complianceRecord, null, 2))
     } catch (err) {
       console.error('[PhoneNumber] Failed to fetch compliance record:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to fetch compliance record: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: `Failed to fetch compliance record: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createPhoneError(
+        `Failed to fetch compliance record: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     if (!complianceRecord) {
@@ -104,7 +79,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       console.log('[PhoneNumber] Direct get returned null, trying list with filter...')
       try {
         const listResult = await instance.list('compliance_record', {
-          filter: { id: complianceRecordId },
+          filter: { id: { eq: complianceRecordId } },
           limit: 1,
         })
         console.log('[PhoneNumber] List result:', JSON.stringify(listResult, null, 2))
@@ -119,18 +94,10 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     }
 
     if (!complianceRecord) {
-      return {
-        output: {
-          status: 'error',
-          message: `Compliance record not found. Searched for id=${complianceRecordId} with appInstallationId=${appInstallationId}. The record may belong to a different installation.`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Compliance record not found',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createNotFoundError(
+        'Compliance record',
+        `${complianceRecordId} (appInstallationId=${appInstallationId})`,
+      )
     }
 
     console.log('[PhoneNumber] Compliance record:', JSON.stringify(complianceRecord, null, 2))
@@ -140,18 +107,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
 
     // 2. Validate compliance record is approved (skip in test mode)
     if (!isTestMode && complianceRecord.status !== 'approved') {
-      return {
-        output: {
-          status: 'error',
-          message: `Compliance record is not approved. Current status: ${complianceRecord.status ?? 'pending'}. Please wait for Twilio to approve your compliance documents before purchasing a phone number.`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Compliance record is not approved',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createValidationError(
+        `Compliance record is not approved. Current status: ${complianceRecord.status ?? 'pending'}. Please wait for Twilio to approve your compliance documents before purchasing a phone number.`,
+      )
     }
 
     if (isTestMode) {
@@ -174,18 +132,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       twilioClient = createTwilioClient(env)
     } catch (err) {
       console.error('[PhoneNumber] Failed to create Twilio client:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to initialize Twilio client: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to initialize Twilio client',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createPhoneError(
+        `Failed to initialize Twilio client: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     if (isTestMode) {
@@ -221,33 +170,16 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         })
       } catch (err) {
         console.error('[PhoneNumber] Failed to search available numbers:', err)
-        return {
-          output: {
-            status: 'error',
-            message: `Failed to search for available phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Failed to search for available phone numbers',
-            toolName: 'submit_new_phone_number',
-          },
-        }
+        return createPhoneError(
+          `Failed to search for available phone numbers: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        )
       }
 
       if (availableNumbers.length === 0) {
-        return {
-          output: {
-            status: 'error',
-            message: 'No available Australian mobile phone numbers found with the required capabilities (Voice, SMS, MMS). Please try again later.',
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'No available phone numbers found',
-            toolName: 'submit_new_phone_number',
-          },
-        }
+        return createNotFoundError(
+          'Available phone numbers',
+          'Australian mobile with Voice, SMS, MMS capabilities',
+        )
       }
 
       const selectedNumber = availableNumbers[0]
@@ -258,33 +190,15 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       const addressSid = complianceRecord.address_sid
 
       if (!bundleSid) {
-        return {
-          output: {
-            status: 'error',
-            message: 'Compliance record is missing bundle_sid. Please resubmit your compliance documents.',
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Compliance record is missing bundle_sid',
-            toolName: 'submit_new_phone_number',
-          },
-        }
+        return createValidationError(
+          'Compliance record is missing bundle_sid. Please resubmit your compliance documents.',
+        )
       }
 
       if (!addressSid) {
-        return {
-          output: {
-            status: 'error',
-            message: 'Compliance record is missing address_sid. Please resubmit your compliance documents.',
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Compliance record is missing address_sid',
-            toolName: 'submit_new_phone_number',
-          },
-        }
+        return createValidationError(
+          'Compliance record is missing address_sid. Please resubmit your compliance documents.',
+        )
       }
 
       // Purchase the phone number with compliance bundle and address
@@ -308,18 +222,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         }
       } catch (err) {
         console.error('[PhoneNumber] Failed to purchase phone number:', err)
-        return {
-          output: {
-            status: 'error',
-            message: `Failed to purchase phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Failed to purchase phone number',
-            toolName: 'submit_new_phone_number',
-          },
-        }
+        return createPhoneError(
+          `Failed to purchase phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        )
       }
 
       console.log('[PhoneNumber] Purchased number:', JSON.stringify(purchasedNumber, null, 2))
@@ -378,18 +283,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       // Verify the instance was created with the correct data
       if (!phoneNumberInstance?.id) {
         console.error('[PhoneNumber] Instance creation returned without ID')
-        return {
-          output: {
-            status: 'error',
-            message: 'Failed to create phone number record - no instance ID returned',
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Failed to create phone number record',
-            toolName: 'submit_new_phone_number',
-          },
-        }
+        return createPhoneError('Failed to create phone number record - no instance ID returned')
       }
 
       // 8. Create communication channel (model links are configured separately on the Contacts page)
@@ -406,43 +300,29 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
         // The user can create the channel later in settings
       }
 
-      return {
-        output: {
+      return createSuccessResponse(
+        {
           status: 'success',
           phoneNumber: purchasedNumber.phoneNumber,
           phoneNumberSid: purchasedNumber.sid,
           message: `Successfully purchased phone number ${purchasedNumber.phoneNumber}`,
         },
-        billing: { credits: 1 },
-        effect: {
-          redirect: `/phone-numbers/${phoneNumberInstance.id}/overview`,
+        {
+          billing: { credits: 1 },
+          effect: {
+            redirect: `/phone-numbers/${phoneNumberInstance.id}/overview`,
+          },
         },
-        meta: {
-          success: true,
-          message: 'Phone number purchased successfully',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      )
     } catch (err) {
       console.error('[PhoneNumber] Failed to create phone_number instance:', err)
       console.error('[PhoneNumber] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2))
 
       // Note: The phone number was already purchased from Twilio.
       // In a production system, you might want to release it or retry the database operation.
-      return {
-        output: {
-          status: 'partial_error',
-          phoneNumber: purchasedNumber.phoneNumber,
-          phoneNumberSid: purchasedNumber.sid,
-          message: `Phone number purchased but failed to save to database: ${err instanceof Error ? err.message : 'Unknown error'}. Please contact support with phone number SID: ${purchasedNumber.sid}`,
-        },
-        billing: { credits: 1 },
-        meta: {
-          success: false,
-          message: 'Phone number purchased but failed to save to database',
-          toolName: 'submit_new_phone_number',
-        },
-      }
+      return createPhoneError(
+        `Phone number purchased but failed to save to database: ${err instanceof Error ? err.message : 'Unknown error'}. Please contact support with phone number SID: ${purchasedNumber.sid}`,
+      )
     }
   },
 }

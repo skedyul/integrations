@@ -1,6 +1,12 @@
 import skedyul, { type z as ZodType, instance, webhook, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import { createTwilioClient } from '../lib/twilio_client'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createNotFoundError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -29,36 +35,14 @@ export const updateForwardingNumberRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const phoneNumberId = input.phone_id || context.request.params?.phone_id
     const forwardingValue = input.forwarding_phone_number.trim()
 
     if (!phoneNumberId) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing phone_id',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing phone_id',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      return createValidationError('Missing phone_id')
     }
 
     // 1. Fetch the phone_number instance to get the phone value
@@ -67,33 +51,11 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       phoneRecord = await instance.get('phone_number', phoneNumberId) as unknown as { phone?: string } | null
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to fetch phone_number instance', error)
-      return {
-        output: {
-          status: 'error',
-          message: 'Failed to fetch phone number record',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to fetch phone number record',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      return createPhoneError('Failed to fetch phone number record')
     }
 
     if (!phoneRecord?.phone) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Phone number not found',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Phone number not found',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      return createNotFoundError('Phone number', phoneNumberId)
     }
 
     // 2. Update the phone_number model with the forwarding number
@@ -103,20 +65,9 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       })
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to save forwarding number', error)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to save forwarding number: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to save forwarding number',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      return createPhoneError(
+        `Failed to save forwarding number: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
 
     // 3. Configure Twilio's voiceUrl
@@ -130,18 +81,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
 
       if (phoneNumbers.length === 0) {
         console.log('[UpdateForwardingNumber] Phone number not found in Twilio:', phoneRecord.phone)
-        return {
-          output: {
-            status: 'partial_success',
-            message: 'Forwarding number saved, but phone number not found in Twilio account',
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Phone number not found in Twilio account',
-            toolName: 'update_forwarding_number',
-          },
-        }
+        return createPhoneError('Forwarding number saved, but phone number not found in Twilio account')
       }
 
       const phoneNumberSid = phoneNumbers[0].sid
@@ -194,37 +134,18 @@ export const updateForwardingNumberRegistry: ToolDefinition<
         console.log('[UpdateForwardingNumber] Cleared Twilio voiceUrl')
       }
 
-      return {
-        output: {
-          status: 'success',
-          message: forwardingValue
-            ? 'Forwarding number saved and Twilio configured'
-            : 'Forwarding number cleared and Twilio updated',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: forwardingValue ? 'Forwarding number configured' : 'Forwarding number cleared',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      return createSuccessResponse({
+        status: 'success',
+        message: forwardingValue
+          ? 'Forwarding number saved and Twilio configured'
+          : 'Forwarding number cleared and Twilio updated',
+      })
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to configure Twilio', error)
-      // Still return success for the database update
-      return {
-        output: {
-          status: 'partial_success',
-          message: `Forwarding number saved, but failed to configure Twilio: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Forwarding number saved but failed to configure Twilio',
-          toolName: 'update_forwarding_number',
-        },
-      }
+      // Still return partial success for the database update
+      return createPhoneError(
+        `Forwarding number saved, but failed to configure Twilio: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   },
 }

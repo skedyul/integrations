@@ -10,6 +10,12 @@ import {
   submitBundleForReview,
 } from '../lib/twilio_client'
 import testData from '../test-data.json'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createAuthError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -146,18 +152,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit)
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const { 
@@ -172,35 +167,17 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 
     // Validate required input fields
     if (!business_name || !business_email || !business_id || !country || !address || !fileId) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required fields: business_name, business_email, business_id, country, address, and file are required',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required fields: business_name, business_email, business_id, country, address, and file are required',
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createValidationError(
+        'Missing required fields: business_name, business_email, business_id, country, address, and file are required',
+      )
     }
 
     // Validate Google Maps API key is configured
     const googleApiKey = env.GOOGLE_MAPS_API_KEY
     if (!googleApiKey) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Google Maps API key is not configured. Please configure GOOGLE_MAPS_API_KEY in environment variables.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Google Maps API key is not configured',
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createAuthError(
+        'Google Maps API key is not configured. Please configure GOOGLE_MAPS_API_KEY in environment variables.',
+      )
     }
 
     // Normalize country to uppercase ISO code
@@ -214,18 +191,9 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       console.log('[Compliance] Parsed address:', parsedAddress)
     } catch (err) {
       console.error('[Compliance] Failed to parse address:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to parse address: ${err instanceof Error ? err.message : 'Unknown error'}. Please provide a valid, complete address.`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: `Failed to parse address: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createValidationError(
+        `Failed to parse address: ${err instanceof Error ? err.message : 'Unknown error'}. Please provide a valid, complete address.`,
+      )
     }
 
     // 1. Get or create the compliance record for this installation
@@ -275,19 +243,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     
     if (!canResubmit) {
       // Already submitted and not rejected - block resubmission
-      return {
-        output: {
-          status: 'already_submitted',
-          bundleSid: existingBundleSid,
-          message: 'Compliance bundle already submitted. Use "Refresh Status" to check current status.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'Compliance bundle already submitted',
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createSuccessResponse({
+        status: 'already_submitted',
+        bundleSid: existingBundleSid,
+        message: 'Compliance bundle already submitted. Use "Refresh Status" to check current status.',
+      })
     }
     
     // If resubmitting after rejection, log it
@@ -351,21 +311,13 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         console.error('[Compliance] Failed to update instance:', updateError)
       }
 
-      return {
-        output: {
-          status: 'pending_review',
-          bundleSid: testData.compliance.bundleSid,
-          endUserSid: testData.compliance.endUserSid,
-          documentSid: testData.compliance.documentSid,
-          message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'Document submitted to Twilio for review',
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createSuccessResponse({
+        status: 'pending_review',
+        bundleSid: testData.compliance.bundleSid,
+        endUserSid: testData.compliance.endUserSid,
+        documentSid: testData.compliance.documentSid,
+        message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
+      })
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -478,21 +430,13 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         documentSid: supportingDoc.sid,
       })
 
-      return {
-        output: {
-          status: 'pending_review',
-          bundleSid: bundle.sid,
-          endUserSid: endUser.sid,
-          documentSid: supportingDoc.sid,
-          message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'Document submitted to Twilio for review',
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createSuccessResponse({
+        status: 'pending_review',
+        bundleSid: bundle.sid,
+        endUserSid: endUser.sid,
+        documentSid: supportingDoc.sid,
+        message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
+      })
     } catch (err) {
       console.error('[Compliance] Failed to submit to Twilio:', err)
 
@@ -506,18 +450,9 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         },
       )
 
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to submit compliance documents: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: `Failed to submit compliance documents: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          toolName: 'submit_compliance_document',
-        },
-      }
+      return createPhoneError(
+        `Failed to submit compliance documents: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
   },
 }

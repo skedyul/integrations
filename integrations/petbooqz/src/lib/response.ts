@@ -1,48 +1,27 @@
-import type { ToolResponseMeta, ToolExecutionResult } from 'skedyul'
+// Re-export SDK helpers for convenience
+// Tools can import directly from 'skedyul' or from this file
+export {
+  createSuccessResponse,
+  createErrorResponse,
+  createNotFoundError,
+  createExternalError,
+  createValidationError,
+  createAuthError,
+  createRateLimitError,
+  createListResponse,
+  isSuccess,
+  isFailure,
+  type ToolResult,
+  type ToolSuccess,
+  type ToolFailure,
+} from 'skedyul'
+
+import { createExternalError, type ToolFailure } from 'skedyul'
 
 /**
- * Create a standardized tool response with meta information.
- * 
- * @param toolName - Name of the tool being executed
- * @param result - Either success with data or failure with error message
- * @returns Complete ToolExecutionResult with output, billing, and meta
+ * Create a Petbooqz API error response.
+ * Wraps createExternalError with 'Petbooqz' as the service name.
  */
-export function createToolResponse<T>(
-  toolName: string,
-  result: { success: true; data: T; message?: string } | { success: false; error: string },
-): ToolExecutionResult<T> {
-  const meta: ToolResponseMeta = {
-    success: result.success,
-    message: result.success ? (result.message ?? 'OK') : result.error,
-    toolName,
-  }
-
-  return {
-    output: result.success ? result.data : null,
-    billing: { credits: 0 },
-    meta,
-  }
-}
-
-/**
- * Create a success response with a descriptive message.
- * Helper that wraps createToolResponse for success cases.
- */
-export function successResponse<T>(
-  toolName: string,
-  data: T,
-  message?: string,
-): ToolExecutionResult<T> {
-  return createToolResponse(toolName, { success: true, data, message })
-}
-
-/**
- * Create an error response with a descriptive message.
- * Helper that wraps createToolResponse for error cases.
- */
-export function errorResponse<T>(
-  toolName: string,
-  error: string,
-): ToolExecutionResult<T> {
-  return createToolResponse<T>(toolName, { success: false, error })
+export function createPetbooqzError(message: string): ToolFailure {
+  return createExternalError('Petbooqz', message)
 }

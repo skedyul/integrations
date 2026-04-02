@@ -1,5 +1,4 @@
-import { z, type ToolDefinition, instance } from 'skedyul'
-import { createToolResponse } from '../lib/response'
+import { z, type ToolDefinition, instance, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
 
 const GetBusinessDetailsInputSchema = z.object({})
 
@@ -35,34 +34,27 @@ export const getBusinessDetailsRegistry: ToolDefinition<
       })
 
       if (records.length === 0) {
-        return createToolResponse<GetBusinessDetailsOutput>('get_business_details', {
-          success: false,
-          error: 'Business details not found. Please run refresh_data first.',
-        })
+        return createNotFoundError('Business details', 'Please run refresh_data first.')
       }
 
       const businessDetails = records[0]
 
-      return createToolResponse('get_business_details', {
-        success: true,
-        data: {
-          businessDetails: {
-            id: businessDetails.id,
-            name: (businessDetails.name as string) || '',
-            clubId: (businessDetails.club_id as string) || undefined,
-            address: (businessDetails.address as string) || undefined,
-            phone: (businessDetails.phone as string) || undefined,
-            email: (businessDetails.email as string) || undefined,
-            websiteUrl: (businessDetails.website_url as string) || undefined,
-          },
+      return createSuccessResponse({
+        businessDetails: {
+          id: businessDetails.id,
+          name: (businessDetails.name as string) || '',
+          clubId: (businessDetails.club_id as string) || undefined,
+          address: (businessDetails.address as string) || undefined,
+          phone: (businessDetails.phone as string) || undefined,
+          email: (businessDetails.email as string) || undefined,
+          websiteUrl: (businessDetails.website_url as string) || undefined,
         },
-        message: 'Business details retrieved successfully',
       })
     } catch (error) {
-      return createToolResponse<GetBusinessDetailsOutput>('get_business_details', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to retrieve business details',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to retrieve business details',
+      )
     }
   },
 }

@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface ConfirmSlotResponse {
@@ -49,60 +48,48 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
   timeout: 600000,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    
+
     try {
       const appointmentType = input.appointment_type ?? input.reason
 
       if (!appointmentType) {
-        return createToolResponse<CalendarSlotsConfirmOutput>('calendar_slots_confirm', {
-          success: false,
-          error: 'Either appointment_type or reason is required',
-        })
+        return createValidationError('Either appointment_type or reason is required', 'appointment_type')
       }
 
       const response = await client.post<ConfirmSlotResponse | PetbooqzErrorResponse>(
-      `/calendars/${input.calendar_id}/confirm`,
-      {
-        client_first: input.client_first,
-        client_last: input.client_last,
-        email_address: input.email_address,
-        phone_number: input.phone_number,
-        patient_name: input.patient_name,
-        appointment_type: appointmentType,
-        reason: input.reason,
-        appointment_note: input.appointment_note,
-        client_id: input.client_id,
-        patient_id: input.patient_id,
-      },
-      { slot_id: input.slot_id },
-    )
+        `/calendars/${input.calendar_id}/confirm`,
+        {
+          client_first: input.client_first,
+          client_last: input.client_last,
+          email_address: input.email_address,
+          phone_number: input.phone_number,
+          patient_name: input.patient_name,
+          appointment_type: appointmentType,
+          reason: input.reason,
+          appointment_note: input.appointment_note,
+          client_id: input.client_id,
+          patient_id: input.patient_id,
+        },
+        { slot_id: input.slot_id },
+      )
 
       console.log('response', response)
 
       if (isPetbooqzError(response)) {
-        return createToolResponse<CalendarSlotsConfirmOutput>('calendar_slots_confirm', {
-          success: false,
-          error: getErrorMessage(response),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(response))
       }
 
-      return createToolResponse('calendar_slots_confirm', {
-        success: true,
-        data: {
-          client_id: response.clientid,
-          patient_id: response.patientid,
-          datetime: input.datetime ?? null,
-          calendar_id: input.calendar_id,
-        },
-        message: input.datetime 
-          ? `Appointment confirmed for ${input.datetime}` 
-          : 'Appointment confirmed',
+      return createSuccessResponse({
+        client_id: response.clientid,
+        patient_id: response.patientid,
+        datetime: input.datetime ?? null,
+        calendar_id: input.calendar_id,
       })
     } catch (error) {
-      return createToolResponse<CalendarSlotsConfirmOutput>('calendar_slots_confirm', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to confirm slot',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to confirm slot',
+      )
     }
   },
 }

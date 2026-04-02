@@ -3,6 +3,11 @@ import { z } from 'skedyul'
 import { AppAuthInvalidError, isRuntimeContext } from 'skedyul'
 import { instance } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createMetaError,
+} from '../lib/response'
 
 /**
  * Input schema - no inputs needed, tool gets data from context
@@ -48,15 +53,7 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool (page_context trigger)
     if (!isRuntimeContext(context)) {
-      return {
-        output: [],
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'fetch_registered_wa_business_numbers',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const { appInstallationId, env } = context
@@ -93,15 +90,7 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
 
     if (metaConnections.data.length === 0) {
       // No meta connection found - return empty array
-      return {
-        output: [],
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'No meta connection found',
-          toolName: 'fetch_registered_wa_business_numbers',
-        },
-      }
+      return createSuccessResponse([])
     }
 
     const metaConnection = metaConnections.data[0] as {
@@ -111,15 +100,7 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
 
     if (!metaConnection.waba_id) {
       // No WABA ID - return empty array
-      return {
-        output: [],
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'Meta connection missing WABA ID',
-          toolName: 'fetch_registered_wa_business_numbers',
-        },
-      }
+      return createSuccessResponse([])
     }
 
     // Initialize Meta client
@@ -140,15 +121,7 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
         quality_rating: phoneNumber.quality_rating,
       }))
 
-      return {
-        output: phoneNumbers,
-        billing: { credits: 1 },
-        meta: {
-          success: true,
-          message: 'Successfully fetched registered WhatsApp business numbers',
-          toolName: 'fetch_registered_wa_business_numbers',
-        },
-      }
+      return createSuccessResponse(phoneNumbers, { billing: { credits: 1 } })
     } catch (error) {
       if (error instanceof AppAuthInvalidError) {
         // Re-throw auth errors so they're handled properly
@@ -158,16 +131,10 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
         '[fetchRegisteredWABusinessNumbers] Failed to fetch phone numbers:',
         error,
       )
-      // On error, return empty array
-      return {
-        output: [],
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: `Failed to fetch phone numbers: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          toolName: 'fetch_registered_wa_business_numbers',
-        },
-      }
+      // On error, return failure
+      return createMetaError(
+        `Failed to fetch phone numbers: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   },
 }

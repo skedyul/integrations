@@ -1,5 +1,4 @@
-import { z, type ToolDefinition, instance } from 'skedyul'
-import { createToolResponse } from '../lib/response'
+import { z, type ToolDefinition, instance, createSuccessResponse, createExternalError } from 'skedyul'
 
 const UpdateBusinessDetailsInputSchema = z.object({
   name: z.string().optional().describe('Business name'),
@@ -27,18 +26,16 @@ export const updateBusinessDetailsRegistry: ToolDefinition<
   description: 'Updates business contact information in the BusinessDetails model',
   inputSchema: UpdateBusinessDetailsInputSchema,
   outputSchema: UpdateBusinessDetailsOutputSchema,
-  timeout: 300000, // 5 minutes - may involve web scraping
+  timeout: 300000,
   handler: async (input, context) => {
     try {
-      // Get the existing business details record
       const { data: records } = await instance.list('business_details', {
         page: 1,
         limit: 1,
       })
 
       if (records.length === 0) {
-        // If no record exists, create one
-        const newRecord = await instance.create('business_details', {
+        await instance.create('business_details', {
           name: input.name || '',
           club_id: input.club_id || null,
           address: input.address || null,
@@ -47,17 +44,12 @@ export const updateBusinessDetailsRegistry: ToolDefinition<
           website_url: input.website_url || null,
         })
 
-        return createToolResponse('update_business_details', {
+        return createSuccessResponse({
           success: true,
-          data: {
-            success: true,
-            message: 'Business details created successfully',
-          },
           message: 'Business details created successfully',
         })
       }
 
-      // Update existing record
       const existingRecord = records[0]
       const updateData: Record<string, string | null> = {}
 
@@ -70,19 +62,15 @@ export const updateBusinessDetailsRegistry: ToolDefinition<
 
       await instance.update('business_details', existingRecord.id, updateData)
 
-      return createToolResponse('update_business_details', {
+      return createSuccessResponse({
         success: true,
-        data: {
-          success: true,
-          message: 'Business details updated successfully',
-        },
         message: 'Business details updated successfully',
       })
     } catch (error) {
-      return createToolResponse<UpdateBusinessDetailsOutput>('update_business_details', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to update business details',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to update business details',
+      )
     }
   },
 }

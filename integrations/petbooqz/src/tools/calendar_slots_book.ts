@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 import type { ReserveSlotResponse } from './calendar_slots_reserve'
 import type { ConfirmSlotResponse } from './calendar_slots_confirm'
@@ -44,18 +43,14 @@ export const calendarSlotsBookRegistry: ToolDefinition<
   outputSchema: CalendarSlotsBookOutputSchema,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    
+
     try {
       const appointmentType = input.appointment_type ?? input.reason
 
       if (!appointmentType) {
-        return createToolResponse<CalendarSlotsBookOutput>('calendar_slots_book', {
-          success: false,
-          error: 'Either appointment_type or reason is required',
-        })
+        return createValidationError('Either appointment_type or reason is required', 'appointment_type')
       }
 
-      // Step 1: Reserve the slot
       const reserveResponse = await client.post<ReserveSlotResponse[] | ReserveSlotResponse | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/reserve`,
         {
@@ -66,23 +61,15 @@ export const calendarSlotsBookRegistry: ToolDefinition<
       )
 
       if (isPetbooqzError(reserveResponse)) {
-        return createToolResponse<CalendarSlotsBookOutput>('calendar_slots_book', {
-          success: false,
-          error: getErrorMessage(reserveResponse),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(reserveResponse))
       }
 
-      // API returns array with single object or single object
       const slotId = Array.isArray(reserveResponse) ? reserveResponse[0]?.slot_id : reserveResponse.slot_id
-      
+
       if (!slotId) {
-        return createToolResponse<CalendarSlotsBookOutput>('calendar_slots_book', {
-          success: false,
-          error: 'No slot_id returned from reserve API',
-        })
+        return createExternalError('Petbooqz', 'No slot_id returned from reserve API')
       }
 
-      // Step 2: Immediately confirm the reserved slot
       const confirmResponse = await client.post<ConfirmSlotResponse | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/confirm`,
         {
@@ -101,26 +88,19 @@ export const calendarSlotsBookRegistry: ToolDefinition<
       )
 
       if (isPetbooqzError(confirmResponse)) {
-        return createToolResponse<CalendarSlotsBookOutput>('calendar_slots_book', {
-          success: false,
-          error: getErrorMessage(confirmResponse),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(confirmResponse))
       }
 
-      return createToolResponse('calendar_slots_book', {
-        success: true,
-        data: {
-          slot_id: slotId,
-          client_id: confirmResponse.clientid,
-          patient_id: confirmResponse.patientid,
-        },
-        message: 'Appointment booked and confirmed',
+      return createSuccessResponse({
+        slot_id: slotId,
+        client_id: confirmResponse.clientid,
+        patient_id: confirmResponse.patientid,
       })
     } catch (error) {
-      return createToolResponse<CalendarSlotsBookOutput>('calendar_slots_book', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to book appointment',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to book appointment',
+      )
     }
   },
 }

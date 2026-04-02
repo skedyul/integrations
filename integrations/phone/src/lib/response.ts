@@ -19,9 +19,9 @@ export {
 import { createExternalError, type ToolFailure } from 'skedyul'
 
 /**
- * Create a BFT API error response.
- * Wraps createExternalError with 'BFT' as the service name.
+ * Create a Phone/Twilio API error response.
+ * Wraps createExternalError with 'Twilio' as the service name.
  */
-export function createBftError(message: string): ToolFailure {
-  return createExternalError('BFT', message)
+export function createPhoneError(message: string): ToolFailure {
+  return createExternalError('Twilio', message)
 }

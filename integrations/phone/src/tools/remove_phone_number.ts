@@ -1,5 +1,11 @@
 import skedyul, { type z as ZodType, instance, communicationChannel, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createNotFoundError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -38,18 +44,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit/page_action)
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     // Accept phone_number_id (from hidden field), instance_id (from modal context), 
@@ -59,34 +54,12 @@ export const removePhoneNumberRegistry: ToolDefinition<
 
     // Validate required context fields
     if (!appInstallationId || !workplace) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required context: appInstallationId or workplace',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required context',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createValidationError('Missing required context: appInstallationId or workplace')
     }
 
     // Validate phone number ID is provided (from any source)
     if (!phoneNumberId) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required field: phone_number_id, instance_id, or phone_id',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required field: phone_number_id',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createValidationError('Missing required field: phone_number_id, instance_id, or phone_id')
     }
 
     // 1. Fetch the phone_number instance to get the phone value
@@ -98,49 +71,18 @@ export const removePhoneNumberRegistry: ToolDefinition<
       console.log('[RemovePhoneNumber] instance.get result:', JSON.stringify(phoneNumberInstance, null, 2))
     } catch (err) {
       console.error('[RemovePhoneNumber] Failed to fetch phone_number instance:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to fetch phone number',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createPhoneError(
+        `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     if (!phoneNumberInstance) {
-      return {
-        output: {
-          status: 'error',
-          message: `Phone number not found: ${phoneNumberId}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Phone number not found',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createNotFoundError('Phone number', phoneNumberId)
     }
 
     const phoneValue = phoneNumberInstance.phone
     if (!phoneValue) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Phone number instance is missing the phone field',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Phone number instance is missing the phone field',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createValidationError('Phone number instance is missing the phone field')
     }
 
     console.log('[RemovePhoneNumber] Phone value:', phoneValue)
@@ -170,18 +112,9 @@ export const removePhoneNumberRegistry: ToolDefinition<
         console.log('[RemovePhoneNumber] Successfully deleted CommunicationChannel')
       } catch (err) {
         console.error('[RemovePhoneNumber] Failed to delete CommunicationChannel:', err)
-        return {
-          output: {
-            status: 'error',
-            message: `Failed to delete communication channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Failed to delete communication channel',
-            toolName: 'remove_phone_number',
-          },
-        }
+        return createPhoneError(
+          `Failed to delete communication channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        )
       }
     } else {
       console.log('[RemovePhoneNumber] No CommunicationChannel found for this phone number')
@@ -195,36 +128,23 @@ export const removePhoneNumberRegistry: ToolDefinition<
       console.log('[RemovePhoneNumber] Successfully deleted phone_number instance')
     } catch (err) {
       console.error('[RemovePhoneNumber] Failed to delete phone_number instance:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to delete phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to delete phone number record',
-          toolName: 'remove_phone_number',
-        },
-      }
+      return createPhoneError(
+        `Failed to delete phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     // Note: Twilio phone number is NOT released - retained for potential transfer
 
-    return {
-      output: {
+    return createSuccessResponse(
+      {
         status: 'success',
         message: `Successfully removed phone number ${phoneValue}`,
       },
-      billing: { credits: 0 },
-      effect: {
-        redirect: `/phone-numbers`,
+      {
+        effect: {
+          redirect: `/phone-numbers`,
+        },
       },
-      meta: {
-        success: true,
-        message: 'Phone number removed successfully',
-        toolName: 'remove_phone_number',
-      },
-    }
+    )
   },
 }

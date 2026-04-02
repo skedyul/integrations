@@ -1,5 +1,11 @@
 import skedyul, { type z as ZodType, instance, communicationChannel, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createNotFoundError,
+  createEmailError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -34,18 +40,7 @@ export const updateEmailAddressRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'update_email_address',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     // Get email_address_id from input, context.request.params, or fetch the first one
@@ -68,34 +63,12 @@ export const updateEmailAddressRegistry: ToolDefinition<
 
     // Validate email address ID is available
     if (!emailAddressId) {
-      return {
-        output: {
-          status: 'error',
-          message: 'No email address found. Please ensure the app is installed correctly.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'No email address found',
-          toolName: 'update_email_address',
-        },
-      }
+      return createNotFoundError('Email address', 'Please ensure the app is installed correctly.')
     }
 
     // Validate that at least name is provided to update
     if (!name) {
-      return {
-        output: {
-          status: 'error',
-          message: 'No fields to update. Provide a name.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'No fields to update',
-          toolName: 'update_email_address',
-        },
-      }
+      return createValidationError('No fields to update. Provide a name.')
     }
 
     console.log('[UpdateEmailAddress] Updating email address:', emailAddressId, 'with name:', name)
@@ -108,49 +81,18 @@ export const updateEmailAddressRegistry: ToolDefinition<
       console.log('[UpdateEmailAddress] Current instance:', JSON.stringify(emailAddressInstance, null, 2))
     } catch (err) {
       console.error('[UpdateEmailAddress] Failed to fetch email_address instance:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to fetch email address: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to fetch email address',
-          toolName: 'update_email_address',
-        },
-      }
+      return createEmailError(
+        `Failed to fetch email address: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     if (!emailAddressInstance) {
-      return {
-        output: {
-          status: 'error',
-          message: `Email address not found: ${emailAddressId}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Email address not found',
-          toolName: 'update_email_address',
-        },
-      }
+      return createNotFoundError('Email address', emailAddressId)
     }
 
     const emailValue = emailAddressInstance.email
     if (!emailValue) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Email address instance is missing the email field',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Email address instance is missing the email field',
-          toolName: 'update_email_address',
-        },
-      }
+      return createValidationError('Email address instance is missing the email field')
     }
 
     // 2. Update the email_address instance with the new name
@@ -159,18 +101,9 @@ export const updateEmailAddressRegistry: ToolDefinition<
       console.log('[UpdateEmailAddress] Successfully updated email_address instance')
     } catch (err) {
       console.error('[UpdateEmailAddress] Failed to update email_address instance:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to update email address record: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to update email address record',
-          toolName: 'update_email_address',
-        },
-      }
+      return createEmailError(
+        `Failed to update email address record: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     // 3. Find the CommunicationChannel by identifierValue (email address)
@@ -199,34 +132,17 @@ export const updateEmailAddressRegistry: ToolDefinition<
       } catch (err) {
         console.error('[UpdateEmailAddress] Failed to update CommunicationChannel:', err)
         // Return partial success - instance was updated but channel wasn't
-        return {
-          output: {
-            status: 'partial_success',
-            message: `Email address name updated, but failed to update channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Email address updated but failed to update channel',
-            toolName: 'update_email_address',
-          },
-        }
+        return createEmailError(
+          `Email address name updated, but failed to update channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        )
       }
     } else {
       console.log('[UpdateEmailAddress] No CommunicationChannel found for this email address')
     }
 
-    return {
-      output: {
-        status: 'success',
-        message: `Successfully updated email address name to "${name}"`,
-      },
-      billing: { credits: 0 },
-      meta: {
-        success: true,
-        message: 'Email address details updated successfully',
-        toolName: 'update_email_address',
-      },
-    }
+    return createSuccessResponse({
+      status: 'success',
+      message: `Successfully updated email address name to "${name}"`,
+    })
   },
 }

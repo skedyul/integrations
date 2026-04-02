@@ -19,9 +19,9 @@ export {
 import { createExternalError, type ToolFailure } from 'skedyul'
 
 /**
- * Create a BFT API error response.
- * Wraps createExternalError with 'BFT' as the service name.
+ * Create an Email/Mailgun API error response.
+ * Wraps createExternalError with 'Mailgun' as the service name.
  */
-export function createBftError(message: string): ToolFailure {
-  return createExternalError('BFT', message)
+export function createEmailError(message: string): ToolFailure {
+  return createExternalError('Mailgun', message)
 }

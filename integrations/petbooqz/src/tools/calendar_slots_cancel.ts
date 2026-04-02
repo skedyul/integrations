@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 const CalendarSlotsCancelInputSchema = z.object({
@@ -27,7 +26,7 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
   outputSchema: CalendarSlotsCancelOutputSchema,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    
+
     try {
       const response = await client.delete<unknown | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/cancel`,
@@ -37,10 +36,7 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
       console.log('response', response)
 
       if (isPetbooqzError(response)) {
-        return createToolResponse<CalendarSlotsCancelOutput>('calendar_slots_cancel', {
-          success: false,
-          error: getErrorMessage(response as PetbooqzErrorResponse),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(response as PetbooqzErrorResponse))
       }
 
       const successMessage =
@@ -48,25 +44,19 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
           ? String((response as { message?: unknown }).message)
           : 'Slot cancelled'
 
-      return createToolResponse('calendar_slots_cancel', {
-        success: true,
-        data: {
-          messagecode:
-            typeof response === 'object' && response !== null && 'messagecode' in response
-              ? String((response as { messagecode?: unknown }).messagecode)
-              : undefined,
-          message: successMessage,
-        },
+      return createSuccessResponse({
+        messagecode:
+          typeof response === 'object' && response !== null && 'messagecode' in response
+            ? String((response as { messagecode?: unknown }).messagecode)
+            : undefined,
         message: successMessage,
       })
     } catch (error) {
-
-
       console.log('error', error)
-      return createToolResponse<CalendarSlotsCancelOutput>('calendar_slots_cancel', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to cancel slot',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to cancel slot',
+      )
     }
   },
 }

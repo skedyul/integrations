@@ -1,5 +1,4 @@
-import { z, type ToolDefinition, instance } from 'skedyul'
-import { createToolResponse } from '../lib/response'
+import { z, type ToolDefinition, instance, createSuccessResponse, createExternalError } from 'skedyul'
 
 const GetIntroOfferInputSchema = z.object({})
 
@@ -34,37 +33,26 @@ export const getIntroOfferRegistry: ToolDefinition<
         limit: 100,
       })
 
-      // Find the intro offer
       const introOffer = packages.find((pkg) => pkg.type === 'intro_offer')
 
       if (!introOffer) {
-        return createToolResponse('get_intro_offer', {
-          success: true,
-          data: {
-            introOffer: null,
-          },
-          message: 'No intro offer found',
-        })
+        return createSuccessResponse({ introOffer: null })
       }
 
-      return createToolResponse('get_intro_offer', {
-        success: true,
-        data: {
-          introOffer: {
-            id: introOffer.id,
-            name: (introOffer.name as string) || '',
-            description: (introOffer.description as string) || undefined,
-            price: (introOffer.price as string) || undefined,
-            type: (introOffer.type as string) || 'intro_offer',
-          },
+      return createSuccessResponse({
+        introOffer: {
+          id: introOffer.id,
+          name: (introOffer.name as string) || '',
+          description: (introOffer.description as string) || undefined,
+          price: (introOffer.price as string) || undefined,
+          type: (introOffer.type as string) || 'intro_offer',
         },
-        message: 'Intro offer retrieved successfully',
       })
     } catch (error) {
-      return createToolResponse<GetIntroOfferOutput>('get_intro_offer', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to retrieve intro offer',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to retrieve intro offer',
+      )
     }
   },
 }

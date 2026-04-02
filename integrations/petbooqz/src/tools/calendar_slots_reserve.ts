@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface ReserveSlotResponse {
@@ -39,7 +38,6 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
-    // Build list of datetimes to try
     const datetimesToTry: string[] = []
     if (input.datetimes && input.datetimes.length > 0) {
       datetimesToTry.push(...input.datetimes)
@@ -48,15 +46,11 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
     }
 
     if (datetimesToTry.length === 0) {
-      return createToolResponse<CalendarSlotsReserveOutput>('calendar_slots_reserve', {
-        success: false,
-        error: 'Either datetime or datetimes array is required',
-      })
+      return createValidationError('Either datetime or datetimes array is required', 'datetime')
     }
 
     let lastError: string = 'No slots attempted'
 
-    // Try each datetime in order until one succeeds
     for (const datetime of datetimesToTry) {
       try {
         const response = await client.post<ReserveSlotResponse[] | ReserveSlotResponse | PetbooqzErrorResponse>(
@@ -70,33 +64,22 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
 
         if (isPetbooqzError(response)) {
           lastError = `${datetime}: ${getErrorMessage(response)}`
-          continue // Try next datetime
+          continue
         }
 
-        // API returns array with single object or single object
         const slotId = Array.isArray(response) ? response[0]?.slot_id : response.slot_id
 
         if (!slotId) {
           lastError = `${datetime}: No slot_id returned from API`
-          continue // Try next datetime
+          continue
         }
 
-        // Success!
-        return createToolResponse('calendar_slots_reserve', {
-          success: true,
-          data: { slot_id: slotId, datetime },
-          message: `Slot ${slotId} reserved for ${datetime}`,
-        })
+        return createSuccessResponse({ slot_id: slotId, datetime })
       } catch (error) {
         lastError = `${datetime}: ${error instanceof Error ? error.message : 'Failed to reserve slot'}`
-        // Continue to next datetime
       }
     }
 
-    // All datetimes failed
-    return createToolResponse<CalendarSlotsReserveOutput>('calendar_slots_reserve', {
-      success: false,
-      error: `Failed to reserve any slot. Last error: ${lastError}`,
-    })
+    return createExternalError('Petbooqz', `Failed to reserve any slot. Last error: ${lastError}`)
   },
 }

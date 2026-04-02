@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 const CalendarSlotsReleaseInputSchema = z.object({
@@ -24,7 +23,7 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
   outputSchema: CalendarSlotsReleaseOutputSchema,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
-    
+
     try {
       const slotCheck = await client.get<unknown | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/check`,
@@ -32,10 +31,7 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
       )
 
       if (isPetbooqzError(slotCheck)) {
-        return createToolResponse<CalendarSlotsReleaseOutput>('calendar_slots_release', {
-          success: false,
-          error: getErrorMessage(slotCheck),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(slotCheck))
       }
 
       const response = await client.delete<unknown | PetbooqzErrorResponse>(
@@ -44,22 +40,15 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
       )
 
       if (isPetbooqzError(response)) {
-        return createToolResponse<CalendarSlotsReleaseOutput>('calendar_slots_release', {
-          success: false,
-          error: getErrorMessage(response as PetbooqzErrorResponse),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(response as PetbooqzErrorResponse))
       }
 
-      return createToolResponse('calendar_slots_release', {
-        success: true,
-        data: {},
-        message: 'Slot released',
-      })
+      return createSuccessResponse({})
     } catch (error) {
-      return createToolResponse<CalendarSlotsReleaseOutput>('calendar_slots_release', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to release slot',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to release slot',
+      )
     }
   },
 }

@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse } from 'skedyul'
 import { createClientFromEnv, type PetbooqzApiClient } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface AvailableSlot {
@@ -56,7 +55,7 @@ async function fetchSlotsForDate(
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), PER_DATE_TIMEOUT_MS)
-    
+
     const response = await client.post<AvailableSlot[] | PetbooqzErrorResponse>(
       '/slots',
       { calendars, dates: [date] },
@@ -64,7 +63,7 @@ async function fetchSlotsForDate(
       undefined,
       controller.signal,
     )
-    
+
     clearTimeout(timeoutId)
 
     if (isPetbooqzError(response)) {
@@ -81,8 +80,8 @@ async function fetchSlotsForDate(
     return { date, slots: normalizedSlots }
   } catch (error) {
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')
-    const errorMsg = isTimeout 
-      ? `Timeout after ${PER_DATE_TIMEOUT_MS / 1000}s` 
+    const errorMsg = isTimeout
+      ? `Timeout after ${PER_DATE_TIMEOUT_MS / 1000}s`
       : (error instanceof Error ? error.message : 'Unknown error')
     console.log(`[calendar_slots_availability_list] Date ${date} failed: ${errorMsg}`)
     return { date, slots: [], error: errorMsg }
@@ -100,47 +99,35 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
   timeout: 120000,
   handler: async (input, context) => {
-    console.log('[calendar_slots_availability_list] Starting handler', { 
-      calendars: input.calendars, 
-      dates: input.dates 
+    console.log('[calendar_slots_availability_list] Starting handler', {
+      calendars: input.calendars,
+      dates: input.dates,
     })
-    
+
     const client = createClientFromEnv(context.env)
-    
-    // Fetch each date individually with its own timeout
+
     const results = await Promise.all(
-      input.dates.map(date => fetchSlotsForDate(client, input.calendars, date))
+      input.dates.map(date => fetchSlotsForDate(client, input.calendars, date)),
     )
-    
-    // Collect all successful slots
+
     const availableSlots: AvailableSlot[] = []
     const failedDates: string[] = []
-    
+
     for (const result of results) {
       if (result.error) {
         failedDates.push(result.date)
       }
       availableSlots.push(...result.slots)
     }
-    
+
     const totalSlots = availableSlots.reduce((sum, s) => sum + s.slots.length, 0)
-    const successfulDates = input.dates.length - failedDates.length
-    
-    let message = `Found ${totalSlots} available slot${totalSlots !== 1 ? 's' : ''} across ${availableSlots.length} calendar${availableSlots.length !== 1 ? 's' : ''}`
-    if (failedDates.length > 0) {
-      message += ` (${failedDates.length} date${failedDates.length !== 1 ? 's' : ''} skipped due to timeout/error: ${failedDates.join(', ')})`
-    }
-    
-    console.log('[calendar_slots_availability_list] Completed', { 
-      totalSlots, 
-      successfulDates, 
-      failedDates 
+
+    console.log('[calendar_slots_availability_list] Completed', {
+      totalSlots,
+      successfulDates: input.dates.length - failedDates.length,
+      failedDates,
     })
 
-    return createToolResponse('calendar_slots_availability_list', {
-      success: true,
-      data: { availableSlots },
-      message,
-    })
+    return createSuccessResponse({ availableSlots })
   },
 }

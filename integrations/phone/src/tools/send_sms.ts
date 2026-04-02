@@ -8,6 +8,7 @@ import {
 } from 'skedyul'
 
 import { createTwilioClient, withTwilioAuth } from '../lib/twilio_client'
+import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 
 /**
  * Send an SMS message via Twilio.
@@ -22,63 +23,38 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
   handler: async (input, context) => {
     // Validate that we have a valid recipient phone number
     if (!input.subscription.identifierValue?.trim()) {
-      return {
-        output: {
-          status: 'failed' as const,
-          remoteId: undefined,
-        },
-        billing: {
-          credits: 0,
-        },
-        meta: {
-          success: false,
-          message: 'Cannot send SMS: subscription.identifierValue (recipient phone number) is empty or missing',
-          toolName: 'send_sms',
-        },
-      }
+      return createValidationError(
+        'Cannot send SMS: subscription.identifierValue (recipient phone number) is empty or missing',
+      )
     }
 
     // Validate that we have a valid sender phone number
     if (!input.channel.identifierValue?.trim()) {
-      return {
-        output: {
-          status: 'failed' as const,
-          remoteId: undefined,
-        },
-        billing: {
-          credits: 0,
-        },
-        meta: {
-          success: false,
-          message: 'Cannot send SMS: channel.identifierValue (sender phone number) is empty or missing',
-          toolName: 'send_sms',
-        },
-      }
+      return createValidationError(
+        'Cannot send SMS: channel.identifierValue (sender phone number) is empty or missing',
+      )
     }
 
-    const client = createTwilioClient(context.env)
+    try {
+      const client = createTwilioClient(context.env)
 
-    const message = await withTwilioAuth(() =>
-      client.messages.create({
-        to: input.subscription.identifierValue,
-        from: input.channel.identifierValue,
-        body: input.message.content,
-      }),
-    )
+      const message = await withTwilioAuth(() =>
+        client.messages.create({
+          to: input.subscription.identifierValue,
+          from: input.channel.identifierValue,
+          body: input.message.content,
+        }),
+      )
 
-    return {
-      output: {
-        status: message.status === 'sent' || message.status === 'delivered' ? 'sent' : 'queued',
-        remoteId: message.sid,
-      },
-      billing: {
-        credits: 1,
-      },
-      meta: {
-        success: true,
-        message: 'SMS sent successfully',
-        toolName: 'send_sms',
-      },
+      return createSuccessResponse(
+        {
+          status: message.status === 'sent' || message.status === 'delivered' ? 'sent' : 'queued',
+          remoteId: message.sid,
+        },
+        { billing: { credits: 1 } },
+      )
+    } catch (err) {
+      return createPhoneError(err instanceof Error ? err.message : 'Failed to send SMS')
     }
   },
 }

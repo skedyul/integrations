@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface AsapOrder {
@@ -54,22 +53,15 @@ export const asapOrdersGetRegistry: ToolDefinition<
       )
 
       if (isPetbooqzError(response)) {
-        return createToolResponse<AsapOrdersGetOutput>('asap_orders_get', {
-          success: false,
-          error: getErrorMessage(response),
-        })
+        return createNotFoundError('ASAP Order', input.order_id)
       }
 
-      return createToolResponse('asap_orders_get', {
-        success: true,
-        data: { order: response },
-        message: `ASAP order ${response.order_id} retrieved`,
-      })
+      return createSuccessResponse({ order: response })
     } catch (error) {
-      return createToolResponse<AsapOrdersGetOutput>('asap_orders_get', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get ASAP order',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to get ASAP order',
+      )
     }
   },
 }

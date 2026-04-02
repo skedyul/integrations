@@ -3,6 +3,13 @@ import { z } from 'skedyul'
 import { AppAuthInvalidError, isRuntimeContext } from 'skedyul'
 import { instance, communicationChannel } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createAuthError,
+  createNotFoundError,
+  createMetaError,
+} from '../lib/response'
 
 /**
  * Input schema for the add_whatsapp_number form submit handler.
@@ -42,18 +49,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool (form_submit)
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const { phone_number_id, name } = input
@@ -61,18 +57,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
 
     // Validate phone_number_id is provided
     if (!phone_number_id) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required field: phone_number_id',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required field: phone_number_id',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createValidationError('Missing required field: phone_number_id')
     }
 
     // Get env vars
@@ -82,50 +67,19 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
     const META_ACCESS_TOKEN = env.META_ACCESS_TOKEN
 
     if (!META_ACCESS_TOKEN) {
-      return {
-        output: {
-          status: 'error',
-          message: 'META_ACCESS_TOKEN is not configured. Please complete the OAuth flow.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'META_ACCESS_TOKEN is not configured',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createAuthError('META_ACCESS_TOKEN is not configured. Please complete the OAuth flow.')
     }
 
     if (!META_APP_ID || !META_APP_SECRET) {
-      return {
-        output: {
-          status: 'error',
-          message:
-            'META_APP_ID and META_APP_SECRET must be configured. Make sure they are set in the app version\'s provision-level environment variables.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'META_APP_ID and META_APP_SECRET must be configured',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createAuthError(
+        'META_APP_ID and META_APP_SECRET must be configured. Make sure they are set in the app version\'s provision-level environment variables.',
+      )
     }
 
     if (!GRAPH_API_VERSION) {
-      return {
-        output: {
-          status: 'error',
-          message:
-            'GRAPH_API_VERSION must be configured. Make sure it is set in the app version\'s provision-level environment variables.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'GRAPH_API_VERSION must be configured',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createAuthError(
+        'GRAPH_API_VERSION must be configured. Make sure it is set in the app version\'s provision-level environment variables.',
+      )
     }
 
     // 1. Fetch the meta_connection instance
@@ -136,19 +90,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
     })
 
     if (metaConnections.data.length === 0) {
-      return {
-        output: {
-          status: 'error',
-          message:
-            'Meta connection not found. Please complete the OAuth flow first.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Meta connection not found',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createNotFoundError('Meta connection', 'Please complete the OAuth flow first.')
     }
 
     const metaConnection = metaConnections.data[0] as {
@@ -157,18 +99,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
     }
 
     if (!metaConnection.waba_id) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Meta connection is missing WABA ID. Please reconnect your Meta account.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Meta connection is missing WABA ID',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createValidationError('Meta connection is missing WABA ID. Please reconnect your Meta account.')
     }
 
     // 2. Fetch phone number details from Meta API
@@ -193,18 +124,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       )
 
       if (!phoneNumber) {
-        return {
-          output: {
-            status: 'error',
-            message: `Phone number ${phone_number_id} not found in WABA`,
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Phone number not found in WABA',
-            toolName: 'add_whatsapp_number',
-          },
-        }
+        return createNotFoundError('Phone number', phone_number_id)
       }
 
       phoneNumberDetails = {
@@ -221,18 +141,9 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
         '[AddWhatsAppNumber] Failed to fetch phone number details:',
         error,
       )
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to fetch phone number details: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to fetch phone number details',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createMetaError(
+        `Failed to fetch phone number details: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
 
     // 3. Check if this phone number is already added
@@ -244,21 +155,9 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
 
     if (existingNumbers.data.length > 0) {
       const existing = existingNumbers.data[0] as { id: string; phone?: string }
-      return {
-        output: {
-          status: 'error',
-          message: `Phone number ${phoneNumberDetails.display_phone_number} is already added`,
-        },
-        billing: { credits: 0 },
-        effect: {
-          redirect: `/whatsapp-numbers/${existing.id}/overview`,
-        },
-        meta: {
-          success: false,
-          message: 'Phone number is already added',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createValidationError(
+        `Phone number ${phoneNumberDetails.display_phone_number} is already added`,
+      )
     }
 
     // 4. Create whatsapp_phone_number instance
@@ -290,37 +189,16 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       )
 
       if (!phoneNumberInstance?.id) {
-        return {
-          output: {
-            status: 'error',
-            message:
-              'Failed to create WhatsApp phone number record - no instance ID returned',
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Failed to create WhatsApp phone number record',
-            toolName: 'add_whatsapp_number',
-          },
-        }
+        return createMetaError('Failed to create WhatsApp phone number record - no instance ID returned')
       }
     } catch (err) {
       console.error(
         '[AddWhatsAppNumber] Failed to create whatsapp_phone_number instance:',
         err,
       )
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to create WhatsApp phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to create WhatsApp phone number',
-          toolName: 'add_whatsapp_number',
-        },
-      }
+      return createMetaError(
+        `Failed to create WhatsApp phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     // 5. Create WhatsApp communication channel
@@ -343,22 +221,19 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       // The user can create the channel later in settings
     }
 
-    return {
-      output: {
+    return createSuccessResponse(
+      {
         status: 'success',
         phoneNumber: phoneNumberDetails.display_phone_number,
         phoneNumberId: phoneNumberDetails.id,
         message: `Successfully added WhatsApp number ${phoneNumberDetails.display_phone_number}`,
       },
-      billing: { credits: 1 },
-      effect: {
-        redirect: `/whatsapp-numbers/${phoneNumberInstance.id}/overview`,
+      {
+        billing: { credits: 1 },
+        effect: {
+          redirect: `/whatsapp-numbers/${phoneNumberInstance.id}/overview`,
+        },
       },
-      meta: {
-        success: true,
-        message: 'WhatsApp number added successfully',
-        toolName: 'add_whatsapp_number',
-      },
-    }
+    )
   },
 }

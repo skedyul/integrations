@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface PetbooqzPatient {
@@ -91,9 +90,8 @@ export const clientsSearchRegistry: ToolDefinition<
   outputSchema: ClientsSearchOutputSchema,
   handler: async (input, context) => {
     const apiClient = createClientFromEnv(context.env)
-    
+
     try {
-      // Strip "+" character from phone number before searching
       const phoneNumber = input.phone.replace(/\+/g, '')
       const response = await apiClient.get<ClientSearchResult | ClientSearchResult[] | PetbooqzErrorResponse>(
         '/clients/search',
@@ -105,30 +103,19 @@ export const clientsSearchRegistry: ToolDefinition<
       if (isPetbooqzError(response)) {
         const message = getErrorMessage(response)
         if (message.toLowerCase() === 'no client found') {
-          return createToolResponse('clients_search', {
-            success: true,
-            data: { clients: [] },
-            message: `Found 0 clients matching phone ${phoneNumber}`,
-          })
+          return createSuccessResponse({ clients: [] })
         }
-        return createToolResponse<ClientsSearchOutput>('clients_search', {
-          success: false,
-          error: message,
-        })
+        return createExternalError('Petbooqz', message)
       }
 
       const clients = Array.isArray(response) ? response : [response]
 
-      return createToolResponse('clients_search', {
-        success: true,
-        data: { clients },
-        message: `Found ${clients.length} client${clients.length !== 1 ? 's' : ''} matching phone ${phoneNumber}`,
-      })
+      return createSuccessResponse({ clients })
     } catch (error) {
-      return createToolResponse<ClientsSearchOutput>('clients_search', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to search clients',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to search clients',
+      )
     }
   },
 }

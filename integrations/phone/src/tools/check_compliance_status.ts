@@ -6,6 +6,11 @@ import {
   mapTwilioStatusToInternal,
   type TwilioBundleStatus,
 } from '../lib/twilio_client'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -54,18 +59,7 @@ export const checkComplianceStatusRegistry: ToolDefinition<
   handler: async (_input, context) => {
     // This is a runtime-only tool (page_action)
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'check_compliance_status',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     const { appInstallationId, workplace, env } = context
@@ -78,19 +72,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
 
     const complianceRecord = records[0]
     if (!complianceRecord) {
-      return {
-        output: {
-          status: 'pending',
-          lastUpdated: new Date().toISOString(),
-          message: STATUS_MESSAGES.pending,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'No compliance record found',
-          toolName: 'check_compliance_status',
-        },
-      }
+      return createSuccessResponse({
+        status: 'pending',
+        lastUpdated: new Date().toISOString(),
+        message: STATUS_MESSAGES.pending,
+      })
     }
 
     const bundleSid = complianceRecord.bundle_sid as string | undefined
@@ -98,19 +84,11 @@ export const checkComplianceStatusRegistry: ToolDefinition<
 
     // If no bundle has been created yet, return current status
     if (!bundleSid) {
-      return {
-        output: {
-          status: currentStatus || 'pending',
-          lastUpdated: new Date().toISOString(),
-          message: STATUS_MESSAGES[currentStatus] || STATUS_MESSAGES.pending,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'Compliance status retrieved',
-          toolName: 'check_compliance_status',
-        },
-      }
+      return createSuccessResponse({
+        status: currentStatus || 'pending',
+        lastUpdated: new Date().toISOString(),
+        message: STATUS_MESSAGES[currentStatus] || STATUS_MESSAGES.pending,
+      })
     }
 
     console.log('[Compliance] Checking Twilio bundle status:', {
@@ -151,38 +129,20 @@ export const checkComplianceStatusRegistry: ToolDefinition<
         )
       }
 
-    return {
-      output: {
-          status: newStatus,
-          twilioStatus,
+      return createSuccessResponse({
+        status: newStatus,
+        twilioStatus,
         lastUpdated: new Date().toISOString(),
-          message: STATUS_MESSAGES[newStatus] || `Status: ${newStatus}`,
-          rejectionReason: bundle.failureReason || undefined,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: true,
-          message: 'Compliance status retrieved from Twilio',
-          toolName: 'check_compliance_status',
-        },
-      }
+        message: STATUS_MESSAGES[newStatus] || `Status: ${newStatus}`,
+        rejectionReason: bundle.failureReason || undefined,
+      })
     } catch (err) {
       console.error('[Compliance] Failed to check Twilio status:', err)
 
       // Return current local status on error
-      return {
-        output: {
-          status: currentStatus || 'pending',
-          lastUpdated: new Date().toISOString(),
-          message: `Unable to fetch latest status from Twilio. Current status: ${currentStatus}`,
-      },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to fetch status from Twilio',
-          toolName: 'check_compliance_status',
-        },
-      }
+      return createPhoneError(
+        `Unable to fetch latest status from Twilio. Current status: ${currentStatus}`,
+      )
     }
   },
 }

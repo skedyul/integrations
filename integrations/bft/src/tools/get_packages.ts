@@ -1,5 +1,4 @@
-import { z, type ToolDefinition, instance } from 'skedyul'
-import { createToolResponse } from '../lib/response'
+import { z, type ToolDefinition, instance, createSuccessResponse, createExternalError } from 'skedyul'
 
 const GetPackagesInputSchema = z.object({})
 
@@ -34,7 +33,6 @@ export const getPackagesRegistry: ToolDefinition<
         limit: 100,
       })
 
-      // Filter to only packages (not intro offers)
       const packageList = packages
         .filter((pkg) => pkg.type === 'package')
         .map((pkg) => ({
@@ -45,18 +43,12 @@ export const getPackagesRegistry: ToolDefinition<
           type: (pkg.type as string) || 'package',
         }))
 
-      return createToolResponse('get_packages', {
-        success: true,
-        data: {
-          packages: packageList,
-        },
-        message: `Found ${packageList.length} package(s)`,
-      })
+      return createSuccessResponse({ packages: packageList })
     } catch (error) {
-      return createToolResponse<GetPackagesOutput>('get_packages', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to retrieve packages',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to retrieve packages',
+      )
     }
   },
 }

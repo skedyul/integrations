@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
-import { createToolResponse } from '../lib/response'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 const PatientHistorySchema = z.object({
@@ -32,7 +31,7 @@ export const patientHistoryGetRegistry: ToolDefinition<
   outputSchema: PatientHistoryGetOutputSchema,
   handler: async (input, context) => {
     const apiClient = createClientFromEnv(context.env)
-    
+
     try {
       const response = await apiClient.get<Array<Record<string, unknown>> | PetbooqzErrorResponse>(
         `/histories/${input.patient_id}`,
@@ -41,31 +40,24 @@ export const patientHistoryGetRegistry: ToolDefinition<
       )
 
       if (isPetbooqzError(response)) {
-        return createToolResponse<PatientHistoryGetOutput>('patient_history_get', {
-          success: false,
-          error: getErrorMessage(response),
-        })
+        return createExternalError('Petbooqz', getErrorMessage(response))
       }
 
       const histories = Array.isArray(response) ? response : [response]
 
-      return createToolResponse('patient_history_get', {
-        success: true,
-        data: {
-          histories: histories as Array<{
-            title: string
-            client_id: string
-            patient_id: string
-            notes: string
-          }>,
-        },
-        message: `Found ${histories.length} history entr${histories.length !== 1 ? 'ies' : 'y'}`,
+      return createSuccessResponse({
+        histories: histories as Array<{
+          title: string
+          client_id: string
+          patient_id: string
+          notes: string
+        }>,
       })
     } catch (error) {
-      return createToolResponse<PatientHistoryGetOutput>('patient_history_get', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get patient history',
-      })
+      return createExternalError(
+        'Petbooqz',
+        error instanceof Error ? error.message : 'Failed to get patient history',
+      )
     }
   },
 }

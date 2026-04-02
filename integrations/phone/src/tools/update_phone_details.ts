@@ -1,5 +1,11 @@
 import skedyul, { type z as ZodType, instance, communicationChannel, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
+import {
+  createSuccessResponse,
+  createValidationError,
+  createNotFoundError,
+  createPhoneError,
+} from '../lib/response'
 
 const { z } = skedyul
 
@@ -34,18 +40,7 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
   handler: async (input, context) => {
     // This is a runtime-only tool
     if (!isRuntimeContext(context)) {
-      return {
-        output: {
-          status: 'error',
-          message: 'This tool can only be called in a runtime context',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'This tool can only be called in a runtime context',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createValidationError('This tool can only be called in a runtime context')
     }
 
     // Get phone_id from input or context.request.params (path params)
@@ -54,34 +49,12 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
 
     // Validate phone number ID is provided
     if (!phoneNumberId) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Missing required field: phone_id',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Missing required field: phone_id',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createValidationError('Missing required field: phone_id')
     }
 
     // Validate that at least name is provided to update
     if (!name) {
-      return {
-        output: {
-          status: 'error',
-          message: 'No fields to update. Provide a name.',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'No fields to update',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createValidationError('No fields to update. Provide a name.')
     }
 
     console.log('[UpdatePhoneDetails] Updating phone number:', phoneNumberId, 'with name:', name)
@@ -94,49 +67,18 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
       console.log('[UpdatePhoneDetails] Current instance:', JSON.stringify(phoneNumberInstance, null, 2))
     } catch (err) {
       console.error('[UpdatePhoneDetails] Failed to fetch phone_number instance:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to fetch phone number',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createPhoneError(
+        `Failed to fetch phone number: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     if (!phoneNumberInstance) {
-      return {
-        output: {
-          status: 'error',
-          message: `Phone number not found: ${phoneNumberId}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Phone number not found',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createNotFoundError('Phone number', phoneNumberId)
     }
 
     const phoneValue = phoneNumberInstance.phone
     if (!phoneValue) {
-      return {
-        output: {
-          status: 'error',
-          message: 'Phone number instance is missing the phone field',
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Phone number instance is missing the phone field',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createValidationError('Phone number instance is missing the phone field')
     }
 
     // 2. Update the phone_number instance with the new name
@@ -145,18 +87,9 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
       console.log('[UpdatePhoneDetails] Successfully updated phone_number instance')
     } catch (err) {
       console.error('[UpdatePhoneDetails] Failed to update phone_number instance:', err)
-      return {
-        output: {
-          status: 'error',
-          message: `Failed to update phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        },
-        billing: { credits: 0 },
-        meta: {
-          success: false,
-          message: 'Failed to update phone number record',
-          toolName: 'update_phone_details',
-        },
-      }
+      return createPhoneError(
+        `Failed to update phone number record: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
     }
 
     // 3. Find the CommunicationChannel by identifierValue (phone number)
@@ -185,34 +118,17 @@ export const updatePhoneDetailsRegistry: ToolDefinition<
       } catch (err) {
         console.error('[UpdatePhoneDetails] Failed to update CommunicationChannel:', err)
         // Return partial success - instance was updated but channel wasn't
-        return {
-          output: {
-            status: 'partial_success',
-            message: `Phone number name updated, but failed to update channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          },
-          billing: { credits: 0 },
-          meta: {
-            success: false,
-            message: 'Phone number updated but failed to update channel',
-            toolName: 'update_phone_details',
-          },
-        }
+        return createPhoneError(
+          `Phone number name updated, but failed to update channel: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        )
       }
     } else {
       console.log('[UpdatePhoneDetails] No CommunicationChannel found for this phone number')
     }
 
-    return {
-      output: {
-        status: 'success',
-        message: `Successfully updated phone number name to "${name}"`,
-      },
-      billing: { credits: 0 },
-      meta: {
-        success: true,
-        message: 'Phone number details updated successfully',
-        toolName: 'update_phone_details',
-      },
-    }
+    return createSuccessResponse({
+      status: 'success',
+      message: `Successfully updated phone number name to "${name}"`,
+    })
   },
 }

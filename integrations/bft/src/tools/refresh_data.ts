@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { scrapeAndSync } from '../lib/sync'
-import { createToolResponse } from '../lib/response'
 
 const RefreshDataInputSchema = z.object({})
 
@@ -26,45 +25,35 @@ export const refreshDataRegistry: ToolDefinition<
   description: 'Re-scrapes the BFT website and updates Packages, Classes, and BusinessDetails models',
   inputSchema: RefreshDataInputSchema,
   outputSchema: RefreshDataOutputSchema,
-  timeout: 300000, // 5 minutes - web scraping can take time
+  timeout: 300000,
   handler: async (input, context) => {
     const { BFT_URL, HAPANA_SITE_ID } = context.env
 
     if (!BFT_URL) {
-      return createToolResponse<RefreshDataOutput>('refresh_data', {
-        success: false,
-        error: 'BFT_URL environment variable is not set',
-      })
+      return createValidationError('BFT_URL environment variable is not set')
     }
 
     if (!HAPANA_SITE_ID) {
-      return createToolResponse<RefreshDataOutput>('refresh_data', {
-        success: false,
-        error: 'HAPANA_SITE_ID is not set. Please re-install the app.',
-      })
+      return createValidationError('HAPANA_SITE_ID is not set. Please re-install the app.')
     }
 
     try {
       const result = await scrapeAndSync(BFT_URL, HAPANA_SITE_ID)
 
-      return createToolResponse('refresh_data', {
+      return createSuccessResponse({
         success: true,
-        data: {
-          success: true,
-          message: 'Data refreshed successfully',
-          packagesCreated: result.packagesCreated,
-          packagesUpdated: result.packagesUpdated,
-          classesCreated: result.classesCreated,
-          classesUpdated: result.classesUpdated,
-          businessDetailsUpdated: result.businessDetailsUpdated,
-        },
-        message: `Refreshed data: ${result.packagesCreated} packages created, ${result.packagesUpdated} packages updated, ${result.classesCreated} classes created, ${result.classesUpdated} classes updated, business details updated`,
+        message: 'Data refreshed successfully',
+        packagesCreated: result.packagesCreated,
+        packagesUpdated: result.packagesUpdated,
+        classesCreated: result.classesCreated,
+        classesUpdated: result.classesUpdated,
+        businessDetailsUpdated: result.businessDetailsUpdated,
       })
     } catch (error) {
-      return createToolResponse<RefreshDataOutput>('refresh_data', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to refresh data',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to refresh data',
+      )
     }
   },
 }

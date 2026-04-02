@@ -1,6 +1,5 @@
-import { z, type ToolDefinition } from 'skedyul'
+import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { scrapeAndSync } from '../lib/sync'
-import { createToolResponse } from '../lib/response'
 
 const SyncPackagesInputSchema = z.object({})
 
@@ -23,22 +22,16 @@ export const syncPackagesRegistry: ToolDefinition<
   description: 'Re-scrapes the BFT website and updates only the Packages model',
   inputSchema: SyncPackagesInputSchema,
   outputSchema: SyncPackagesOutputSchema,
-  timeout: 300000, // 5 minutes - web scraping can take time
+  timeout: 300000,
   handler: async (input, context) => {
     const { BFT_URL, HAPANA_SITE_ID } = context.env
 
     if (!BFT_URL) {
-      return createToolResponse<SyncPackagesOutput>('sync_packages', {
-        success: false,
-        error: 'BFT_URL environment variable is not set',
-      })
+      return createValidationError('BFT_URL environment variable is not set')
     }
 
     if (!HAPANA_SITE_ID) {
-      return createToolResponse<SyncPackagesOutput>('sync_packages', {
-        success: false,
-        error: 'HAPANA_SITE_ID is not set. Please re-install the app.',
-      })
+      return createValidationError('HAPANA_SITE_ID is not set. Please re-install the app.')
     }
 
     try {
@@ -48,21 +41,17 @@ export const syncPackagesRegistry: ToolDefinition<
         syncBusinessDetails: false,
       })
 
-      return createToolResponse('sync_packages', {
+      return createSuccessResponse({
         success: true,
-        data: {
-          success: true,
-          message: 'Packages synced successfully',
-          packagesCreated: result.packagesCreated,
-          packagesUpdated: result.packagesUpdated,
-        },
-        message: `Synced packages: ${result.packagesCreated} created, ${result.packagesUpdated} updated`,
+        message: 'Packages synced successfully',
+        packagesCreated: result.packagesCreated,
+        packagesUpdated: result.packagesUpdated,
       })
     } catch (error) {
-      return createToolResponse<SyncPackagesOutput>('sync_packages', {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to sync packages',
-      })
+      return createExternalError(
+        'BFT',
+        error instanceof Error ? error.message : 'Failed to sync packages',
+      )
     }
   },
 }

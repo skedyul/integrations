@@ -19,9 +19,9 @@ export {
 import { createExternalError, type ToolFailure } from 'skedyul'
 
 /**
- * Create a BFT API error response.
- * Wraps createExternalError with 'BFT' as the service name.
+ * Create a Meta/WhatsApp API error response.
+ * Wraps createExternalError with 'Meta' as the service name.
  */
-export function createBftError(message: string): ToolFailure {
-  return createExternalError('BFT', message)
+export function createMetaError(message: string): ToolFailure {
+  return createExternalError('Meta', message)
 }
