@@ -25,7 +25,9 @@ export const refreshDataRegistry: ToolDefinition<
   description: 'Re-scrapes the BFT website and updates Packages, Classes, and BusinessDetails models',
   inputSchema: RefreshDataInputSchema,
   outputSchema: RefreshDataOutputSchema,
-  timeout: 300000,
+  config: {
+    timeout: 300000,
+  },
   handler: async (input, context) => {
     const { BFT_URL, HAPANA_SITE_ID } = context.env
 

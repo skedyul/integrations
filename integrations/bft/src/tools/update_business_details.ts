@@ -26,7 +26,9 @@ export const updateBusinessDetailsRegistry: ToolDefinition<
   description: 'Updates business contact information in the BusinessDetails model',
   inputSchema: UpdateBusinessDetailsInputSchema,
   outputSchema: UpdateBusinessDetailsOutputSchema,
-  timeout: 300000,
+  config: {
+    timeout: 300000,
+  },
   handler: async (input, context) => {
     try {
       const { data: records } = await instance.list('business_details', {
