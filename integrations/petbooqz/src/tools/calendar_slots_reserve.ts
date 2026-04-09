@@ -42,9 +42,7 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   description: 'Reserve a calendar slot on the Petbooqz calendar. Accepts either a single datetime or an array of datetimes to try in order (handles race conditions gracefully).',
   inputSchema: CalendarSlotsReserveInputSchema,
   outputSchema: CalendarSlotsReserveOutputSchema,
-  config: {
-    timeout: 600000,
-  },
+  timeout: 600000,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
     let reservedSlotId: string | null = null

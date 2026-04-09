@@ -45,9 +45,7 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
   description: 'Confirm a calendar slot on the Petbooqz calendar',
   inputSchema: CalendarSlotsConfirmInputSchema,
   outputSchema: CalendarSlotsConfirmOutputSchema,
-  config: {
-    timeout: 600000,
-  },
+  timeout: 600000,
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 

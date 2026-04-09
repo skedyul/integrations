@@ -97,9 +97,7 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   description: 'List available calendar slots for given calendars and dates on the Petbooqz calendar',
   inputSchema: CalendarSlotsAvailabilityListInputSchema,
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
-  config: {
-    timeout: 120000,
-  },
+  timeout: 120000,
   handler: async (input, context) => {
     console.log('[calendar_slots_availability_list] Starting handler', {
       calendars: input.calendars,
