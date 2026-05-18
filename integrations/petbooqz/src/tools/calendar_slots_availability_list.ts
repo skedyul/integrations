@@ -141,6 +141,7 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
       )
       .slice(0, 5)
 
+    // Always show SpreadsheetBlock - with "No Slots Found" message if empty
     if (rows.length > 0) {
       dataBlocks.push({
         type: 'spreadsheet',
@@ -152,6 +153,16 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
         ],
         data: rows,
         totalRows: totalSlots,
+      })
+    } else {
+      dataBlocks.push({
+        type: 'spreadsheet',
+        title: 'Available Slots',
+        columns: [
+          { id: 'message', label: 'Status' },
+        ],
+        data: [{ id: 'no-slots', message: 'No Slots Found' }],
+        totalRows: 0,
       })
     }
 
