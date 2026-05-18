@@ -73,6 +73,7 @@ export class MailgunProvider implements EmailProvider {
       from: fromAddress,
       to: toArray,
       subject: params.subject,
+      attachmentCount: params.attachments?.length ?? 0,
     })
 
     // Build message data per mailgun.js docs
@@ -90,7 +91,25 @@ export class MailgunProvider implements EmailProvider {
       messageData.html = params.html
     }
 
-    this.log('[MailgunProvider] Message data:', JSON.stringify(messageData, null, 2))
+    // Add attachments if present
+    // mailgun.js expects attachments as array of { filename, data } objects
+    if (params.attachments && params.attachments.length > 0) {
+      messageData.attachment = params.attachments.map((att) => ({
+        filename: att.filename,
+        data: att.content,
+        contentType: att.contentType,
+      }))
+      this.log('[MailgunProvider] Including attachments:', params.attachments.map(a => ({
+        filename: a.filename,
+        contentType: a.contentType,
+        size: Buffer.isBuffer(a.content) ? a.content.length : a.content.length,
+      })))
+    }
+
+    this.log('[MailgunProvider] Message data:', JSON.stringify({
+      ...messageData,
+      attachment: messageData.attachment ? `[${(messageData.attachment as unknown[]).length} attachments]` : undefined,
+    }, null, 2))
 
     try {
       const response = await this.client.messages.create(this.domain, messageData as {
@@ -99,6 +118,7 @@ export class MailgunProvider implements EmailProvider {
         subject: string
         text?: string
         html?: string
+        attachment?: Array<{ filename: string; data: Buffer | string; contentType?: string }>
       })
 
       this.log('[MailgunProvider] Mailgun response:', JSON.stringify(response, null, 2))

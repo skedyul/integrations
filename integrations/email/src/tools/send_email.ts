@@ -6,8 +6,20 @@ import {
   type MessageSendInput,
   type MessageSendOutput,
 } from 'skedyul'
-import { createEmailProvider, type EmailEnv } from '../lib/email_provider'
+import { createEmailProvider, type EmailEnv, type EmailAttachment } from '../lib/email_provider'
 import { createSuccessResponse, createEmailError } from '../lib/response'
+
+/**
+ * Fetch attachment content from a URL.
+ */
+async function fetchAttachmentContent(url: string): Promise<Buffer> {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch attachment: ${response.status} ${response.statusText}`)
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
 
 /**
  * Send an email message.
@@ -52,12 +64,49 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
     const fallbackFromEmail = `${context.workplace.subdomain}@skedyul.app`
     const fromEmail = input.channel.identifierValue?.trim() || fallbackFromEmail
 
+    // Support both old (subscription) and new (recipient) field formats
+    const toEmail = input.recipient?.address ?? input.subscription?.identifierValue
+    if (!toEmail) {
+      return createEmailError('No recipient email address provided (expected recipient.address or subscription.identifierValue)')
+    }
+
+    // Fetch attachment content from URLs
+    let emailAttachments: EmailAttachment[] | undefined
+    if (input.message.attachments && input.message.attachments.length > 0) {
+      context.log('[send_email] Fetching attachments:', input.message.attachments.length)
+      
+      emailAttachments = await Promise.all(
+        input.message.attachments.map(async (att) => {
+          if (!att.url) {
+            context.log.error('[send_email] Attachment missing URL:', att.filename)
+            throw new Error(`Attachment ${att.filename} has no URL`)
+          }
+          
+          context.log('[send_email] Fetching attachment:', {
+            filename: att.filename,
+            mimeType: att.mimeType,
+            size: att.size,
+          })
+          
+          const content = await fetchAttachmentContent(att.url)
+          return {
+            filename: att.filename,
+            content,
+            contentType: att.mimeType,
+          }
+        })
+      )
+      
+      context.log('[send_email] Fetched all attachments successfully')
+    }
+
     const emailParams = {
       from: fromEmail,
-      to: input.subscription.identifierValue,
+      to: toEmail,
       subject: input.message.title ?? 'No Subject',
       text: input.message.content,
       html: input.message.contentRaw,
+      attachments: emailAttachments,
     }
 
     context.log('[send_email] Sending email with params:', {
@@ -66,6 +115,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
       subject: emailParams.subject,
       textLength: emailParams.text?.length ?? 0,
       htmlLength: emailParams.html?.length ?? 0,
+      attachmentCount: emailParams.attachments?.length ?? 0,
     })
 
     try {
@@ -112,7 +162,7 @@ export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
           subject: emailParams.subject,
         },
         channel: input.channel.identifierValue,
-        subscription: input.subscription.identifierValue,
+        recipient: input.recipient?.address ?? input.subscription?.identifierValue,
         messageId: input.message.id,
         appInstallationId: context.appInstallationId,
         workplace: context.workplace.subdomain,
