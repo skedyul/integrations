@@ -1,4 +1,4 @@
-import { z, type ToolDefinition, createSuccessResponse } from 'skedyul'
+import { z, type ToolDefinition, type SpreadsheetBlock, createSuccessResponse } from 'skedyul'
 import { createClientFromEnv, type PetbooqzApiClient } from '../lib/api_client'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
@@ -128,6 +128,33 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
       failedDates,
     })
 
-    return createSuccessResponse({ availableSlots })
+    // Build SpreadsheetBlock from available slots (preview first 5)
+    const dataBlocks: SpreadsheetBlock[] = []
+    const rows = availableSlots
+      .flatMap((slot) =>
+        slot.slots.map((datetime) => ({
+          id: `${slot.calendar}-${datetime}`,
+          calendar: slot.calendar,
+          date: slot.date,
+          time: datetime.split(' ')[1] || datetime,
+        })),
+      )
+      .slice(0, 5)
+
+    if (rows.length > 0) {
+      dataBlocks.push({
+        type: 'spreadsheet',
+        title: 'Available Slots',
+        columns: [
+          { id: 'calendar', label: 'Calendar' },
+          { id: 'date', label: 'Date' },
+          { id: 'time', label: 'Time' },
+        ],
+        data: rows,
+        totalRows: totalSlots,
+      })
+    }
+
+    return createSuccessResponse({ availableSlots }, { dataBlocks })
   },
 }
