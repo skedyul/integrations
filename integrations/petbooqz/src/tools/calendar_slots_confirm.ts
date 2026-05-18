@@ -1,4 +1,4 @@
-import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
+import { z, type ToolDefinition, type DateTimeBlock, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
@@ -79,12 +79,30 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
         return createExternalError('Petbooqz', getErrorMessage(response))
       }
 
-      return createSuccessResponse({
-        client_id: response.clientid,
-        patient_id: response.patientid,
-        datetime: input.datetime ?? null,
-        calendar_id: input.calendar_id,
-      })
+      // Build DateTimeBlock for booking confirmation
+      const dataBlocks: DateTimeBlock[] = []
+      if (input.datetime) {
+        dataBlocks.push({
+          type: 'dateTime',
+          title: 'Booking Confirmed',
+          subtitle: `${input.patient_name} - ${appointmentType}`,
+          datetime: input.datetime,
+          duration: 20,
+          location: input.calendar_id,
+          status: 'confirmed',
+          icon: 'check',
+        })
+      }
+
+      return createSuccessResponse(
+        {
+          client_id: response.clientid,
+          patient_id: response.patientid,
+          datetime: input.datetime ?? null,
+          calendar_id: input.calendar_id,
+        },
+        { dataBlocks },
+      )
     } catch (error) {
       return createExternalError(
         'Petbooqz',
