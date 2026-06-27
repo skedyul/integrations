@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, type DateTimeBlock, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface ConfirmSlotResponse {
@@ -49,65 +50,67 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
-    try {
-      const appointmentType = input.appointment_type ?? input.reason
+    return withPetbooqzCalendarBooking(input.calendar_id, async () => {
+      try {
+        const appointmentType = input.appointment_type ?? input.reason
 
-      if (!appointmentType) {
-        return createValidationError('Either appointment_type or reason is required', 'appointment_type')
+        if (!appointmentType) {
+          return createValidationError('Either appointment_type or reason is required', 'appointment_type')
+        }
+
+        const response = await client.post<ConfirmSlotResponse | PetbooqzErrorResponse>(
+          `/calendars/${input.calendar_id}/confirm`,
+          {
+            client_first: input.client_first,
+            client_last: input.client_last,
+            email_address: input.email_address,
+            phone_number: input.phone_number,
+            patient_name: input.patient_name,
+            appointment_type: appointmentType,
+            reason: input.reason,
+            appointment_note: input.appointment_note,
+            client_id: input.client_id,
+            patient_id: input.patient_id,
+          },
+          { slot_id: input.slot_id },
+        )
+
+        console.log('response', response)
+
+        if (isPetbooqzError(response)) {
+          return createExternalError('Petbooqz', getErrorMessage(response))
+        }
+
+        // Build DateTimeBlock for booking confirmation
+        const dataBlocks: DateTimeBlock[] = []
+        if (input.datetime) {
+          dataBlocks.push({
+            type: 'dateTime',
+            title: 'Booking Confirmed',
+            subtitle: `${input.patient_name} - ${appointmentType}`,
+            datetime: input.datetime,
+            duration: 20,
+            location: input.calendar_id,
+            status: 'confirmed',
+            icon: 'check',
+          })
+        }
+
+        return createSuccessResponse(
+          {
+            client_id: response.clientid,
+            patient_id: response.patientid,
+            datetime: input.datetime ?? null,
+            calendar_id: input.calendar_id,
+          },
+          { dataBlocks },
+        )
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to confirm slot',
+        )
       }
-
-      const response = await client.post<ConfirmSlotResponse | PetbooqzErrorResponse>(
-        `/calendars/${input.calendar_id}/confirm`,
-        {
-          client_first: input.client_first,
-          client_last: input.client_last,
-          email_address: input.email_address,
-          phone_number: input.phone_number,
-          patient_name: input.patient_name,
-          appointment_type: appointmentType,
-          reason: input.reason,
-          appointment_note: input.appointment_note,
-          client_id: input.client_id,
-          patient_id: input.patient_id,
-        },
-        { slot_id: input.slot_id },
-      )
-
-      console.log('response', response)
-
-      if (isPetbooqzError(response)) {
-        return createExternalError('Petbooqz', getErrorMessage(response))
-      }
-
-      // Build DateTimeBlock for booking confirmation
-      const dataBlocks: DateTimeBlock[] = []
-      if (input.datetime) {
-        dataBlocks.push({
-          type: 'dateTime',
-          title: 'Booking Confirmed',
-          subtitle: `${input.patient_name} - ${appointmentType}`,
-          datetime: input.datetime,
-          duration: 20,
-          location: input.calendar_id,
-          status: 'confirmed',
-          icon: 'check',
-        })
-      }
-
-      return createSuccessResponse(
-        {
-          client_id: response.clientid,
-          patient_id: response.patientid,
-          datetime: input.datetime ?? null,
-          calendar_id: input.calendar_id,
-        },
-        { dataBlocks },
-      )
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to confirm slot',
-      )
-    }
+    })
   },
 }

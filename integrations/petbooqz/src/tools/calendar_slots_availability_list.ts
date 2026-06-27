@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, type SpreadsheetBlock, createSuccessResponse } from 'skedyul'
 import { createClientFromEnv, type PetbooqzApiClient } from '../lib/api_client'
+import { withPetbooqzAvailability } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface AvailableSlot {
@@ -104,68 +105,70 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
       dates: input.dates,
     })
 
-    const client = createClientFromEnv(context.env)
+    return withPetbooqzAvailability(input.calendars, async () => {
+      const client = createClientFromEnv(context.env)
 
-    const results = await Promise.all(
-      input.dates.map(date => fetchSlotsForDate(client, input.calendars, date)),
-    )
-
-    const availableSlots: AvailableSlot[] = []
-    const failedDates: string[] = []
-
-    for (const result of results) {
-      if (result.error) {
-        failedDates.push(result.date)
-      }
-      availableSlots.push(...result.slots)
-    }
-
-    const totalSlots = availableSlots.reduce((sum, s) => sum + s.slots.length, 0)
-
-    console.log('[calendar_slots_availability_list] Completed', {
-      totalSlots,
-      successfulDates: input.dates.length - failedDates.length,
-      failedDates,
-    })
-
-    // Build SpreadsheetBlock from available slots (preview first 5)
-    const dataBlocks: SpreadsheetBlock[] = []
-    const rows = availableSlots
-      .flatMap((slot) =>
-        slot.slots.map((datetime) => ({
-          id: `${slot.calendar}-${datetime}`,
-          calendar: slot.calendar,
-          date: slot.date,
-          time: datetime.split(' ')[1] || datetime,
-        })),
+      const results = await Promise.all(
+        input.dates.map(date => fetchSlotsForDate(client, input.calendars, date)),
       )
-      .slice(0, 5)
 
-    // Always show SpreadsheetBlock - with "No Slots Found" message if empty
-    if (rows.length > 0) {
-      dataBlocks.push({
-        type: 'spreadsheet',
-        title: 'Available Slots',
-        columns: [
-          { id: 'calendar', label: 'Calendar' },
-          { id: 'date', label: 'Date' },
-          { id: 'time', label: 'Time' },
-        ],
-        data: rows,
-        totalRows: totalSlots,
-      })
-    } else {
-      dataBlocks.push({
-        type: 'spreadsheet',
-        title: 'Available Slots',
-        columns: [
-          { id: 'message', label: 'Status' },
-        ],
-        data: [{ id: 'no-slots', message: 'No Slots Found' }],
-        totalRows: 0,
-      })
-    }
+      const availableSlots: AvailableSlot[] = []
+      const failedDates: string[] = []
 
-    return createSuccessResponse({ availableSlots }, { dataBlocks })
+      for (const result of results) {
+        if (result.error) {
+          failedDates.push(result.date)
+        }
+        availableSlots.push(...result.slots)
+      }
+
+      const totalSlots = availableSlots.reduce((sum, s) => sum + s.slots.length, 0)
+
+      console.log('[calendar_slots_availability_list] Completed', {
+        totalSlots,
+        successfulDates: input.dates.length - failedDates.length,
+        failedDates,
+      })
+
+      // Build SpreadsheetBlock from available slots (preview first 5)
+      const dataBlocks: SpreadsheetBlock[] = []
+      const rows = availableSlots
+        .flatMap((slot) =>
+          slot.slots.map((datetime) => ({
+            id: `${slot.calendar}-${datetime}`,
+            calendar: slot.calendar,
+            date: slot.date,
+            time: datetime.split(' ')[1] || datetime,
+          })),
+        )
+        .slice(0, 5)
+
+      // Always show SpreadsheetBlock - with "No Slots Found" message if empty
+      if (rows.length > 0) {
+        dataBlocks.push({
+          type: 'spreadsheet',
+          title: 'Available Slots',
+          columns: [
+            { id: 'calendar', label: 'Calendar' },
+            { id: 'date', label: 'Date' },
+            { id: 'time', label: 'Time' },
+          ],
+          data: rows,
+          totalRows: totalSlots,
+        })
+      } else {
+        dataBlocks.push({
+          type: 'spreadsheet',
+          title: 'Available Slots',
+          columns: [
+            { id: 'message', label: 'Status' },
+          ],
+          data: [{ id: 'no-slots', message: 'No Slots Found' }],
+          totalRows: 0,
+        })
+      }
+
+      return createSuccessResponse({ availableSlots }, { dataBlocks })
+    })
   },
 }

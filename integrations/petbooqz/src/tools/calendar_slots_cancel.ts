@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 const CalendarSlotsCancelInputSchema = z.object({
@@ -27,8 +28,9 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
-    try {
-      const response = await client.delete<unknown | PetbooqzErrorResponse>(
+    return withPetbooqzCalendarBooking(input.calendar_id, async () => {
+      try {
+        const response = await client.delete<unknown | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/cancel`,
         { slot_id: input.slot_id },
       )
@@ -51,12 +53,13 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
             : undefined,
         message: successMessage,
       })
-    } catch (error) {
-      console.log('error', error)
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to cancel slot',
-      )
-    }
+      } catch (error) {
+        console.log('error', error)
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to cancel slot',
+        )
+      }
+    })
   },
 }

@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 const CalendarSlotsReleaseInputSchema = z.object({
@@ -24,8 +25,9 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
-    try {
-      const slotCheck = await client.get<unknown | PetbooqzErrorResponse>(
+    return withPetbooqzCalendarBooking(input.calendar_id, async () => {
+      try {
+        const slotCheck = await client.get<unknown | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/check`,
         { slot_id: input.slot_id },
       )
@@ -44,11 +46,12 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
       }
 
       return createSuccessResponse({})
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to release slot',
-      )
-    }
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to release slot',
+        )
+      }
+    })
   },
 }
