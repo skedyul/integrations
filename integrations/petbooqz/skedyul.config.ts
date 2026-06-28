@@ -26,24 +26,4 @@ export default defineConfig({
   tools: import('./src/registries'),
 
   provision: import('./src/provision'),
-
-  /**
-   * Rate-limit queues for Petbooqz API coordination.
-   *
-   * - petbooqz_availability: read-only slot checks (parallel-friendly)
-   * - petbooqz_calendar_booking: mutations serialized per calendar_id (prevents duplicate bookings)
-   */
-  queues: {
-    petbooqz_availability: {
-      scope: 'install',
-      maxConcurrent: 5,
-      minTime: 50,
-    },
-    petbooqz_calendar_booking: {
-      scope: 'install',
-      maxConcurrent: 1,
-      maxRetries: 2,
-      retryDelayMs: 500,
-    },
-  },
 })
