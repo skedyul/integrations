@@ -1,13 +1,11 @@
 /**
  * Phone Number Detail Page - Voice
  *
- * Voice/call forwarding configuration for this phone number.
- *
  * Path: /phone-numbers/[phone_id]/voice
  */
 
 import { definePage } from 'skedyul'
-import navigation from './navigation'
+import navigation from '../navigation'
 
 export default definePage({
   handle: 'phone-number-voice',
@@ -32,35 +30,27 @@ export default definePage({
       restructurable: false,
       header: {
         title: 'Voice Settings',
-        description: 'Configure call forwarding for this phone number.',
+        description: 'Configure call settings for this phone number.',
       },
       form: {
         id: 'voice-settings-form',
         fields: [
           {
             component: 'input',
-            id: 'forwarding_phone_number',
+            id: 'phone',
             row: 0,
             col: 0,
-            label: 'Call Forwarding Number',
-            leftIcon: 'PhoneForwarded',
-            value: '{{ phone_number.forwarding_phone_number }}',
-            placeholder: '+1 (555) 123-4567',
-            helpText: 'Incoming calls will be forwarded to this number',
+            label: 'Phone Number',
+            leftIcon: 'Phone',
+            value: '{{ phone_number.phone }}',
+            disabled: true,
+            helpText: 'Your provisioned phone number (read-only)',
           },
         ],
         layout: {
           type: 'form',
-          rows: [{ columns: [{ field: 'forwarding_phone_number', colSpan: 12 }] }],
+          rows: [{ columns: [{ field: 'phone', colSpan: 12 }] }],
         },
-        actions: [
-          {
-            handle: 'save_forwarding_number',
-            label: 'Save',
-            handler: 'update_forwarding_number',
-            variant: 'primary',
-          },
-        ],
       },
     },
   ],

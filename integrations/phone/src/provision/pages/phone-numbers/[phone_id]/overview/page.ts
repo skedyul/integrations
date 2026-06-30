@@ -7,7 +7,7 @@
  */
 
 import { definePage } from 'skedyul'
-import navigation from './navigation'
+import navigation from '../navigation'
 
 export default definePage({
   handle: 'phone-number-overview',

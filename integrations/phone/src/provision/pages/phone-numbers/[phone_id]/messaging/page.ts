@@ -1,13 +1,11 @@
 /**
  * Phone Number Detail Page - Messaging
  *
- * Messaging configuration for this phone number.
- *
  * Path: /phone-numbers/[phone_id]/messaging
  */
 
 import { definePage } from 'skedyul'
-import navigation from './navigation'
+import navigation from '../navigation'
 
 export default definePage({
   handle: 'phone-number-messaging',
@@ -36,10 +34,22 @@ export default definePage({
       },
       form: {
         id: 'messaging-settings-form',
-        fields: [],
+        fields: [
+          {
+            component: 'input',
+            id: 'phone',
+            row: 0,
+            col: 0,
+            label: 'Phone Number',
+            leftIcon: 'Phone',
+            value: '{{ phone_number.phone }}',
+            disabled: true,
+            helpText: 'Your provisioned phone number (read-only)',
+          },
+        ],
         layout: {
           type: 'form',
-          rows: [],
+          rows: [{ columns: [{ field: 'phone', colSpan: 12 }] }],
         },
       },
     },
