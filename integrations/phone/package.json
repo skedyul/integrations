@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/phone",
-  "version": "1.1.32",
+  "version": "1.1.33",
   "private": true,
   "type": "module",
   "main": "./src/registry.ts",
@@ -8,7 +8,7 @@
     "build": "skedyul build"
   },
   "dependencies": {
-    "skedyul": "1.3.1",
+    "skedyul": "1.4.1",
     "twilio": "^5.0.0"
   },
   "devDependencies": {
