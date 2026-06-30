@@ -49,6 +49,15 @@ export default defineEnv({
     description: 'Google Maps API key for geocoding addresses (enable Geocoding API)',
     placeholder: 'AIzaSy...',
   },
+  TRANSCRIPTION_ENGINE: {
+    label: 'Transcription Engine',
+    scope: 'provision',
+    required: false,
+    visibility: 'visible',
+    description:
+      'Twilio Real-Time Transcription speech-to-text provider for calls ("deepgram" or "google"). Defaults to "deepgram".',
+    placeholder: 'deepgram',
+  },
   ENABLE_TEST_COMPLIANCE_AND_NUMBER: {
     label: 'Enable Test Mode',
     scope: 'provision',
