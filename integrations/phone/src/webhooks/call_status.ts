@@ -102,5 +102,6 @@ export const callStatusRegistry: WebhookDefinition = {
   name: 'call_status',
   description: 'Receive Twilio call/dial status callbacks and finalize the CallSession',
   methods: ['POST'],
+  type: 'CALLBACK',
   handler: handleCallStatus,
 }

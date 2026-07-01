@@ -122,5 +122,6 @@ export const callTranscriptionRegistry: WebhookDefinition = {
   description:
     'Receive Twilio Real-Time Transcription events and append/summarize call transcripts',
   methods: ['POST'],
+  type: 'CALLBACK',
   handler: handleCallTranscription,
 }
