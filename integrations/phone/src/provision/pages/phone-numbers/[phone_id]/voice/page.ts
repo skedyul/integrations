@@ -82,21 +82,12 @@ export default definePage({
             hidden: inboundForwardingHidden,
             hiddenWhen: 'inbound_voice_enabled',
           },
-          {
-            component: 'input',
-            id: 'phone_id',
-            row: 2,
-            col: 0,
-            type: 'hidden',
-            value: '{{ phone_number.id }}',
-          },
         ],
         layout: {
           type: 'form',
           rows: [
             { columns: [{ field: 'inbound_voice_enabled', colSpan: 12 }] },
             { columns: [{ field: 'forwarding_phone_number', colSpan: 12 }] },
-            { columns: [{ field: 'phone_id', colSpan: 0 }] },
           ],
         },
         actions: [
@@ -129,21 +120,10 @@ export default definePage({
             checked: outboundEnabledChecked,
             handler: 'update_outbound_voice',
           },
-          {
-            component: 'input',
-            id: 'phone_id',
-            row: 1,
-            col: 0,
-            type: 'hidden',
-            value: '{{ phone_number.id }}',
-          },
         ],
         layout: {
           type: 'form',
-          rows: [
-            { columns: [{ field: 'outbound_voice_enabled', colSpan: 12 }] },
-            { columns: [{ field: 'phone_id', colSpan: 0 }] },
-          ],
+          rows: [{ columns: [{ field: 'outbound_voice_enabled', colSpan: 12 }] }],
         },
       },
     },
