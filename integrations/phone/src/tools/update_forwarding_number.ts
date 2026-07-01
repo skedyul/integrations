@@ -36,6 +36,23 @@ function parseBoolean(value: unknown): boolean {
   return false
 }
 
+async function ensureReceiveCallVoiceUrl(): Promise<string> {
+  // Always mint a fresh registration so Twilio never points at a stale/deleted whreg_ URL
+  // (common after DB resets or switching between local/deploy environments).
+  try {
+    const { count } = await webhook.deleteByName('receive_call')
+    if (count > 0) {
+      console.log('[UpdateForwardingNumber] Cleared', count, 'stale receive_call registration(s)')
+    }
+  } catch (deleteError) {
+    console.error('[UpdateForwardingNumber] Failed to clear receive_call registrations:', deleteError)
+  }
+
+  const result = await webhook.create('receive_call')
+  console.log('[UpdateForwardingNumber] Created receive_call webhook:', result.url)
+  return result.url
+}
+
 async function configureTwilioVoiceUrl(
   twilioClient: ReturnType<typeof createTwilioClient>,
   phoneE164: string,
@@ -52,25 +69,7 @@ async function configureTwilioVoiceUrl(
   const phoneNumberSid = phoneNumbers[0].sid
 
   if (forwardingValue) {
-    const { webhooks: existingWebhooks } = await webhook.list({ name: 'receive_call' })
-
-    let voiceUrl: string
-    if (existingWebhooks.length > 0) {
-      voiceUrl = existingWebhooks[0].url
-
-      if (existingWebhooks.length > 1) {
-        for (let i = 1; i < existingWebhooks.length; i++) {
-          try {
-            await webhook.delete(existingWebhooks[i].id)
-          } catch (deleteError) {
-            console.error('[UpdateForwardingNumber] Failed to delete duplicate webhook:', deleteError)
-          }
-        }
-      }
-    } else {
-      const result = await webhook.create('receive_call')
-      voiceUrl = result.url
-    }
+    const voiceUrl = await ensureReceiveCallVoiceUrl()
 
     await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
       voiceUrl,
