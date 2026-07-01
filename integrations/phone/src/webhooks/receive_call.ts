@@ -8,23 +8,15 @@ import type {
 import { URLSearchParams } from 'url'
 import twilio from 'twilio'
 import { getHeaderValue, serializeBody } from './lib/helpers'
+import {
+  buildDialTwiml,
+  ensureHttpsWebhookUrl,
+  twimlError,
+  twimlResponse,
+} from './lib/twiml'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function xmlEscape(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
-
-/**
- * Validate the Twilio signature for an inbound webhook request and return the
- * parsed form/query params, or a WebhookResponse to short-circuit on failure.
+/** for an inbound webhook request and return the
+ * parsed form/query params, or a TwiML error response on failure.
  */
 function validateAndParse(
   request: WebhookRequest,
@@ -39,27 +31,32 @@ function validateAndParse(
     getHeaderValue(request.headers, 'x-twilio-signature') ??
     getHeaderValue(request.headers, 'X-Twilio-Signature')
   if (!signature) {
-    return { error: { status: 401, body: { error: 'Missing Twilio signature' } } }
+    return { error: twimlError('Unauthorized request.') }
   }
 
   const authToken = context.env.TWILIO_AUTH_TOKEN
   if (!authToken) {
-    return { error: { status: 500, body: { error: 'TWILIO_AUTH_TOKEN is not configured' } } }
+    return { error: twimlError('This number is temporarily unavailable.') }
   }
 
   let webhookUrl = request.url
   if (!webhookUrl) {
-    return { error: { status: 400, body: { error: 'Missing webhook URL' } } }
+    return { error: twimlError('Invalid request.') }
   }
   const ngrokUrl = context.env.NGROK_DEVELOPER_URL
   if (ngrokUrl) {
     try {
       const parsed = new URL(webhookUrl)
-      parsed.hostname = ngrokUrl
+      parsed.hostname = ngrokUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '')
+      if (parsed.protocol === 'http:') {
+        parsed.protocol = 'https:'
+      }
       webhookUrl = parsed.toString()
     } catch {
       // keep original
     }
+  } else if (webhookUrl.includes('.ngrok.') && webhookUrl.startsWith('http://')) {
+    webhookUrl = ensureHttpsWebhookUrl(webhookUrl)
   }
 
   const valid = twilio.validateRequest(
@@ -69,25 +66,39 @@ function validateAndParse(
     isGet ? {} : params,
   )
   if (!valid) {
-    return { error: { status: 403, body: { error: 'Invalid Twilio signature' } } }
+    return { error: twimlError('Unauthorized request.') }
   }
 
   return { params }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Webhook Handler
-// ─────────────────────────────────────────────────────────────────────────────
+async function registerCallWebhooks(
+  callSessionId: string,
+): Promise<{ transcriptionCallbackUrl?: string; statusCallbackUrl?: string }> {
+  const [tc, st] = await Promise.all([
+    webhook.create('call_transcription', { callSessionId }),
+    webhook.create('call_status', { callSessionId }),
+  ])
+  return {
+    transcriptionCallbackUrl: tc.url,
+    statusCallbackUrl: st.url,
+  }
+}
+
+async function endCallSession(callSessionId: string, reason: string): Promise<void> {
+  try {
+    await call.end({
+      callSessionId,
+      status: 'FAILED',
+      externalStatus: reason,
+    })
+  } catch (err) {
+    console.error('[receiveCall] Failed to end call session', callSessionId, err)
+  }
+}
 
 /**
  * Handle an inbound voice call from Twilio.
- *
- * 1. Validate the Twilio signature and look up the forwarding number.
- * 2. Create a CallSession + thread CALL block via the Core API (`call.start`).
- * 3. Register per-call transcription + status callback URLs (carrying the
- *    callSessionId in their registration context).
- * 4. Return TwiML that starts Twilio Real-Time Transcription on both tracks and
- *    dials the forwarding number, so the human-to-human call is transcribed live.
  */
 async function handleReceiveCall(
   request: WebhookRequest,
@@ -103,14 +114,9 @@ async function handleReceiveCall(
   const callStatus = params.CallStatus ?? undefined
 
   if (!to) {
-    return {
-      status: 400,
-      headers: { 'Content-Type': 'application/xml' },
-      body: '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Invalid request</Say></Response>',
-    }
+    return twimlError('Invalid request.')
   }
 
-  // Look up the phone number record (cross-installation via sk_app_ token).
   const searchResult = await instance.list('phone_number', {
     filter: { phone: to },
     limit: 1,
@@ -121,27 +127,25 @@ async function handleReceiveCall(
 
   if (!phoneRecord || !phoneRecord.forwarding_phone_number) {
     console.log('[receiveCall] No forwarding number configured for', to)
-    return {
-      status: 200,
-      headers: { 'Content-Type': 'application/xml' },
-      body: '<?xml version="1.0" encoding="UTF-8"?><Response><Say>This number is not configured to receive calls.</Say></Response>',
-    }
+    return twimlError('This number is not configured to receive calls.')
   }
 
   const forwarding = phoneRecord.forwarding_phone_number
   const transcriptionEngine = context.env.TRANSCRIPTION_ENGINE || 'deepgram'
 
-  // Resolve the communication channel for this Twilio number.
   let callSessionId: string | undefined
   let transcriptionCallbackUrl: string | undefined
   let statusCallbackUrl: string | undefined
+
   try {
     const channels = await communicationChannel.list({
       filter: { identifierValue: to },
       limit: 1,
     })
     const channel = channels[0]
-    if (channel) {
+    if (!channel) {
+      console.log('[receiveCall] No communication channel for', to, '- forwarding without transcription')
+    } else {
       const started = await call.start({
         communicationChannelId: channel.id,
         fromNumber: from,
@@ -154,53 +158,48 @@ async function handleReceiveCall(
       })
       callSessionId = started.callSessionId
 
-      // Per-call callbacks carry the callSessionId in their registration context.
-      const [tc, st] = await Promise.all([
-        webhook.create('call_transcription', { callSessionId }),
-        webhook.create('call_status', { callSessionId }),
-      ])
-      transcriptionCallbackUrl = tc.url
-      statusCallbackUrl = st.url
-    } else {
-      console.log('[receiveCall] No communication channel for', to, '- forwarding without transcription')
+      try {
+        const callbacks = await registerCallWebhooks(callSessionId)
+        transcriptionCallbackUrl = callbacks.transcriptionCallbackUrl
+        statusCallbackUrl = callbacks.statusCallbackUrl
+      } catch (webhookErr) {
+        console.error('[receiveCall] Failed to register per-call webhooks, forwarding without transcription:', webhookErr)
+        transcriptionCallbackUrl = undefined
+        statusCallbackUrl = undefined
+      }
     }
   } catch (err) {
-    // Never fail the call if transcription setup fails; fall back to plain forwarding.
-    console.error('[receiveCall] Failed to set up transcription:', err)
+    console.error('[receiveCall] Failed to set up call session:', err)
+    if (callSessionId) {
+      await endCallSession(callSessionId, 'setup_error')
+    }
+    return twimlError('We are sorry, an error occurred. Please try again later.')
   }
 
-  // Build TwiML. Start real-time transcription on both tracks (when configured),
-  // then dial the forwarding number.
-  const transcriptionTwiml = transcriptionCallbackUrl
-    ? `<Start><Transcription statusCallbackUrl="${xmlEscape(transcriptionCallbackUrl)}" track="both_tracks" inboundTrackLabel="caller" outboundTrackLabel="agent" transcriptionEngine="${xmlEscape(transcriptionEngine)}" partialResults="false"/></Start>`
-    : ''
-
-  const numberTwiml = statusCallbackUrl
-    ? `<Number statusCallback="${xmlEscape(statusCallbackUrl)}" statusCallbackEvent="completed" statusCallbackMethod="POST">${xmlEscape(forwarding)}</Number>`
-    : xmlEscape(forwarding)
-
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  ${transcriptionTwiml}
-  <Dial callerId="${xmlEscape(phoneRecord.phone)}">${numberTwiml}</Dial>
-</Response>`
-
-  return {
-    status: 200,
-    headers: { 'Content-Type': 'application/xml' },
-    body: twiml,
+  try {
+    const twiml = buildDialTwiml({
+      callerId: phoneRecord.phone,
+      forwardingNumber: forwarding,
+      transcriptionCallbackUrl,
+      statusCallbackUrl,
+      transcriptionEngine,
+      transcriptionName: callSessionId ?? callSid,
+    })
+    return twimlResponse(twiml)
+  } catch (err) {
+    console.error('[receiveCall] Failed to build TwiML:', err)
+    if (callSessionId) {
+      await endCallSession(callSessionId, 'twiml_error')
+    }
+    return twimlError('We are sorry, an error occurred. Please try again later.')
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Webhook Registry Export
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const receiveCallRegistry: WebhookDefinition = {
   name: 'receive_call',
   description:
     'Forward inbound voice calls and start Twilio Real-Time Transcription on both tracks',
   methods: ['GET', 'POST'],
-  type: 'CALLBACK', // Must return TwiML to Twilio
+  type: 'CALLBACK',
   handler: handleReceiveCall,
 }

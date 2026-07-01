@@ -8,9 +8,7 @@ import type {
 import { URLSearchParams } from 'url'
 import twilio from 'twilio'
 import { getHeaderValue, serializeBody } from './lib/helpers'
-
-const EMPTY_TWIML =
-  '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+import { TWILIO_CALLBACK_OK } from './lib/twiml'
 
 function validate(
   request: WebhookRequest,
@@ -25,8 +23,7 @@ function validate(
     getHeaderValue(request.headers, 'X-Twilio-Signature')
   const authToken = context.env.TWILIO_AUTH_TOKEN
   if (!signature || !authToken) {
-    // Missing signature/token: acknowledge to avoid Twilio retries but do nothing.
-    return { error: { status: 200, headers: { 'Content-Type': 'application/xml' }, body: EMPTY_TWIML } }
+    return { error: TWILIO_CALLBACK_OK }
   }
 
   let webhookUrl = request.url ?? ''
@@ -74,7 +71,7 @@ async function handleCallTranscription(
   const callSessionId = getCallSessionId(context)
   if (!callSessionId) {
     console.error('[callTranscription] Missing callSessionId in registration context')
-    return { status: 200, headers: { 'Content-Type': 'application/xml' }, body: EMPTY_TWIML }
+    return TWILIO_CALLBACK_OK
   }
 
   const event = params.TranscriptionEvent
@@ -117,7 +114,7 @@ async function handleCallTranscription(
     console.error(`[callTranscription] Failed to handle ${event}:`, err)
   }
 
-  return { status: 200, headers: { 'Content-Type': 'application/xml' }, body: EMPTY_TWIML }
+  return TWILIO_CALLBACK_OK
 }
 
 export const callTranscriptionRegistry: WebhookDefinition = {
