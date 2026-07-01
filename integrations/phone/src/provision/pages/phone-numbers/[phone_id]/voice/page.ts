@@ -8,21 +8,21 @@ import { definePage } from 'skedyul'
 import navigation from '../navigation'
 
 const inboundEnabledChecked = [
-  "{%- if phone_number.inbound_voice_enabled == true -%}true",
+  "{%- if phone_number.inbound_voice_enabled -%}true",
   "{%- elsif phone_number.forwarding_phone_number != blank -%}true",
   "{%- else -%}false",
   "{%- endif -%}",
 ].join('')
 
 const inboundForwardingHidden = [
-  "{%- if phone_number.inbound_voice_enabled == true -%}false",
+  "{%- if phone_number.inbound_voice_enabled -%}false",
   "{%- elsif phone_number.forwarding_phone_number != blank -%}false",
   "{%- else -%}true",
   "{%- endif -%}",
 ].join('')
 
 const outboundEnabledChecked = [
-  "{%- if phone_number.outbound_voice_enabled == true -%}true",
+  "{%- if phone_number.outbound_voice_enabled -%}true",
   "{%- else -%}false",
   "{%- endif -%}",
 ].join('')

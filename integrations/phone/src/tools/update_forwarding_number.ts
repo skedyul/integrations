@@ -57,6 +57,7 @@ async function configureTwilioVoiceUrl(
   twilioClient: ReturnType<typeof createTwilioClient>,
   phoneE164: string,
   forwardingValue: string,
+  voiceUrl?: string,
 ): Promise<{ voiceUrl?: string; error?: string }> {
   const phoneNumbers = await twilioClient.incomingPhoneNumbers.list({
     phoneNumber: phoneE164,
@@ -69,14 +70,14 @@ async function configureTwilioVoiceUrl(
   const phoneNumberSid = phoneNumbers[0].sid
 
   if (forwardingValue) {
-    const voiceUrl = await ensureReceiveCallVoiceUrl()
+    const resolvedVoiceUrl = voiceUrl ?? (await ensureReceiveCallVoiceUrl())
 
     await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
-      voiceUrl,
+      voiceUrl: resolvedVoiceUrl,
       voiceMethod: 'GET',
     })
 
-    return { voiceUrl }
+    return { voiceUrl: resolvedVoiceUrl }
   }
 
   await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
@@ -134,10 +135,14 @@ export const updateForwardingNumberRegistry: ToolDefinition<
               phoneRecord.forwarding_phone_number,
           )
         : parseBoolean(input.inbound_voice_enabled)
-    const forwardingValue =
-      input.forwarding_phone_number !== undefined
-        ? input.forwarding_phone_number.trim()
-        : (phoneRecord.forwarding_phone_number ?? '').trim()
+    let forwardingValue = (phoneRecord.forwarding_phone_number ?? '').trim()
+    if (input.forwarding_phone_number !== undefined) {
+      const trimmed = input.forwarding_phone_number.trim()
+      // Ignore empty string from a hidden/unedited field — only clear when disabling
+      if (trimmed || !inboundEnabled) {
+        forwardingValue = trimmed
+      }
+    }
 
     if (inboundEnabled && !forwardingValue) {
       return createValidationError(
@@ -159,12 +164,27 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       )
     }
 
+    // Mint webhook registration before Twilio so receive_call URL exists even if
+    // Twilio API credentials are missing or the API call fails.
+    let voiceUrl: string | undefined
+    if (inboundEnabled && forwardingValue) {
+      try {
+        voiceUrl = await ensureReceiveCallVoiceUrl()
+      } catch (error) {
+        console.error('[UpdateForwardingNumber] Failed to register receive_call webhook', error)
+        return createPhoneError(
+          `Inbound voice settings saved, but failed to register call webhook: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+      }
+    }
+
     try {
       const twilioClient = createTwilioClient(context.env)
       const twilioResult = await configureTwilioVoiceUrl(
         twilioClient,
         phoneRecord.phone,
         inboundEnabled ? forwardingValue : '',
+        voiceUrl,
       )
 
       if (twilioResult.error) {
