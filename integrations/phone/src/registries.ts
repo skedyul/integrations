@@ -35,6 +35,7 @@ import { submitNewPhoneNumberRegistry } from './tools/submit_new_phone_number'
 import { removePhoneNumberRegistry } from './tools/remove_phone_number'
 import { updatePhoneDetailsRegistry } from './tools/update_phone_details'
 import { updateForwardingNumberRegistry } from './tools/update_forwarding_number'
+import { updateOutboundVoiceRegistry } from './tools/update_outbound_voice'
 import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
 
 /**
@@ -61,8 +62,11 @@ export const toolRegistry: ToolRegistry = {
   /** Update phone number details (name) in both the phone_number model and communication channel. */
   update_phone_details: updatePhoneDetailsRegistry,
 
-  /** Update the forwarding_phone_number for a phone number instance. */
+  /** Update inbound voice settings, forwarding number, and Twilio voiceUrl/webhooks. */
   update_forwarding_number: updateForwardingNumberRegistry,
+
+  /** Update the outbound voice enabled setting for a phone number. */
+  update_outbound_voice: updateOutboundVoiceRegistry,
 
   /** Sync the SMS webhook URL to Twilio for a given phone number. */
   sync_twilio_webhook: syncTwilioWebhookRegistry,

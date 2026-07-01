@@ -4,7 +4,13 @@
 
 import type { NavigationConfig } from 'skedyul'
 
-const navigation: NavigationConfig = {
+const complianceApprovedHidden = [
+  "{%- if compliance_record.status == 'approved' -%}false",
+  "{%- else -%}true",
+  "{%- endif -%}",
+].join('')
+
+const navigation = {
   sidebar: {
     sections: [
       {
@@ -19,11 +25,13 @@ const navigation: NavigationConfig = {
             label: 'Messaging',
             href: '/phone-numbers/{{ path_params.phone_id }}/messaging',
             icon: 'MessageSquare',
+            hidden: complianceApprovedHidden,
           },
           {
             label: 'Voice',
             href: '/phone-numbers/{{ path_params.phone_id }}/voice',
             icon: 'PhoneCall',
+            hidden: complianceApprovedHidden,
           },
         ],
       },
@@ -35,6 +43,6 @@ const navigation: NavigationConfig = {
       { label: '{{ phone_number.phone }}' },
     ],
   },
-}
+} as NavigationConfig
 
 export default navigation

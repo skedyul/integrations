@@ -11,7 +11,14 @@ import {
 const { z } = skedyul
 
 const UpdateForwardingNumberInputSchema = z.object({
-  forwarding_phone_number: z.string().describe('Forwarding phone number to save'),
+  inbound_voice_enabled: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .describe('Whether inbound voice is enabled'),
+  forwarding_phone_number: z
+    .string()
+    .optional()
+    .describe('Forwarding phone number to save'),
   phone_id: z.string().optional().describe('Instance ID from path params'),
 })
 
@@ -23,32 +30,95 @@ const UpdateForwardingNumberOutputSchema = z.object({
 type UpdateForwardingNumberInput = ZodType.infer<typeof UpdateForwardingNumberInputSchema>
 type UpdateForwardingNumberOutput = ZodType.infer<typeof UpdateForwardingNumberOutputSchema>
 
+function parseBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') return value.toLowerCase().trim() === 'true'
+  return false
+}
+
+async function configureTwilioVoiceUrl(
+  twilioClient: ReturnType<typeof createTwilioClient>,
+  phoneE164: string,
+  forwardingValue: string,
+): Promise<{ voiceUrl?: string; error?: string }> {
+  const phoneNumbers = await twilioClient.incomingPhoneNumbers.list({
+    phoneNumber: phoneE164,
+  })
+
+  if (phoneNumbers.length === 0) {
+    return { error: 'Phone number not found in Twilio account' }
+  }
+
+  const phoneNumberSid = phoneNumbers[0].sid
+
+  if (forwardingValue) {
+    const { webhooks: existingWebhooks } = await webhook.list({ name: 'receive_call' })
+
+    let voiceUrl: string
+    if (existingWebhooks.length > 0) {
+      voiceUrl = existingWebhooks[0].url
+
+      if (existingWebhooks.length > 1) {
+        for (let i = 1; i < existingWebhooks.length; i++) {
+          try {
+            await webhook.delete(existingWebhooks[i].id)
+          } catch (deleteError) {
+            console.error('[UpdateForwardingNumber] Failed to delete duplicate webhook:', deleteError)
+          }
+        }
+      }
+    } else {
+      const result = await webhook.create('receive_call')
+      voiceUrl = result.url
+    }
+
+    await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
+      voiceUrl,
+      voiceMethod: 'GET',
+    })
+
+    return { voiceUrl }
+  }
+
+  await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
+    voiceUrl: '',
+    voiceMethod: 'POST',
+  })
+
+  return {}
+}
+
 export const updateForwardingNumberRegistry: ToolDefinition<
   UpdateForwardingNumberInput,
   UpdateForwardingNumberOutput
 > = {
   name: 'update_forwarding_number',
-  label: 'Update Forwarding Number',
-  description: 'Updates the call forwarding number for this phone record and configures Twilio voiceUrl',
+  label: 'Update Inbound Voice',
+  description:
+    'Updates inbound voice settings, forwarding number, and Twilio voiceUrl/webhooks',
   inputSchema: UpdateForwardingNumberInputSchema,
   outputSchema: UpdateForwardingNumberOutputSchema,
   handler: async (input, context) => {
-    // This is a runtime-only tool
     if (!isRuntimeContext(context)) {
       return createValidationError('This tool can only be called in a runtime context')
     }
 
     const phoneNumberId = input.phone_id || context.request.params?.phone_id
-    const forwardingValue = input.forwarding_phone_number.trim()
-
     if (!phoneNumberId) {
       return createValidationError('Missing phone_id')
     }
 
-    // 1. Fetch the phone_number instance to get the phone value
-    let phoneRecord: { phone?: string } | null = null
+    let phoneRecord: {
+      phone?: string
+      inbound_voice_enabled?: boolean
+      forwarding_phone_number?: string | null
+    } | null = null
     try {
-      phoneRecord = await instance.get('phone_number', phoneNumberId) as unknown as { phone?: string } | null
+      phoneRecord = (await instance.get('phone_number', phoneNumberId)) as {
+        phone?: string
+        inbound_voice_enabled?: boolean
+        forwarding_phone_number?: string | null
+      } | null
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to fetch phone_number instance', error)
       return createPhoneError('Failed to fetch phone number record')
@@ -58,93 +128,67 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       return createNotFoundError('Phone number', phoneNumberId)
     }
 
-    // 2. Update the phone_number model with the forwarding number
-    try {
-      await instance.update('phone_number', phoneNumberId, {
-        forwarding_phone_number: forwardingValue || null,
-      })
-    } catch (error) {
-      console.error('[UpdateForwardingNumber] Failed to save forwarding number', error)
-      return createPhoneError(
-        `Failed to save forwarding number: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    const inboundEnabled =
+      input.inbound_voice_enabled === undefined
+        ? Boolean(
+            phoneRecord.inbound_voice_enabled ||
+              phoneRecord.forwarding_phone_number,
+          )
+        : parseBoolean(input.inbound_voice_enabled)
+    const forwardingValue =
+      input.forwarding_phone_number !== undefined
+        ? input.forwarding_phone_number.trim()
+        : (phoneRecord.forwarding_phone_number ?? '').trim()
+
+    if (inboundEnabled && !forwardingValue) {
+      return createValidationError(
+        'Provide a forwarding phone number before enabling inbound voice',
       )
     }
 
-    // 3. Configure Twilio's voiceUrl
+    const modelUpdate = {
+      inbound_voice_enabled: inboundEnabled,
+      forwarding_phone_number: inboundEnabled ? forwardingValue : null,
+    }
+
+    try {
+      await instance.update('phone_number', phoneNumberId, modelUpdate)
+    } catch (error) {
+      console.error('[UpdateForwardingNumber] Failed to save inbound voice settings', error)
+      return createPhoneError(
+        `Failed to save inbound voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+
     try {
       const twilioClient = createTwilioClient(context.env)
+      const twilioResult = await configureTwilioVoiceUrl(
+        twilioClient,
+        phoneRecord.phone,
+        inboundEnabled ? forwardingValue : '',
+      )
 
-      // Find the phone number in Twilio
-      const phoneNumbers = await twilioClient.incomingPhoneNumbers.list({
-        phoneNumber: phoneRecord.phone,
-      })
-
-      if (phoneNumbers.length === 0) {
-        console.log('[UpdateForwardingNumber] Phone number not found in Twilio:', phoneRecord.phone)
-        return createPhoneError('Forwarding number saved, but phone number not found in Twilio account')
+      if (twilioResult.error) {
+        return createPhoneError(
+          `Inbound voice settings saved, but ${twilioResult.error}`,
+        )
       }
 
-      const phoneNumberSid = phoneNumbers[0].sid
-
-      if (forwardingValue) {
-        // Check if a webhook registration already exists for receive_call
-        const { webhooks: existingWebhooks } = await webhook.list({ name: 'receive_call' })
-        
-        console.log('[UpdateForwardingNumber] Found existing receive_call registrations:', existingWebhooks.length)
-        
-        let voiceUrl: string
-        if (existingWebhooks.length > 0) {
-          // Reuse the first existing registration
-          voiceUrl = existingWebhooks[0].url
-          console.log('[UpdateForwardingNumber] Reusing existing webhook registration:', voiceUrl)
-          
-          // Clean up duplicate registrations if there are more than one
-          if (existingWebhooks.length > 1) {
-            console.log('[UpdateForwardingNumber] Cleaning up', existingWebhooks.length - 1, 'duplicate registrations')
-            for (let i = 1; i < existingWebhooks.length; i++) {
-              try {
-                await webhook.delete(existingWebhooks[i].id)
-                console.log('[UpdateForwardingNumber] Deleted duplicate registration:', existingWebhooks[i].id)
-              } catch (deleteError) {
-                console.error('[UpdateForwardingNumber] Failed to delete duplicate:', existingWebhooks[i].id, deleteError)
-              }
-            }
-          }
-        } else {
-          // Create new webhook registration
-          const result = await webhook.create('receive_call')
-          voiceUrl = result.url
-          console.log('[UpdateForwardingNumber] Created new webhook registration:', voiceUrl)
-        }
-
-        // Configure Twilio to point to our webhook
-        await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
-          voiceUrl,
-          voiceMethod: 'GET', // Use GET since Twilio sends data as query params
+      if (inboundEnabled && forwardingValue) {
+        return createSuccessResponse({
+          status: 'success',
+          message: 'Inbound voice enabled and Twilio webhooks configured',
         })
-
-        console.log('[UpdateForwardingNumber] Configured Twilio voiceUrl:', voiceUrl)
-      } else {
-        // Clear the voiceUrl when forwarding number is removed
-        await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
-          voiceUrl: '',
-          voiceMethod: 'POST',
-        })
-
-        console.log('[UpdateForwardingNumber] Cleared Twilio voiceUrl')
       }
 
       return createSuccessResponse({
         status: 'success',
-        message: forwardingValue
-          ? 'Forwarding number saved and Twilio configured'
-          : 'Forwarding number cleared and Twilio updated',
+        message: 'Inbound voice disabled and Twilio voice URL cleared',
       })
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to configure Twilio', error)
-      // Still return partial success for the database update
       return createPhoneError(
-        `Forwarding number saved, but failed to configure Twilio: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Inbound voice settings saved, but failed to configure Twilio: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
   },

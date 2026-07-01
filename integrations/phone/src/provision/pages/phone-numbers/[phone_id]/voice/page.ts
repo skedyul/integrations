@@ -7,6 +7,26 @@
 import { definePage } from 'skedyul'
 import navigation from '../navigation'
 
+const inboundEnabledChecked = [
+  "{%- if phone_number.inbound_voice_enabled == true -%}true",
+  "{%- elsif phone_number.forwarding_phone_number != blank -%}true",
+  "{%- else -%}false",
+  "{%- endif -%}",
+].join('')
+
+const inboundForwardingHidden = [
+  "{%- if phone_number.inbound_voice_enabled == true -%}false",
+  "{%- elsif phone_number.forwarding_phone_number != blank -%}false",
+  "{%- else -%}true",
+  "{%- endif -%}",
+].join('')
+
+const outboundEnabledChecked = [
+  "{%- if phone_number.outbound_voice_enabled == true -%}true",
+  "{%- else -%}false",
+  "{%- endif -%}",
+].join('')
+
 export default definePage({
   handle: 'phone-number-voice',
   label: 'Voice',
@@ -22,6 +42,10 @@ export default definePage({
         id: { eq: '{{ path_params.phone_id }}' },
       },
     },
+    compliance_record: {
+      model: 'compliance_record',
+      mode: 'first',
+    },
   },
 
   blocks: [
@@ -29,27 +53,97 @@ export default definePage({
       type: 'card',
       restructurable: false,
       header: {
-        title: 'Voice Settings',
-        description: 'Configure call settings for this phone number.',
+        title: 'Inbound Voice',
+        description: 'Receive calls on this number and forward them to another phone.',
       },
       form: {
-        id: 'voice-settings-form',
+        id: 'inbound-voice-form',
         fields: [
           {
-            component: 'input',
-            id: 'phone',
+            component: 'switch',
+            id: 'inbound_voice_enabled',
             row: 0,
             col: 0,
-            label: 'Phone Number',
-            leftIcon: 'Phone',
-            value: '{{ phone_number.phone }}',
-            disabled: true,
-            helpText: 'Your provisioned phone number (read-only)',
+            label: 'Enable inbound voice',
+            helpText: 'When enabled, incoming calls to this number can be forwarded.',
+            checked: inboundEnabledChecked,
+          },
+          {
+            component: 'input',
+            id: 'forwarding_phone_number',
+            row: 1,
+            col: 0,
+            type: 'tel',
+            label: 'Forwarding number',
+            leftIcon: 'PhoneForwarded',
+            value: '{{ phone_number.forwarding_phone_number }}',
+            placeholder: '+61412345678',
+            helpText: 'Calls to this phone number will be forwarded here.',
+            hidden: inboundForwardingHidden,
+            hiddenWhen: 'inbound_voice_enabled',
+          },
+          {
+            component: 'input',
+            id: 'phone_id',
+            row: 2,
+            col: 0,
+            type: 'hidden',
+            value: '{{ phone_number.id }}',
           },
         ],
         layout: {
           type: 'form',
-          rows: [{ columns: [{ field: 'phone', colSpan: 12 }] }],
+          rows: [
+            { columns: [{ field: 'inbound_voice_enabled', colSpan: 12 }] },
+            { columns: [{ field: 'forwarding_phone_number', colSpan: 12 }] },
+            { columns: [{ field: 'phone_id', colSpan: 0 }] },
+          ],
+        },
+        actions: [
+          {
+            handle: 'save_inbound_voice',
+            label: 'Save',
+            handler: 'update_forwarding_number',
+            variant: 'primary',
+          },
+        ],
+      },
+    },
+    {
+      type: 'card',
+      restructurable: false,
+      header: {
+        title: 'Outbound Voice',
+        description: 'Place outbound calls from this phone number.',
+      },
+      form: {
+        id: 'outbound-voice-form',
+        fields: [
+          {
+            component: 'switch',
+            id: 'outbound_voice_enabled',
+            row: 0,
+            col: 0,
+            label: 'Enable outbound voice',
+            helpText: 'Outbound calling is not available yet.',
+            checked: outboundEnabledChecked,
+            handler: 'update_outbound_voice',
+          },
+          {
+            component: 'input',
+            id: 'phone_id',
+            row: 1,
+            col: 0,
+            type: 'hidden',
+            value: '{{ phone_number.id }}',
+          },
+        ],
+        layout: {
+          type: 'form',
+          rows: [
+            { columns: [{ field: 'outbound_voice_enabled', colSpan: 12 }] },
+            { columns: [{ field: 'phone_id', colSpan: 0 }] },
+          ],
         },
       },
     },

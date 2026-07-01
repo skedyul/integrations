@@ -22,6 +22,10 @@ export default definePage({
         id: { eq: '{{ path_params.phone_id }}' },
       },
     },
+    compliance_record: {
+      model: 'compliance_record',
+      mode: 'first',
+    },
   },
 
   blocks: [

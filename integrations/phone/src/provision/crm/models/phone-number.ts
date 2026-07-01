@@ -53,5 +53,23 @@ export default defineModel({
       description: 'Phone number to forward incoming calls to',
       owner: 'shared',
     },
+    {
+      handle: 'inbound_voice_enabled',
+      label: 'Inbound Voice Enabled',
+      type: 'boolean',
+      requirement: 'optional',
+      system: false,
+      description: 'Whether inbound voice calls are enabled for this number',
+      owner: 'shared',
+    },
+    {
+      handle: 'outbound_voice_enabled',
+      label: 'Outbound Voice Enabled',
+      type: 'boolean',
+      requirement: 'optional',
+      system: false,
+      description: 'Whether outbound voice calls are enabled for this number',
+      owner: 'shared',
+    },
   ],
 })
