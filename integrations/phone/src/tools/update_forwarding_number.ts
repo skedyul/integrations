@@ -7,6 +7,7 @@ import {
   createNotFoundError,
   createCoreApiError,
   createPhoneError,
+  formatToolError,
 } from '../lib/response'
 
 const { z } = skedyul
@@ -123,7 +124,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to fetch phone_number instance', error)
       return createCoreApiError(
-        `Failed to fetch phone number record: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to fetch phone number record (${phoneNumberId}): ${formatToolError(error)}`,
       )
     }
 
@@ -171,7 +172,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to save inbound voice settings', error)
       return createCoreApiError(
-        `Failed to save inbound voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to save inbound voice settings: ${formatToolError(error)}`,
       )
     }
 
