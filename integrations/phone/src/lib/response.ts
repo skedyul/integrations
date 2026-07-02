@@ -19,6 +19,13 @@ export {
 import { createExternalError, type ToolFailure } from 'skedyul'
 
 /**
+ * Create a Core API / CRM error response for instance.* operations.
+ */
+export function createCoreApiError(message: string): ToolFailure {
+  return createExternalError('Core API', message)
+}
+
+/**
  * Create a Phone/Twilio API error response.
  * Wraps createExternalError with 'Twilio' as the service name.
  */

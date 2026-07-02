@@ -5,6 +5,7 @@ import {
   createSuccessResponse,
   createValidationError,
   createNotFoundError,
+  createCoreApiError,
   createPhoneError,
 } from '../lib/response'
 
@@ -121,14 +122,20 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       } | null
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to fetch phone_number instance', error)
-      return createPhoneError('Failed to fetch phone number record')
+      return createCoreApiError(
+        `Failed to fetch phone number record: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
 
-    if (!phoneRecord?.phone) {
+    if (!phoneRecord) {
       return createNotFoundError('Phone number', phoneNumberId)
     }
 
-    const inboundEnabled =
+    if (!phoneRecord.phone) {
+      return createValidationError('Phone number instance is missing the phone field')
+    }
+
+    let inboundEnabled =
       input.inbound_voice_enabled === undefined
         ? Boolean(
             phoneRecord.inbound_voice_enabled ||
@@ -141,6 +148,10 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       // Ignore empty string from a hidden/unedited field — only clear when disabling
       if (trimmed || !inboundEnabled) {
         forwardingValue = trimmed
+      }
+      // Saving a forwarding number implies enabling inbound voice unless explicitly disabled
+      if (trimmed && input.inbound_voice_enabled === undefined) {
+        inboundEnabled = true
       }
     }
 
@@ -159,7 +170,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       await instance.update('phone_number', phoneNumberId, modelUpdate)
     } catch (error) {
       console.error('[UpdateForwardingNumber] Failed to save inbound voice settings', error)
-      return createPhoneError(
+      return createCoreApiError(
         `Failed to save inbound voice settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
       )
     }
