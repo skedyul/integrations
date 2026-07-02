@@ -25,6 +25,7 @@ import { appointmentTypesListRegistry } from './tools/appointment_types_list'
 import { asapOrdersGetRegistry } from './tools/asap_orders_get'
 import { calendarSlotsAvailabilityListRegistry } from './tools/calendar_slots_availability_list'
 import { calendarSlotsBookRegistry } from './tools/calendar_slots_book'
+import { calendarSlotsBookNextAvailableRegistry } from './tools/calendar_slots_book_next_available'
 import { calendarSlotsCancelRegistry } from './tools/calendar_slots_cancel'
 import { calendarSlotsConfirmRegistry } from './tools/calendar_slots_confirm'
 import { calendarSlotsGetRegistry } from './tools/calendar_slots_get'
@@ -55,6 +56,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Book a calendar slot (reserves and confirms in one step) */
   calendar_slots_book: calendarSlotsBookRegistry,
+
+  /** Find earliest available slot in a date window and book atomically */
+  calendar_slots_book_next_available: calendarSlotsBookNextAvailableRegistry,
 
   /** Cancel a calendar slot */
   calendar_slots_cancel: calendarSlotsCancelRegistry,
