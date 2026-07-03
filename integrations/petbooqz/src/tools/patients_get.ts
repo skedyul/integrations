@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Patient {
@@ -43,25 +44,27 @@ export const patientsGetRegistry: ToolDefinition<
   inputSchema: PatientsGetInputSchema,
   outputSchema: PatientsGetOutputSchema,
   handler: async (input, context) => {
-    const client = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const client = createClientFromEnv(context.env)
 
-    try {
-      const response = await client.get<Patient | PetbooqzErrorResponse>(
-        `/patients/${input.patient_id}`,
-        undefined,
-        'Vetstoria/v2',
-      )
+      try {
+        const response = await client.get<Patient | PetbooqzErrorResponse>(
+          `/patients/${input.patient_id}`,
+          undefined,
+          'Vetstoria/v2',
+        )
 
-      if (isPetbooqzError(response)) {
-        return createNotFoundError('Patient', input.patient_id)
+        if (isPetbooqzError(response)) {
+          return createNotFoundError('Patient', input.patient_id)
+        }
+
+        return createSuccessResponse({ patient: response })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to get patient',
+        )
       }
-
-      return createSuccessResponse({ patient: response })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to get patient',
-      )
-    }
+    })
   },
 }

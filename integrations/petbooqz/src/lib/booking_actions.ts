@@ -126,23 +126,28 @@ export async function reserveAndConfirm(
     return { ok: false, error: reserveResult.error }
   }
 
-  const confirmResult = await attemptConfirm(
-    client,
-    calendarId,
-    reserveResult.slotId,
-    details,
-  )
+  const { slotId, datetime: reservedDatetime } = reserveResult
 
-  if ('error' in confirmResult) {
-    await releaseSlot(client, calendarId, reserveResult.slotId)
-    return { ok: false, error: confirmResult.error }
-  }
+  try {
+    const confirmResult = await attemptConfirm(client, calendarId, slotId, details)
 
-  return {
-    ok: true,
-    slotId: reserveResult.slotId,
-    datetime: reserveResult.datetime,
-    clientId: confirmResult.clientId,
-    patientId: confirmResult.patientId,
+    if ('error' in confirmResult) {
+      await releaseSlot(client, calendarId, slotId)
+      return { ok: false, error: confirmResult.error }
+    }
+
+    return {
+      ok: true,
+      slotId,
+      datetime: reservedDatetime,
+      clientId: confirmResult.clientId,
+      patientId: confirmResult.patientId,
+    }
+  } catch (error) {
+    await releaseSlot(client, calendarId, slotId)
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to confirm slot',
+    }
   }
 }

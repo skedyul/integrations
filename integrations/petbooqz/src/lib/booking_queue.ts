@@ -23,3 +23,11 @@ export async function withPetbooqzCalendarBooking<T>(
 ): Promise<T> {
   return queuedFetch({ queue: 'petbooqz_calendar_booking', key: calendarId }, fn)
 }
+
+/**
+ * Rate-limit sync/patient/client/history API calls per install.
+ * Shared pool (maxConcurrent: 2) prevents thrashing private Petbooqz servers.
+ */
+export async function withPetbooqzApi<T>(fn: () => Promise<T>): Promise<T> {
+  return queuedFetch('petbooqz_api', fn)
+}

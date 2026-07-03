@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createAuthError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 /**
@@ -28,24 +29,26 @@ export const verifyCredentialsRegistry: ToolDefinition<
   inputSchema: VerifyCredentialsInputSchema,
   outputSchema: VerifyCredentialsOutputSchema,
   handler: async (_input, context) => {
-    const client = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const client = createClientFromEnv(context.env)
 
-    try {
-      const response = await client.get<unknown | PetbooqzErrorResponse>('/calendars')
+      try {
+        const response = await client.get<unknown | PetbooqzErrorResponse>('/calendars')
 
-      if (isPetbooqzError(response)) {
-        return createAuthError(
-          `Invalid credentials: ${getErrorMessage(response as PetbooqzErrorResponse)}`,
+        if (isPetbooqzError(response)) {
+          return createAuthError(
+            `Invalid credentials: ${getErrorMessage(response as PetbooqzErrorResponse)}`,
+          )
+        }
+
+        return createSuccessResponse({})
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+
+        throw new Error(
+          `Failed to verify Petbooqz credentials: ${errorMessage}. Please check your API URL, username, password, and API key.`,
         )
       }
-
-      return createSuccessResponse({})
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-
-      throw new Error(
-        `Failed to verify Petbooqz credentials: ${errorMessage}. Please check your API URL, username, password, and API key.`,
-      )
-    }
+    })
   },
 }

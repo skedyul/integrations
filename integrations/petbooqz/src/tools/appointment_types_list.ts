@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface AppointmentType {
@@ -35,29 +36,31 @@ export const appointmentTypesListRegistry: ToolDefinition<
   inputSchema: AppointmentTypesListInputSchema,
   outputSchema: AppointmentTypesListOutputSchema,
   handler: async (_input, context) => {
-    const client = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const client = createClientFromEnv(context.env)
 
-    try {
-      const response = await client.get<
-        AppointmentType[] | { appointmentTypes: AppointmentType[] } | PetbooqzErrorResponse
-      >('/appointmenttypes')
+      try {
+        const response = await client.get<
+          AppointmentType[] | { appointmentTypes: AppointmentType[] } | PetbooqzErrorResponse
+        >('/appointmenttypes')
 
-      console.log('response', response)
+        console.log('response', response)
 
-      if (isPetbooqzError(response)) {
-        return createExternalError('Petbooqz', getErrorMessage(response))
+        if (isPetbooqzError(response)) {
+          return createExternalError('Petbooqz', getErrorMessage(response))
+        }
+
+        const appointmentTypes = Array.isArray(response)
+          ? response
+          : response.appointmentTypes ?? []
+
+        return createSuccessResponse({ appointmentTypes })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to list appointment types',
+        )
       }
-
-      const appointmentTypes = Array.isArray(response)
-        ? response
-        : response.appointmentTypes ?? []
-
-      return createSuccessResponse({ appointmentTypes })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to list appointment types',
-      )
-    }
+    })
   },
 }

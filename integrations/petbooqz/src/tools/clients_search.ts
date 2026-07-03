@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, type ProfileBlock, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 function getInitials(name: string | undefined): string {
@@ -98,71 +99,73 @@ export const clientsSearchRegistry: ToolDefinition<
   inputSchema: ClientsSearchInputSchema,
   outputSchema: ClientsSearchOutputSchema,
   handler: async (input, context) => {
-    const apiClient = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const apiClient = createClientFromEnv(context.env)
 
-    try {
-      const phoneNumber = input.phone.replace(/\+/g, '')
-      const response = await apiClient.get<ClientSearchResult | ClientSearchResult[] | PetbooqzErrorResponse>(
-        '/clients/search',
-        { phone: phoneNumber },
-      )
+      try {
+        const phoneNumber = input.phone.replace(/\+/g, '')
+        const response = await apiClient.get<ClientSearchResult | ClientSearchResult[] | PetbooqzErrorResponse>(
+          '/clients/search',
+          { phone: phoneNumber },
+        )
 
-      console.log('response', response)
+        console.log('response', response)
 
-      if (isPetbooqzError(response)) {
-        const message = getErrorMessage(response)
-        if (message.toLowerCase() === 'no client found') {
-          return createSuccessResponse({ clients: [] })
+        if (isPetbooqzError(response)) {
+          const message = getErrorMessage(response)
+          if (message.toLowerCase() === 'no client found') {
+            return createSuccessResponse({ clients: [] })
+          }
+          return createExternalError('Petbooqz', message)
         }
-        return createExternalError('Petbooqz', message)
+
+        const clients = Array.isArray(response) ? response : [response]
+
+        // Build ProfileBlock for the first client found
+        const dataBlocks: ProfileBlock[] = []
+        const firstClient = clients[0]?.client
+        if (firstClient) {
+          const fullName = [firstClient.firstname, firstClient.lastname]
+            .filter(Boolean)
+            .join(' ')
+          const pets =
+            firstClient.patients?.map((p) => p.patientname).join(', ') || 'No pets'
+
+          const fields: Array<{ label: string; value: string }> = []
+          if (firstClient.mobile || firstClient.phone) {
+            fields.push({ label: 'Phone', value: firstClient.mobile || firstClient.phone || '' })
+          }
+          if (firstClient.email) {
+            fields.push({ label: 'Email', value: firstClient.email })
+          }
+          if (firstClient.patients && firstClient.patients.length > 0) {
+            fields.push({ label: 'Pets', value: pets })
+          }
+          const address = [firstClient.address, firstClient.city, firstClient.state]
+            .filter(Boolean)
+            .join(', ')
+          if (address) {
+            fields.push({ label: 'Address', value: address })
+          }
+
+          dataBlocks.push({
+            type: 'profile',
+            title: fullName || 'Client',
+            subtitle: pets !== 'No pets' ? pets : undefined,
+            avatar: {
+              initials: getInitials(fullName),
+            },
+            fields,
+          })
+        }
+
+        return createSuccessResponse({ clients }, { dataBlocks })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to search clients',
+        )
       }
-
-      const clients = Array.isArray(response) ? response : [response]
-
-      // Build ProfileBlock for the first client found
-      const dataBlocks: ProfileBlock[] = []
-      const firstClient = clients[0]?.client
-      if (firstClient) {
-        const fullName = [firstClient.firstname, firstClient.lastname]
-          .filter(Boolean)
-          .join(' ')
-        const pets =
-          firstClient.patients?.map((p) => p.patientname).join(', ') || 'No pets'
-
-        const fields: Array<{ label: string; value: string }> = []
-        if (firstClient.mobile || firstClient.phone) {
-          fields.push({ label: 'Phone', value: firstClient.mobile || firstClient.phone || '' })
-        }
-        if (firstClient.email) {
-          fields.push({ label: 'Email', value: firstClient.email })
-        }
-        if (firstClient.patients && firstClient.patients.length > 0) {
-          fields.push({ label: 'Pets', value: pets })
-        }
-        const address = [firstClient.address, firstClient.city, firstClient.state]
-          .filter(Boolean)
-          .join(', ')
-        if (address) {
-          fields.push({ label: 'Address', value: address })
-        }
-
-        dataBlocks.push({
-          type: 'profile',
-          title: fullName || 'Client',
-          subtitle: pets !== 'No pets' ? pets : undefined,
-          avatar: {
-            initials: getInitials(fullName),
-          },
-          fields,
-        })
-      }
-
-      return createSuccessResponse({ clients }, { dataBlocks })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to search clients',
-      )
-    }
+    })
   },
 }
