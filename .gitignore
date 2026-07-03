@@ -3,3 +3,4 @@ integrations/**/dist-tests
 integrations/**/node_modules
 integrations/**/.turbo/**
 integrations/**/.skedyul
+integrations/**/.skedyul-tsup.config.mjs
