@@ -30,20 +30,26 @@ export default defineConfig({
   /**
    * Rate-limit queues for Petbooqz API coordination.
    *
-   * - petbooqz_availability: read-only slot checks (parallel-friendly)
+   * - petbooqz_api: sync/patient/client/history calls (max 2 concurrent per install)
+   * - petbooqz_availability: read-only slot checks
    * - petbooqz_calendar_booking: mutations serialized per calendar_id (prevents duplicate bookings)
    */
   queues: {
+    petbooqz_api: {
+      scope: 'install',
+      maxConcurrent: 2,
+      minTime: 50,
+      maxRetries: 0,
+    },
     petbooqz_availability: {
       scope: 'install',
-      maxConcurrent: 5,
+      maxConcurrent: 2,
       minTime: 50,
     },
     petbooqz_calendar_booking: {
       scope: 'install',
       maxConcurrent: 1,
-      maxRetries: 2,
-      retryDelayMs: 500,
+      maxRetries: 0,
     },
   },
 })

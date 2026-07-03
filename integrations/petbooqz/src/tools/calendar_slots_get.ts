@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Slot {
@@ -48,24 +49,26 @@ export const calendarSlotsGetRegistry: ToolDefinition<
   inputSchema: CalendarSlotsGetInputSchema,
   outputSchema: CalendarSlotsGetOutputSchema,
   handler: async (input, context) => {
-    const client = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const client = createClientFromEnv(context.env)
 
-    try {
-      const response = await client.get<Slot | PetbooqzErrorResponse>(
-        `/calendars/${input.calendar_id}/check`,
-        { slot_id: input.slot_id },
-      )
+      try {
+        const response = await client.get<Slot | PetbooqzErrorResponse>(
+          `/calendars/${input.calendar_id}/check`,
+          { slot_id: input.slot_id },
+        )
 
-      if (isPetbooqzError(response)) {
-        return createNotFoundError('Calendar Slot', input.slot_id)
+        if (isPetbooqzError(response)) {
+          return createNotFoundError('Calendar Slot', input.slot_id)
+        }
+
+        return createSuccessResponse({ slot: response })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to get slot',
+        )
       }
-
-      return createSuccessResponse({ slot: response })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to get slot',
-      )
-    }
+    })
   },
 }

@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Calendar {
@@ -31,23 +32,25 @@ export const calendarsListRegistry: ToolDefinition<
   inputSchema: CalendarsListInputSchema,
   outputSchema: CalendarsListOutputSchema,
   handler: async (_input, context) => {
-    const client = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const client = createClientFromEnv(context.env)
 
-    try {
-      const response = await client.get<Calendar[] | PetbooqzErrorResponse>('/calendars')
+      try {
+        const response = await client.get<Calendar[] | PetbooqzErrorResponse>('/calendars')
 
-      if (isPetbooqzError(response)) {
-        return createExternalError('Petbooqz', getErrorMessage(response))
+        if (isPetbooqzError(response)) {
+          return createExternalError('Petbooqz', getErrorMessage(response))
+        }
+
+        const calendars = Array.isArray(response) ? response : []
+
+        return createSuccessResponse({ calendars })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to list calendars',
+        )
       }
-
-      const calendars = Array.isArray(response) ? response : []
-
-      return createSuccessResponse({ calendars })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to list calendars',
-      )
-    }
+    })
   },
 }

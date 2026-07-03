@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface AsapOrder {
@@ -43,25 +44,27 @@ export const asapOrdersGetRegistry: ToolDefinition<
   inputSchema: AsapOrdersGetInputSchema,
   outputSchema: AsapOrdersGetOutputSchema,
   handler: async (input, context) => {
-    const apiClient = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const apiClient = createClientFromEnv(context.env)
 
-    try {
-      const response = await apiClient.get<AsapOrder | PetbooqzErrorResponse>(
-        `/asapOrder/${input.order_id}`,
-        undefined,
-        'Skedyul/v1',
-      )
+      try {
+        const response = await apiClient.get<AsapOrder | PetbooqzErrorResponse>(
+          `/asapOrder/${input.order_id}`,
+          undefined,
+          'Skedyul/v1',
+        )
 
-      if (isPetbooqzError(response)) {
-        return createNotFoundError('ASAP Order', input.order_id)
+        if (isPetbooqzError(response)) {
+          return createNotFoundError('ASAP Order', input.order_id)
+        }
+
+        return createSuccessResponse({ order: response })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to get ASAP order',
+        )
       }
-
-      return createSuccessResponse({ order: response })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to get ASAP order',
-      )
-    }
+    })
   },
 }

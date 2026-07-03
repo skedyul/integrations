@@ -1,5 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
 import { createClientFromEnv } from '../lib/api_client'
+import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 
 export interface Client {
@@ -51,25 +52,27 @@ export const clientsGetRegistry: ToolDefinition<
   inputSchema: ClientsGetInputSchema,
   outputSchema: ClientsGetOutputSchema,
   handler: async (input, context) => {
-    const apiClient = createClientFromEnv(context.env)
+    return withPetbooqzApi(async () => {
+      const apiClient = createClientFromEnv(context.env)
 
-    try {
-      const response = await apiClient.get<Client | PetbooqzErrorResponse>(
-        `/clients/${input.client_id}`,
-        undefined,
-        'Vetstoria/v2',
-      )
+      try {
+        const response = await apiClient.get<Client | PetbooqzErrorResponse>(
+          `/clients/${input.client_id}`,
+          undefined,
+          'Vetstoria/v2',
+        )
 
-      if (isPetbooqzError(response)) {
-        return createNotFoundError('Client', input.client_id)
+        if (isPetbooqzError(response)) {
+          return createNotFoundError('Client', input.client_id)
+        }
+
+        return createSuccessResponse({ client: response })
+      } catch (error) {
+        return createExternalError(
+          'Petbooqz',
+          error instanceof Error ? error.message : 'Failed to get client',
+        )
       }
-
-      return createSuccessResponse({ client: response })
-    } catch (error) {
-      return createExternalError(
-        'Petbooqz',
-        error instanceof Error ? error.message : 'Failed to get client',
-      )
-    }
+    })
   },
 }
