@@ -1,5 +1,7 @@
 import { defineConfig } from 'skedyul'
 import pkg from './package.json' with { type: 'json' }
+import { toolRegistry, webhookRegistry } from './src/registries'
+import provisionConfig from './src/provision'
 
 export default defineConfig({
   name: 'Email',
@@ -10,8 +12,8 @@ export default defineConfig({
     external: ['mailgun.js', 'form-data'],
   },
 
-  tools: import('./src/registries'),
-  webhooks: import('./src/registries'),
+  tools: Promise.resolve({ toolRegistry }),
+  webhooks: Promise.resolve({ webhookRegistry }),
 
-  provision: import('./src/provision'),
+  provision: Promise.resolve({ default: provisionConfig }),
 })

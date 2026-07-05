@@ -10,7 +10,7 @@
   "dependencies": {
     "form-data": "^4.0.5",
     "mailgun.js": "12.7.0",
-    "skedyul": "latest"
+    "skedyul": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
