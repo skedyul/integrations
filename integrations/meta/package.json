@@ -8,7 +8,7 @@
     "build": "skedyul build"
   },
   "dependencies": {
-    "skedyul": "workspace:*"
+    "skedyul": "latest"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

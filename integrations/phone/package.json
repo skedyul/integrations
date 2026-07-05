@@ -8,7 +8,7 @@
     "build": "skedyul build"
   },
   "dependencies": {
-    "skedyul": "workspace:*",
+    "skedyul": "1.4.4",
     "twilio": "^5.0.0"
   },
   "devDependencies": {
