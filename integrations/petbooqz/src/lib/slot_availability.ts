@@ -9,6 +9,51 @@ interface AvailableSlot {
 
 const PER_DATE_TIMEOUT_MS = 15000
 
+const DEFAULT_PRACTICE_TIMEZONE = 'Australia/Sydney'
+
+function getPracticeNow(timeZone: string): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date())
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '00'
+
+  return {
+    date: `${get('year')}-${get('month')}-${get('day')}`,
+    time: `${get('hour')}:${get('minute')}:${get('second')}`,
+  }
+}
+
+/** Drop slots Petbooqz will reject (past dates/times in practice-local clock). */
+export function filterPastBookableDatetimes(
+  datetimes: string[],
+  timeZone: string = DEFAULT_PRACTICE_TIMEZONE,
+): string[] {
+  const now = getPracticeNow(timeZone)
+
+  return datetimes.filter((datetime) => {
+    const [datePart, timePart = '00:00:00'] = datetime.trim().split(/\s+/, 2)
+    if (!datePart) {
+      return false
+    }
+    if (datePart < now.date) {
+      return false
+    }
+    if (datePart > now.date) {
+      return true
+    }
+    return timePart > now.time
+  })
+}
+
 function convertTo24Hour(timeStr: string): string {
   if (!timeStr || typeof timeStr !== 'string') return '09:00'
   const parts = timeStr.trim().split(' ')

@@ -45,4 +45,12 @@ export default defineEnv({
     visibility: 'visible',
     description: 'Optional client practice identifier for multi-practice setups',
   },
+  PETBOOQZ_TIMEZONE: {
+    label: 'Practice Timezone',
+    scope: 'install',
+    required: false,
+    visibility: 'visible',
+    description: 'IANA timezone for slot filtering (defaults to Australia/Sydney)',
+    placeholder: 'Australia/Sydney',
+  },
 })

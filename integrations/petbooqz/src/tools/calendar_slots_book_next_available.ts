@@ -3,7 +3,7 @@ import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints
 import { rethrowRateLimitError } from '../lib/response'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { reserveAndConfirm } from '../lib/booking_actions'
-import { fetchAvailableDatetimes } from '../lib/slot_availability'
+import { fetchAvailableDatetimes, filterPastBookableDatetimes } from '../lib/slot_availability'
 
 const DEFAULT_MAX_ATTEMPTS = 20
 
@@ -60,10 +60,17 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
     const maxAttempts = input.max_attempts ?? DEFAULT_MAX_ATTEMPTS
 
     return withPetbooqzCalendarBooking(input.calendar_id, context.env, async (client) => {
-      const datetimes = await fetchAvailableDatetimes(client, input.calendar_id, input.dates)
+      const practiceTimezone = context.env.PETBOOQZ_TIMEZONE || 'Australia/Sydney'
+      const rawDatetimes = await fetchAvailableDatetimes(client, input.calendar_id, input.dates)
+      const datetimes = filterPastBookableDatetimes(rawDatetimes, practiceTimezone)
 
       if (datetimes.length === 0) {
-        return createExternalError('Petbooqz', 'No available slots found in the requested date window')
+        return createExternalError(
+          'Petbooqz',
+          rawDatetimes.length > 0
+            ? 'No future bookable slots found in the requested date window (all candidates were in the past for the practice timezone)'
+            : 'No available slots found in the requested date window',
+        )
       }
 
       const details = {
