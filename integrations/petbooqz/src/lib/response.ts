@@ -16,13 +16,24 @@ export {
   type ToolFailure,
 } from 'skedyul'
 
-import { createExternalError, RateLimitExceededError, type ToolFailure } from 'skedyul'
+import { createExternalError, type ToolFailure } from 'skedyul'
+
+function isRateLimitExceededError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false
+  }
+  if (error.name === 'RateLimitExceededError') {
+    return true
+  }
+  const code = (error as { code?: unknown }).code
+  return code === 'RATE_LIMITED'
+}
 
 /**
  * Re-throw rate limit errors so tool-handler returns RATE_LIMITED (not external error).
  */
 export function rethrowRateLimitError(error: unknown): void {
-  if (error instanceof RateLimitExceededError) {
+  if (isRateLimitExceededError(error)) {
     throw error
   }
 }
