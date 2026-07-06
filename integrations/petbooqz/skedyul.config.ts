@@ -41,7 +41,9 @@ export default defineConfig({
       reservoir: 12,
       reservoirRefreshAmount: 12,
       reservoirRefreshInterval: 60_000,
-      timeout: 30_000,
+      // Fail fast on acquire so MCP callers with long timeouts get RateLimitExceededError
+      // (not a connection timeout when this matches the outer HTTP deadline).
+      timeout: 10_000,
       maxRetries: 0,
     },
     petbooqz_calendar_booking: {
