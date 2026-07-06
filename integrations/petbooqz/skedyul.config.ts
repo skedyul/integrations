@@ -16,8 +16,6 @@
 
 import { defineConfig } from 'skedyul'
 import pkg from './package.json' with { type: 'json' }
-import { toolRegistry } from './src/registries.ts'
-import provisionConfig from './src/provision/index.ts'
 
 export default defineConfig({
   name: 'Petbooqz',
@@ -25,9 +23,9 @@ export default defineConfig({
   description: 'Petbooqz veterinary practice management integration',
   computeLayer: 'serverless',
 
-  tools: Promise.resolve({ toolRegistry }),
+  tools: import('./src/registries'),
 
-  provision: Promise.resolve({ default: provisionConfig }),
+  provision: import('./src/provision'),
 
   /**
    * Rate-limit queues for Petbooqz API coordination.
