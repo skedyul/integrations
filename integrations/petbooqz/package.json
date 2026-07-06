@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/petbooqz",
-  "version": "2.1.45",
+  "version": "2.1.46",
   "private": true,
   "type": "module",
   "main": "./src/registries.ts",
@@ -8,7 +8,7 @@
     "build": "skedyul build"
   },
   "dependencies": {
-    "skedyul": "1.4.9"
+    "skedyul": "1.4.10"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
