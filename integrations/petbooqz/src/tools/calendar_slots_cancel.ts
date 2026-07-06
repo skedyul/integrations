@@ -64,5 +64,6 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
           error instanceof Error ? error.message : 'Failed to cancel slot',
         )
       }
+    })
   },
 }

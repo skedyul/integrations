@@ -92,5 +92,6 @@ export const calendarSlotsBookRegistry: ToolDefinition<
           error instanceof Error ? error.message : 'Failed to book appointment',
         )
       }
+    })
   },
 }

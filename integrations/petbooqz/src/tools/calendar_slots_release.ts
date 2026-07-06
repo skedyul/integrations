@@ -56,5 +56,6 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
           error instanceof Error ? error.message : 'Failed to release slot',
         )
       }
+    })
   },
 }

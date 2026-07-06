@@ -116,7 +116,7 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
               datetime: result.datetime,
             })
           } catch (error) {
-        rethrowRateLimitError(error)
+            rethrowRateLimitError(error)
             lastError = `${datetime}: ${error instanceof Error ? error.message : 'Failed to reserve slot'}`
           }
         }
@@ -129,5 +129,6 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
         }
         throw error
       }
+    })
   },
 }

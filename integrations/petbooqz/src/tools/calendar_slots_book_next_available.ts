@@ -111,5 +111,6 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
         'Petbooqz',
         `Failed to book any slot in the date window. Last error: ${lastError}`,
       )
+    })
   },
 }

@@ -115,5 +115,6 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
           error instanceof Error ? error.message : 'Failed to confirm slot',
         )
       }
+    })
   },
 }
