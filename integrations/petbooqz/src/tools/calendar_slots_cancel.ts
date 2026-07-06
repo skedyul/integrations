@@ -1,6 +1,5 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
 import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
-import { createClientFromEnv } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 import { rethrowRateLimitError } from '../lib/response'
@@ -29,9 +28,7 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
   outputSchema: CalendarSlotsCancelOutputSchema,
   queueTouchPoints: petbooqzBookingTouchPoints(2),
   handler: async (input, context) => {
-    const client = createClientFromEnv(context.env)
-
-    return withPetbooqzCalendarBooking(input.calendar_id, async () => {
+    return withPetbooqzCalendarBooking(input.calendar_id, context.env, async (client) => {
       try {
         const response = await client.delete<unknown | PetbooqzErrorResponse>(
         `/calendars/${input.calendar_id}/cancel`,

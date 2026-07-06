@@ -1,14 +1,22 @@
 import { queuedFetch } from 'skedyul'
+import { createDirectClientFromEnv, type PetbooqzApiClient } from './api_client'
 
 /**
  * Serialize calendar mutations (reserve, confirm, release, cancel, book)
  * per calendar ID. Prevents concurrent double-booking on the same calendar/slot.
+ *
+ * HTTP inside the mutex uses a direct client (no nested petbooqz_api queuedFetch).
+ * The api leaky bucket still applies per-call for all other tools.
  */
 export async function withPetbooqzCalendarBooking<T>(
   calendarId: string,
-  fn: () => Promise<T>,
+  env: Record<string, string | undefined>,
+  fn: (client: PetbooqzApiClient) => Promise<T>,
 ): Promise<T> {
-  return queuedFetch({ queue: 'petbooqz_calendar_booking', key: calendarId }, fn)
+  return queuedFetch({ queue: 'petbooqz_calendar_booking', key: calendarId }, () => {
+    const client = createDirectClientFromEnv(env)
+    return fn(client)
+  })
 }
 
 /** @deprecated HTTP rate limiting is enforced in PetbooqzApiClient.request() */

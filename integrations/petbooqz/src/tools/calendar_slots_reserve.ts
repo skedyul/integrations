@@ -1,6 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
 import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
-import { createClientFromEnv, type PetbooqzApiClient } from '../lib/api_client'
+import { type PetbooqzApiClient } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 import { rethrowRateLimitError } from '../lib/response'
@@ -77,8 +77,6 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   timeout: 600000,
   queueTouchPoints: petbooqzBookingTouchPoints(2),
   handler: async (input, context) => {
-    const client = createClientFromEnv(context.env)
-
     const datetimesToTry: string[] = []
     if (input.datetimes && input.datetimes.length > 0) {
       datetimesToTry.push(...input.datetimes)
@@ -90,7 +88,7 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
       return createValidationError('Either datetime or datetimes array is required', 'datetime')
     }
 
-    return withPetbooqzCalendarBooking(input.calendar_id, async () => {
+    return withPetbooqzCalendarBooking(input.calendar_id, context.env, async (client) => {
       let reservedSlotId: string | null = null
       let lastError = 'No slots attempted'
 

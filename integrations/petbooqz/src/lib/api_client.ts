@@ -7,6 +7,8 @@ export interface ApiClientConfig {
   apiKey?: string
   clientPractice?: string
   timeoutMs?: number
+  /** When true, HTTP calls skip petbooqz_api queuedFetch (used inside calendar booking mutex). */
+  skipRateLimitQueue?: boolean
 }
 
 const DEFAULT_TIMEOUT_MS = 600000 // 10 minutes
@@ -59,20 +61,64 @@ export function createClientFromEnv(env: Record<string, string | undefined>): Pe
   return new PetbooqzApiClient({ rootUrl, username, password, apiKey, clientPractice })
 }
 
+export function createDirectClientFromEnv(
+  env: Record<string, string | undefined>,
+): PetbooqzApiClient {
+  const rootUrl = env.PETBOOQZ_BASE_URL
+  const username = env.PETBOOQZ_USERNAME
+  const password = env.PETBOOQZ_PASSWORD
+  const apiKey = env.PETBOOQZ_API_KEY
+  const clientPractice = env.PETBOOQZ_CLIENT_PRACTICE
+
+  if (!rootUrl || !username || !password) {
+    throw new Error(
+      'Missing required environment variables: PETBOOQZ_BASE_URL, PETBOOQZ_USERNAME, PETBOOQZ_PASSWORD',
+    )
+  }
+
+  return new PetbooqzApiClient({
+    rootUrl,
+    username,
+    password,
+    apiKey,
+    clientPractice,
+    skipRateLimitQueue: true,
+  })
+}
+
 export class PetbooqzApiClient {
   private rootUrl: string
+  private username: string
+  private password: string
   private authHeader: string
   private apiKey?: string
   private clientPractice?: string
   private timeoutMs: number
+  private skipRateLimitQueue: boolean
 
   constructor(config: ApiClientConfig) {
     this.rootUrl = config.rootUrl.replace(/\/$/, '') // Remove trailing slash
+    this.username = config.username
+    this.password = config.password
     const credentials = `${config.username}:${config.password}`
     this.authHeader = `Basic ${Buffer.from(credentials).toString('base64')}`
     this.apiKey = config.apiKey
     this.clientPractice = config.clientPractice
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS
+    this.skipRateLimitQueue = config.skipRateLimitQueue ?? false
+  }
+
+  /** Returns a client that performs direct HTTP without petbooqz_api queuedFetch per call. */
+  withoutRateLimitQueue(): PetbooqzApiClient {
+    return new PetbooqzApiClient({
+      rootUrl: this.rootUrl,
+      username: this.username,
+      password: this.password,
+      apiKey: this.apiKey,
+      clientPractice: this.clientPractice,
+      timeoutMs: this.timeoutMs,
+      skipRateLimitQueue: true,
+    })
   }
 
   private async executeRequest<T>(
@@ -151,6 +197,10 @@ export class PetbooqzApiClient {
     apiVersionOverride?: ApiVersion,
     externalSignal?: AbortSignal,
   ): Promise<T> {
+    if (this.skipRateLimitQueue) {
+      return this.executeRequest<T>(endpoint, options, apiVersionOverride, externalSignal)
+    }
+
     return queuedFetch('petbooqz_api', () =>
       this.executeRequest<T>(endpoint, options, apiVersionOverride, externalSignal),
     )
