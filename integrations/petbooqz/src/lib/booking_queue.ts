@@ -14,6 +14,9 @@ export async function withPetbooqzCalendarBooking<T>(
   fn: (client: PetbooqzApiClient) => Promise<T>,
 ): Promise<T> {
   return queuedFetch({ queue: 'petbooqz_calendar_booking', key: calendarId }, () => {
+    console.log(
+      `[petbooqz] calendar booking mutex acquired for ${calendarId} (direct HTTP, no nested api queue)`,
+    )
     const client = createDirectClientFromEnv(env)
     return fn(client)
   })

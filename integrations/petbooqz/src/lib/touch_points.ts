@@ -10,17 +10,19 @@ export const PETBOOQZ_API_AVAILABILITY: QueueTouchPoint[] = [
   { queue: 'petbooqz_api', estimatedCalls: 10 },
 ]
 
-/** Calendar booking mutex + multi-step reserve/confirm flows */
+/**
+ * Calendar booking mutex touch point for reserve/confirm/book flows.
+ * HTTP inside the mutex uses direct fetch — no petbooqz_api queue probes/acquires.
+ */
 export function petbooqzBookingTouchPoints(
-  estimatedApiCalls: number,
+  _estimatedApiCalls?: number,
 ): QueueTouchPoint[] {
   return [
     {
       queue: 'petbooqz_calendar_booking',
       subKeyFromArg: 'calendar_id',
-      estimatedCalls: estimatedApiCalls,
+      estimatedCalls: 1,
       mutexOnly: true,
     },
-    { queue: 'petbooqz_api', estimatedCalls: estimatedApiCalls },
   ]
 }
