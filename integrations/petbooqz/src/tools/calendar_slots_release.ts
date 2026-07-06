@@ -1,7 +1,9 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 const CalendarSlotsReleaseInputSchema = z.object({
   calendar_id: z.string(),
@@ -22,6 +24,7 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
   description: 'Release a calendar slot on the Petbooqz calendar',
   inputSchema: CalendarSlotsReleaseInputSchema,
   outputSchema: CalendarSlotsReleaseOutputSchema,
+  queueTouchPoints: petbooqzBookingTouchPoints(2),
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
@@ -47,11 +50,11 @@ export const calendarSlotsReleaseRegistry: ToolDefinition<
 
       return createSuccessResponse({})
       } catch (error) {
+        rethrowRateLimitError(error)
         return createExternalError(
           'Petbooqz',
           error instanceof Error ? error.message : 'Failed to release slot',
         )
       }
-    })
   },
 }

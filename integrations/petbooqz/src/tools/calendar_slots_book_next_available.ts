@@ -1,4 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
+import { rethrowRateLimitError } from '../lib/response'
 import { createClientFromEnv } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { reserveAndConfirm } from '../lib/booking_actions'
@@ -48,6 +50,7 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
   inputSchema: CalendarSlotsBookNextAvailableInputSchema,
   outputSchema: CalendarSlotsBookNextAvailableOutputSchema,
   timeout: 600000,
+  queueTouchPoints: petbooqzBookingTouchPoints(25),
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
     const appointmentType = input.appointment_type ?? input.reason
@@ -108,6 +111,5 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
         'Petbooqz',
         `Failed to book any slot in the date window. Last error: ${lastError}`,
       )
-    })
   },
 }

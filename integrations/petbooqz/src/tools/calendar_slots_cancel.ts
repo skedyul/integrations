@@ -1,7 +1,9 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 const CalendarSlotsCancelInputSchema = z.object({
   calendar_id: z.string(),
@@ -25,6 +27,7 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
   description: 'Cancel a calendar slot on the Petbooqz calendar',
   inputSchema: CalendarSlotsCancelInputSchema,
   outputSchema: CalendarSlotsCancelOutputSchema,
+  queueTouchPoints: petbooqzBookingTouchPoints(2),
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
@@ -54,12 +57,12 @@ export const calendarSlotsCancelRegistry: ToolDefinition<
         message: successMessage,
       })
       } catch (error) {
+        rethrowRateLimitError(error)
         console.log('error', error)
         return createExternalError(
           'Petbooqz',
           error instanceof Error ? error.message : 'Failed to cancel slot',
         )
       }
-    })
   },
 }

@@ -16,7 +16,16 @@ export {
   type ToolFailure,
 } from 'skedyul'
 
-import { createExternalError, type ToolFailure } from 'skedyul'
+import { createExternalError, RateLimitExceededError, type ToolFailure } from 'skedyul'
+
+/**
+ * Re-throw rate limit errors so tool-handler returns RATE_LIMITED (not external error).
+ */
+export function rethrowRateLimitError(error: unknown): void {
+  if (error instanceof RateLimitExceededError) {
+    throw error
+  }
+}
 
 /**
  * Create a Petbooqz API error response.

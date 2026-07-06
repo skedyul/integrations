@@ -1,7 +1,8 @@
 import { z, type ToolDefinition, createSuccessResponse, createAuthError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
-import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 /**
  * Verify Credentials Tool
@@ -28,8 +29,10 @@ export const verifyCredentialsRegistry: ToolDefinition<
   description: 'Verify Petbooqz API credentials are valid during installation',
   inputSchema: VerifyCredentialsInputSchema,
   outputSchema: VerifyCredentialsOutputSchema,
+  timeout: 300000,
+  queueTouchPoints: PETBOOQZ_API_ONE,
   handler: async (_input, context) => {
-    return withPetbooqzApi(async () => {
+    
       const client = createClientFromEnv(context.env)
 
       try {
@@ -43,12 +46,12 @@ export const verifyCredentialsRegistry: ToolDefinition<
 
         return createSuccessResponse({})
       } catch (error) {
+        rethrowRateLimitError(error)
         const errorMessage = error instanceof Error ? error.message : String(error)
 
         throw new Error(
           `Failed to verify Petbooqz credentials: ${errorMessage}. Please check your API URL, username, password, and API key.`,
         )
       }
-    })
   },
 }

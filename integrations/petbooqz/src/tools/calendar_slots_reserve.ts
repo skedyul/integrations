@@ -1,7 +1,9 @@
 import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv, type PetbooqzApiClient } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 export interface ReserveSlotResponse {
   slot_id: string
@@ -73,6 +75,7 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   inputSchema: CalendarSlotsReserveInputSchema,
   outputSchema: CalendarSlotsReserveOutputSchema,
   timeout: 600000,
+  queueTouchPoints: petbooqzBookingTouchPoints(2),
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
@@ -113,17 +116,18 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
               datetime: result.datetime,
             })
           } catch (error) {
+        rethrowRateLimitError(error)
             lastError = `${datetime}: ${error instanceof Error ? error.message : 'Failed to reserve slot'}`
           }
         }
 
         return createExternalError('Petbooqz', `Failed to reserve any slot. Last error: ${lastError}`)
       } catch (error) {
+        rethrowRateLimitError(error)
         if (reservedSlotId) {
           await releaseSlot(client, input.calendar_id, reservedSlotId)
         }
         throw error
       }
-    })
   },
 }

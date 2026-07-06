@@ -1,4 +1,6 @@
 import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
+import { rethrowRateLimitError } from '../lib/response'
 import { createClientFromEnv } from '../lib/api_client'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { reserveAndConfirm } from '../lib/booking_actions'
@@ -42,6 +44,7 @@ export const calendarSlotsBookRegistry: ToolDefinition<
   inputSchema: CalendarSlotsBookInputSchema,
   outputSchema: CalendarSlotsBookOutputSchema,
   timeout: 600000,
+  queueTouchPoints: petbooqzBookingTouchPoints(3),
   handler: async (input, context) => {
     const client = createClientFromEnv(context.env)
 
@@ -83,11 +86,11 @@ export const calendarSlotsBookRegistry: ToolDefinition<
           patient_id: result.patientId,
         })
       } catch (error) {
+        rethrowRateLimitError(error)
         return createExternalError(
           'Petbooqz',
           error instanceof Error ? error.message : 'Failed to book appointment',
         )
       }
-    })
   },
 }

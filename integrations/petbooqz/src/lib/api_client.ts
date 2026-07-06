@@ -1,4 +1,4 @@
-import { AppAuthInvalidError } from 'skedyul'
+import { AppAuthInvalidError, queuedFetch } from 'skedyul'
 
 export interface ApiClientConfig {
   rootUrl: string
@@ -75,7 +75,7 @@ export class PetbooqzApiClient {
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS
   }
 
-  private async request<T>(
+  private async executeRequest<T>(
     endpoint: string,
     options: RequestInit = {},
     apiVersionOverride?: ApiVersion,
@@ -143,6 +143,17 @@ export class PetbooqzApiClient {
     }
 
     return response.json() as Promise<T>
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    apiVersionOverride?: ApiVersion,
+    externalSignal?: AbortSignal,
+  ): Promise<T> {
+    return queuedFetch('petbooqz_api', () =>
+      this.executeRequest<T>(endpoint, options, apiVersionOverride, externalSignal),
+    )
   }
 
   async get<T>(

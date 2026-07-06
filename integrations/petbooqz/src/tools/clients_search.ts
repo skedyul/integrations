@@ -1,7 +1,8 @@
 import { z, type ToolDefinition, type ProfileBlock, createSuccessResponse, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
-import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 function getInitials(name: string | undefined): string {
   if (!name) return '??'
@@ -98,9 +99,10 @@ export const clientsSearchRegistry: ToolDefinition<
   description: 'Search for clients by phone number on Petbooqz',
   inputSchema: ClientsSearchInputSchema,
   outputSchema: ClientsSearchOutputSchema,
+  timeout: 300000,
+  queueTouchPoints: PETBOOQZ_API_ONE,
   handler: async (input, context) => {
-    return withPetbooqzApi(async () => {
-      const apiClient = createClientFromEnv(context.env)
+    const apiClient = createClientFromEnv(context.env)
 
       try {
         const phoneNumber = input.phone.replace(/\+/g, '')
@@ -161,11 +163,11 @@ export const clientsSearchRegistry: ToolDefinition<
 
         return createSuccessResponse({ clients }, { dataBlocks })
       } catch (error) {
+        rethrowRateLimitError(error)
         return createExternalError(
           'Petbooqz',
           error instanceof Error ? error.message : 'Failed to search clients',
         )
       }
-    })
   },
 }

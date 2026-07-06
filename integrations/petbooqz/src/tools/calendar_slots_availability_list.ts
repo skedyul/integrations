@@ -1,7 +1,8 @@
-import { z, type ToolDefinition, type SpreadsheetBlock, createSuccessResponse } from 'skedyul'
+import { z, type ToolDefinition, type SpreadsheetBlock, createSuccessResponse, RateLimitExceededError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv, type PetbooqzApiClient } from '../lib/api_client'
-import { withPetbooqzAvailability } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 export interface AvailableSlot {
   calendar: string
@@ -80,6 +81,9 @@ async function fetchSlotsForDate(
     console.log(`[calendar_slots_availability_list] Date ${date} returned ${rawSlots.length} calendar(s) with slots`)
     return { date, slots: normalizedSlots }
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      throw error
+    }
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')
     const errorMsg = isTimeout
       ? `Timeout after ${PER_DATE_TIMEOUT_MS / 1000}s`
@@ -99,13 +103,14 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
   inputSchema: CalendarSlotsAvailabilityListInputSchema,
   outputSchema: CalendarSlotsAvailabilityListOutputSchema,
   timeout: 120000,
+  queueTouchPoints: PETBOOQZ_API_AVAILABILITY,
   handler: async (input, context) => {
     console.log('[calendar_slots_availability_list] Starting handler', {
       calendars: input.calendars,
       dates: input.dates,
     })
 
-    return withPetbooqzAvailability(input.calendars, async () => {
+    
       const client = createClientFromEnv(context.env)
 
       const results = await Promise.all(
@@ -169,6 +174,5 @@ export const calendarSlotsAvailabilityListRegistry: ToolDefinition<
       }
 
       return createSuccessResponse({ availableSlots }, { dataBlocks })
-    })
   },
 }
