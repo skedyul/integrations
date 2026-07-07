@@ -1,7 +1,8 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
-import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 const PatientHistorySchema = z.object({
   title: z.string(),
@@ -30,9 +31,10 @@ export const patientHistoryGetRegistry: ToolDefinition<
   description: 'Get patient history on Petbooqz',
   inputSchema: PatientHistoryGetInputSchema,
   outputSchema: PatientHistoryGetOutputSchema,
+  timeout: 300000,
+  queueTouchPoints: PETBOOQZ_API_ONE,
   handler: async (input, context) => {
-    return withPetbooqzApi(async () => {
-      const apiClient = createClientFromEnv(context.env)
+    const apiClient = createClientFromEnv(context.env)
 
       try {
         const response = await apiClient.get<Array<Record<string, unknown>> | PetbooqzErrorResponse>(
@@ -56,11 +58,11 @@ export const patientHistoryGetRegistry: ToolDefinition<
           }>,
         })
       } catch (error) {
+        rethrowRateLimitError(error)
         return createExternalError(
           'Petbooqz',
           error instanceof Error ? error.message : 'Failed to get patient history',
         )
       }
-    })
   },
 }

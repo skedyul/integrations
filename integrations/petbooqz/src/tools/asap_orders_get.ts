@@ -1,7 +1,8 @@
 import { z, type ToolDefinition, createSuccessResponse, createNotFoundError, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
-import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 export interface AsapOrder {
   order_id: string
@@ -43,9 +44,10 @@ export const asapOrdersGetRegistry: ToolDefinition<
   description: 'Get ASAP order information by ID from Petbooqz',
   inputSchema: AsapOrdersGetInputSchema,
   outputSchema: AsapOrdersGetOutputSchema,
+  timeout: 300000,
+  queueTouchPoints: PETBOOQZ_API_ONE,
   handler: async (input, context) => {
-    return withPetbooqzApi(async () => {
-      const apiClient = createClientFromEnv(context.env)
+    const apiClient = createClientFromEnv(context.env)
 
       try {
         const response = await apiClient.get<AsapOrder | PetbooqzErrorResponse>(
@@ -60,11 +62,11 @@ export const asapOrdersGetRegistry: ToolDefinition<
 
         return createSuccessResponse({ order: response })
       } catch (error) {
+        rethrowRateLimitError(error)
         return createExternalError(
           'Petbooqz',
           error instanceof Error ? error.message : 'Failed to get ASAP order',
         )
       }
-    })
   },
 }

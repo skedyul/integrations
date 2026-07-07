@@ -1,33 +1,36 @@
 import { queuedFetch } from 'skedyul'
+import { createDirectClientFromEnv, type PetbooqzApiClient } from './api_client'
 
 /**
- * Serialize read-only availability checks per calendar set.
- * Multiple agents can check availability concurrently (up to queue maxConcurrent),
- * but Petbooqz API calls are rate-limited per install.
- */
-export async function withPetbooqzAvailability<T>(
-  calendarIds: string[],
-  fn: () => Promise<T>,
-): Promise<T> {
-  const key = [...calendarIds].sort().join(',')
-  return queuedFetch({ queue: 'petbooqz_availability', key }, fn)
-}
-
-/**
- * Serialize all calendar mutations (reserve, confirm, release, cancel, book)
+ * Serialize calendar mutations (reserve, confirm, release, cancel, book)
  * per calendar ID. Prevents concurrent double-booking on the same calendar/slot.
+ *
+ * HTTP inside the mutex uses a direct client (no nested petbooqz_api queuedFetch).
+ * The api leaky bucket still applies per-call for all other tools.
  */
 export async function withPetbooqzCalendarBooking<T>(
   calendarId: string,
-  fn: () => Promise<T>,
+  env: Record<string, string | undefined>,
+  fn: (client: PetbooqzApiClient) => Promise<T>,
 ): Promise<T> {
-  return queuedFetch({ queue: 'petbooqz_calendar_booking', key: calendarId }, fn)
+  return queuedFetch({ queue: 'petbooqz_calendar_booking', key: calendarId }, () => {
+    console.log(
+      `[petbooqz] calendar booking mutex acquired for ${calendarId} (direct HTTP, no nested api queue)`,
+    )
+    const client = createDirectClientFromEnv(env)
+    return fn(client)
+  })
 }
 
-/**
- * Rate-limit sync/patient/client/history API calls per install.
- * Shared pool (maxConcurrent: 2) prevents thrashing private Petbooqz servers.
- */
+/** @deprecated HTTP rate limiting is enforced in PetbooqzApiClient.request() */
 export async function withPetbooqzApi<T>(fn: () => Promise<T>): Promise<T> {
-  return queuedFetch('petbooqz_api', fn)
+  return fn()
+}
+
+/** @deprecated HTTP rate limiting is enforced per request in PetbooqzApiClient */
+export async function withPetbooqzAvailability<T>(
+  _calendarIds: string[],
+  fn: () => Promise<T>,
+): Promise<T> {
+  return fn()
 }

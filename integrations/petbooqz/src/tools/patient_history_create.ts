@@ -1,7 +1,8 @@
 import { z, type ToolDefinition, createSuccessResponse, createExternalError } from 'skedyul'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
 import { createClientFromEnv } from '../lib/api_client'
-import { withPetbooqzApi } from '../lib/booking_queue'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
+import { rethrowRateLimitError } from '../lib/response'
 
 const PatientHistorySchema = z.object({
   title: z.string(),
@@ -67,9 +68,10 @@ export const patientHistoryCreateRegistry: ToolDefinition<
   description: 'Create patient history entry on Petbooqz',
   inputSchema: PatientHistoryCreateInputSchema,
   outputSchema: PatientHistoryCreateOutputSchema,
+  timeout: 300000,
+  queueTouchPoints: PETBOOQZ_API_ONE,
   handler: async (input, context) => {
-    return withPetbooqzApi(async () => {
-      const apiClient = createClientFromEnv(context.env)
+    const apiClient = createClientFromEnv(context.env)
       const effectiveTitle = buildPatientHistoryTitle(input.title, input.source_report_id)
 
       console.log('[patient_history_create] Starting with input:', JSON.stringify({
@@ -140,6 +142,7 @@ export const patientHistoryCreateRegistry: ToolDefinition<
 
         return result
       } catch (error) {
+        rethrowRateLimitError(error)
         console.error('[patient_history_create] Error:', error instanceof Error ? error.message : String(error))
         return createExternalError(
           'Petbooqz',
@@ -147,6 +150,5 @@ export const patientHistoryCreateRegistry: ToolDefinition<
           { retry: { allowed: false } },
         )
       }
-    })
   },
 }

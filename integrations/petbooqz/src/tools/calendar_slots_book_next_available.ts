@@ -1,8 +1,9 @@
 import { z, type ToolDefinition, createSuccessResponse, createValidationError, createExternalError } from 'skedyul'
-import { createClientFromEnv } from '../lib/api_client'
+import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints } from '../lib/touch_points'
+import { rethrowRateLimitError } from '../lib/response'
 import { withPetbooqzCalendarBooking } from '../lib/booking_queue'
 import { reserveAndConfirm } from '../lib/booking_actions'
-import { fetchAvailableDatetimes } from '../lib/slot_availability'
+import { fetchAvailableDatetimes, filterPastBookableDatetimes } from '../lib/slot_availability'
 
 const DEFAULT_MAX_ATTEMPTS = 20
 
@@ -48,8 +49,8 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
   inputSchema: CalendarSlotsBookNextAvailableInputSchema,
   outputSchema: CalendarSlotsBookNextAvailableOutputSchema,
   timeout: 600000,
+  queueTouchPoints: petbooqzBookingTouchPoints(25),
   handler: async (input, context) => {
-    const client = createClientFromEnv(context.env)
     const appointmentType = input.appointment_type ?? input.reason
 
     if (!appointmentType) {
@@ -58,11 +59,18 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
 
     const maxAttempts = input.max_attempts ?? DEFAULT_MAX_ATTEMPTS
 
-    return withPetbooqzCalendarBooking(input.calendar_id, async () => {
-      const datetimes = await fetchAvailableDatetimes(client, input.calendar_id, input.dates)
+    return withPetbooqzCalendarBooking(input.calendar_id, context.env, async (client) => {
+      const practiceTimezone = context.env.PETBOOQZ_TIMEZONE || 'Australia/Sydney'
+      const rawDatetimes = await fetchAvailableDatetimes(client, input.calendar_id, input.dates)
+      const datetimes = filterPastBookableDatetimes(rawDatetimes, practiceTimezone)
 
       if (datetimes.length === 0) {
-        return createExternalError('Petbooqz', 'No available slots found in the requested date window')
+        return createExternalError(
+          'Petbooqz',
+          rawDatetimes.length > 0
+            ? 'No future bookable slots found in the requested date window (all candidates were in the past for the practice timezone)'
+            : 'No available slots found in the requested date window',
+        )
       }
 
       const details = {
