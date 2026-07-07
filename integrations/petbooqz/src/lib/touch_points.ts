@@ -11,13 +11,13 @@ export const PETBOOQZ_API_AVAILABILITY: QueueTouchPoint[] = [
 ]
 
 /**
- * Calendar booking mutex touch point for reserve/confirm/book flows.
- * HTTP inside the mutex uses direct fetch — no petbooqz_api queue probes/acquires.
+ * Calendar booking mutex + optional Petbooqz API capacity for workflow probes.
+ * HTTP inside the mutex uses direct fetch — nested petbooqz_api queuedFetch is skipped.
  */
 export function petbooqzBookingTouchPoints(
-  _estimatedApiCalls?: number,
+  estimatedApiCalls = 1,
 ): QueueTouchPoint[] {
-  return [
+  const touchPoints: QueueTouchPoint[] = [
     {
       queue: 'petbooqz_calendar_booking',
       subKeyFromArg: 'calendar_id',
@@ -25,4 +25,13 @@ export function petbooqzBookingTouchPoints(
       mutexOnly: true,
     },
   ]
+
+  if (estimatedApiCalls > 0) {
+    touchPoints.push({
+      queue: 'petbooqz_api',
+      estimatedCalls: estimatedApiCalls,
+    })
+  }
+
+  return touchPoints
 }
