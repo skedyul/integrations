@@ -18,6 +18,8 @@
 
 import { defineConfig } from 'skedyul'
 import pkg from './package.json' with { type: 'json' }
+import { toolRegistry, webhookRegistry } from './src/registries'
+import provisionConfig from './src/provision'
 
 export default defineConfig({
   name: 'Phone',
@@ -28,10 +30,8 @@ export default defineConfig({
     external: ['twilio'],
   },
 
-  // Dynamic imports for tools and webhooks (resolved at build time)
-  tools: import('./src/registries'),
-  webhooks: import('./src/registries'),
+  tools: Promise.resolve({ toolRegistry }),
+  webhooks: Promise.resolve({ webhookRegistry }),
 
-  // Provision config imports the modular files
-  provision: import('./src/provision'),
+  provision: Promise.resolve({ default: provisionConfig }),
 })
