@@ -8,7 +8,7 @@
     "build": "skedyul build"
   },
   "dependencies": {
-    "skedyul": "1.5.0"
+    "skedyul": "1.5.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
