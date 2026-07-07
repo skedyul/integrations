@@ -36,15 +36,15 @@ export default defineConfig({
   queues: {
     petbooqz_api: {
       scope: 'install',
-      maxConcurrent: 2,
-      minTime: 200,
-      reservoir: 12,
-      reservoirRefreshAmount: 12,
+      maxConcurrent: 4,
+      minTime: 100,
+      reservoir: 30,
+      reservoirRefreshAmount: 30,
       reservoirRefreshInterval: 60_000,
-      // Fail fast on acquire so MCP callers with long timeouts get RateLimitExceededError
-      // (not a connection timeout when this matches the outer HTTP deadline).
-      timeout: 10_000,
-      maxRetries: 0,
+      // Wait up to 2 minutes for a slot; SDK retries acquire with backoff before surfacing RATE_LIMITED.
+      timeout: 120_000,
+      maxRetries: 5,
+      retryDelayMs: 2000,
     },
     petbooqz_calendar_booking: {
       scope: 'install',
