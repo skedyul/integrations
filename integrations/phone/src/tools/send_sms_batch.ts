@@ -58,8 +58,7 @@ function buildEstimateBilling(input: MessageBulkSendInput) {
       billing: {
         costCentsLow,
         costCentsHigh,
-        creditsLow: costCentsLow,
-        creditsHigh: costCentsHigh,
+        currency: 'AUD',
       },
       acceptedCount: deliverableCount,
     }
@@ -75,8 +74,7 @@ function buildEstimateBilling(input: MessageBulkSendInput) {
     billing: {
       costCentsLow: costCents,
       costCentsHigh: costCents,
-      creditsLow: costCents,
-      creditsHigh: costCents,
+      currency: 'AUD',
     },
     acceptedCount: input.recipients.length,
   }
