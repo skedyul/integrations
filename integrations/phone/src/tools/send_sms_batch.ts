@@ -1,10 +1,4 @@
-import type { ToolDefinition } from 'skedyul'
-import {
-  MessageBulkSendInputSchema,
-  MessageBulkSendOutputSchema,
-  type MessageBulkSendInput,
-  type MessageBulkSendOutput,
-} from 'skedyul'
+import { z, type ToolDefinition } from 'skedyul'
 
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import { withTwilioAuth } from '../lib/twilio_client'
@@ -12,9 +6,35 @@ import { withTwilioAuth } from '../lib/twilio_client'
 const TWILIO_BULK_MESSAGES_URL = 'https://comms.twilio.com/v1/Messages'
 const MAX_RECIPIENTS = 10_000
 
-type TwilioBulkMessagesResponseHeaders = {
-  operationId?: string
-}
+// Local schemas — phone pins skedyul before bulk message schemas were published.
+const MessageBulkRecipientSchema = z.object({
+  address: z.string(),
+  renderedBody: z.string(),
+  instanceId: z.string().optional(),
+  threadId: z.string().optional(),
+  messageId: z.string().optional(),
+  contactId: z.string().optional(),
+})
+
+const MessageBulkSendInputSchema = z.object({
+  channel: z.object({
+    id: z.string(),
+    handle: z.string(),
+    identifierValue: z.string(),
+  }),
+  recipients: z.array(MessageBulkRecipientSchema).min(1).max(10000),
+  schedule: z.object({ at: z.string() }).optional(),
+})
+
+const MessageBulkSendOutputSchema = z.object({
+  status: z.enum(['accepted', 'failed']),
+  operationId: z.string().optional(),
+  acceptedCount: z.number().int().nonnegative(),
+  rejectedCount: z.number().int().nonnegative().optional(),
+})
+
+type MessageBulkSendInput = z.infer<typeof MessageBulkSendInputSchema>
+type MessageBulkSendOutput = z.infer<typeof MessageBulkSendOutputSchema>
 
 /**
  * Send SMS messages in bulk via Twilio Bulk Messaging API.
