@@ -52,6 +52,8 @@ export default defineConfig({
       scope: 'install',
       maxConcurrent: 1,
       maxRetries: 0,
+      mutex: true,
+      suppressesQueues: ['petbooqz_api'],
     },
   },
 })

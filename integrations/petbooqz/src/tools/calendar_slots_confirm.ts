@@ -49,6 +49,7 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
   outputSchema: CalendarSlotsConfirmOutputSchema,
   timeout: 600000,
   queueTouchPoints: petbooqzBookingTouchPoints(2),
+  rateLimitHandoff: { role: 'mutex_confirm' },
   handler: async (input, context) => {
     return withPetbooqzCalendarBooking(input.calendar_id, context.env, async (client) => {
       try {
