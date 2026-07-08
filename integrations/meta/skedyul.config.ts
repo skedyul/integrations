@@ -1,7 +1,5 @@
 import { defineConfig } from 'skedyul'
 import pkg from './package.json' with { type: 'json' }
-import { toolRegistry, webhookRegistry } from './src/registries'
-import provisionConfig from './src/provision'
 
 export default defineConfig({
   name: 'Meta',
@@ -9,8 +7,8 @@ export default defineConfig({
   description: 'WhatsApp, Instagram, and Messenger communication via Meta Graph API',
   computeLayer: 'serverless',
 
-  tools: Promise.resolve({ toolRegistry }),
-  webhooks: Promise.resolve({ webhookRegistry }),
+  tools: import('./src/registries'),
+  webhooks: import('./src/registries'),
 
-  provision: Promise.resolve({ default: provisionConfig }),
+  provision: import('./src/provision'),
 })

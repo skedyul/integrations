@@ -18,8 +18,6 @@
 
 import { defineConfig } from 'skedyul'
 import pkg from './package.json' with { type: 'json' }
-import { toolRegistry, webhookRegistry } from './src/registries'
-import provisionConfig from './src/provision'
 
 export default defineConfig({
   name: 'Phone',
@@ -30,8 +28,9 @@ export default defineConfig({
     external: ['twilio'],
   },
 
-  tools: Promise.resolve({ toolRegistry }),
-  webhooks: Promise.resolve({ webhookRegistry }),
+  // Dynamic imports — static imports break skedyul build config loader in Docker (requires .ts as CJS)
+  tools: import('./src/registries'),
+  webhooks: import('./src/registries'),
 
-  provision: Promise.resolve({ default: provisionConfig }),
+  provision: import('./src/provision'),
 })
