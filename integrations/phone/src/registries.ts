@@ -29,6 +29,7 @@ import type { ToolRegistry, WebhookRegistry } from 'skedyul'
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { sendSmsRegistry } from './tools/send_sms'
+import { sendSmsBatchRegistry } from './tools/send_sms_batch'
 import { submitComplianceDocumentRegistry } from './tools/submit_compliance_document'
 import { checkComplianceStatusRegistry } from './tools/check_compliance_status'
 import { submitNewPhoneNumberRegistry } from './tools/submit_new_phone_number'
@@ -46,6 +47,9 @@ import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
 export const toolRegistry: ToolRegistry = {
   /** Send an SMS message via Twilio. Used by the SMS channel. */
   send_sms: sendSmsRegistry,
+
+  /** Send pre-rendered SMS messages in bulk via Twilio Bulk Messaging API. */
+  send_sms_batch: sendSmsBatchRegistry,
 
   /** Submit compliance documents to Twilio for regulatory approval. */
   submit_compliance_document: submitComplianceDocumentRegistry,
