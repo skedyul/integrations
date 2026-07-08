@@ -2,11 +2,15 @@ import { z, type ToolDefinition } from 'skedyul'
 
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import { withTwilioAuth } from '../lib/twilio_client'
+import {
+  AU_PRICE_PER_SEGMENT_CENTS,
+  countSmsSegments,
+  segmentsToCostCents,
+} from '../lib/sms_segments'
 
 const TWILIO_BULK_MESSAGES_URL = 'https://comms.twilio.com/v1/Messages'
 const MAX_RECIPIENTS = 10_000
 
-// Local schemas — phone pins skedyul before bulk message schemas were published.
 const MessageBulkRecipientSchema = z.object({
   address: z.string(),
   renderedBody: z.string(),
@@ -14,6 +18,16 @@ const MessageBulkRecipientSchema = z.object({
   threadId: z.string().optional(),
   messageId: z.string().optional(),
   contactId: z.string().optional(),
+})
+
+const EstimateSummarySchema = z.object({
+  deliverableCount: z.number().int().nonnegative(),
+  totalSegmentsLow: z.number().int().nonnegative(),
+  totalSegmentsHigh: z.number().int().nonnegative(),
+  encoding: z.enum(['GSM-7', 'UCS-2', 'mixed']),
+  region: z.literal('AU'),
+  costCentsLow: z.number().int().nonnegative(),
+  costCentsHigh: z.number().int().nonnegative(),
 })
 
 const MessageBulkSendInputSchema = z.object({
@@ -24,6 +38,7 @@ const MessageBulkSendInputSchema = z.object({
   }),
   recipients: z.array(MessageBulkRecipientSchema).min(1).max(10000),
   schedule: z.object({ at: z.string() }).optional(),
+  estimateSummary: EstimateSummarySchema.optional(),
 })
 
 const MessageBulkSendOutputSchema = z.object({
@@ -36,10 +51,37 @@ const MessageBulkSendOutputSchema = z.object({
 type MessageBulkSendInput = z.infer<typeof MessageBulkSendInputSchema>
 type MessageBulkSendOutput = z.infer<typeof MessageBulkSendOutputSchema>
 
-/**
- * Send SMS messages in bulk via Twilio Bulk Messaging API.
- * Each recipient body is pre-rendered on the platform; Twilio receives passthrough variables.
- */
+function buildEstimateBilling(input: MessageBulkSendInput) {
+  if (input.estimateSummary) {
+    const { costCentsLow, costCentsHigh, deliverableCount } = input.estimateSummary
+    return {
+      billing: {
+        costCentsLow,
+        costCentsHigh,
+        creditsLow: costCentsLow,
+        creditsHigh: costCentsHigh,
+      },
+      acceptedCount: deliverableCount,
+    }
+  }
+
+  const segmentCounts = input.recipients.map(
+    (recipient) => countSmsSegments(recipient.renderedBody).segments,
+  )
+  const totalSegments = segmentCounts.reduce((sum, value) => sum + value, 0)
+  const costCents = segmentsToCostCents(totalSegments, AU_PRICE_PER_SEGMENT_CENTS)
+
+  return {
+    billing: {
+      costCentsLow: costCents,
+      costCentsHigh: costCents,
+      creditsLow: costCents,
+      creditsHigh: costCents,
+    },
+    acceptedCount: input.recipients.length,
+  }
+}
+
 export const sendSmsBatchRegistry: ToolDefinition<
   MessageBulkSendInput,
   MessageBulkSendOutput
@@ -72,6 +114,17 @@ export const sendSmsBatchRegistry: ToolDefinition<
     if (invalidRecipient) {
       return createValidationError(
         'Cannot send SMS batch: each recipient must have a non-empty address and renderedBody',
+      )
+    }
+
+    if (context.mode === 'estimate') {
+      const { billing, acceptedCount } = buildEstimateBilling(input)
+      return createSuccessResponse(
+        {
+          status: 'accepted' as const,
+          acceptedCount,
+        },
+        { billing },
       )
     }
 
