@@ -10,6 +10,7 @@ import {
   submitBundleForReview,
 } from '../lib/twilio_client'
 import testData from '../test-data.json'
+import { isMockComplianceAndNumberEnabled } from '../lib/mock_compliance'
 import {
   createSuccessResponse,
   createValidationError,
@@ -272,7 +273,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 
     // Update the compliance record with all form data
     // Check if test mode is enabled
-    const isTestMode = env.ENABLE_TEST_COMPLIANCE_AND_NUMBER === 'true'
+    const isTestMode = isMockComplianceAndNumberEnabled(env)
 
     if (isTestMode) {
       // ══════════════════════════════════════════════════════════════════════════

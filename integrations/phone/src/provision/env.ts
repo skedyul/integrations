@@ -58,13 +58,13 @@ export default defineEnv({
       'Twilio Real-Time Transcription speech-to-text provider for calls ("deepgram" or "google"). Defaults to "deepgram".',
     placeholder: 'deepgram',
   },
-  ENABLE_TEST_COMPLIANCE_AND_NUMBER: {
-    label: 'Enable Test Mode (compliance)',
+  MOCK_COMPLIANCE_AND_NUMBER: {
+    label: 'Mock compliance and number provisioning',
     scope: 'provision',
     required: false,
     visibility: 'visible',
     description:
-      'When set to "true", uses hardcoded test responses for compliance submission and phone number provisioning (does not affect SMS sends)',
+      'When set to "true", compliance submission and phone number purchase use hardcoded test data instead of Twilio (does not affect SMS sends — use Mock outbound messages for that)',
     placeholder: 'true',
   },
   MOCK_OUTBOUND_MESSAGES: {

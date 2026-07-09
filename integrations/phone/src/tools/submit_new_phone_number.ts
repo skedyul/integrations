@@ -6,6 +6,7 @@ import {
   purchasePhoneNumber,
 } from '../lib/twilio_client'
 import testData from '../test-data.json'
+import { isMockComplianceAndNumberEnabled } from '../lib/mock_compliance'
 import {
   createSuccessResponse,
   createValidationError,
@@ -103,7 +104,7 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
     console.log('[PhoneNumber] Compliance record:', JSON.stringify(complianceRecord, null, 2))
 
     // Check if test mode is enabled (check early to bypass compliance validation)
-    const isTestMode = env.ENABLE_TEST_COMPLIANCE_AND_NUMBER === 'true'
+    const isTestMode = isMockComplianceAndNumberEnabled(env)
 
     // 2. Validate compliance record is approved (skip in test mode)
     if (!isTestMode && complianceRecord.status !== 'approved') {
