@@ -1,4 +1,9 @@
 import { z, type ToolDefinition } from 'skedyul'
+import {
+  computeSkewedExpectedMinorUnits,
+  createEstimation,
+  createMoneyMinorRange,
+} from 'skedyul/estimation'
 
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import { withTwilioAuth } from '../lib/twilio_client'
@@ -22,12 +27,15 @@ const MessageBulkRecipientSchema = z.object({
 
 const EstimateSummarySchema = z.object({
   deliverableCount: z.number().int().nonnegative(),
+  skippedCount: z.number().int().nonnegative().optional(),
   totalSegmentsLow: z.number().int().nonnegative(),
   totalSegmentsHigh: z.number().int().nonnegative(),
+  totalSegmentsExpected: z.number().int().nonnegative().optional(),
   encoding: z.enum(['GSM-7', 'UCS-2', 'mixed']),
   region: z.literal('AU'),
   costCentsLow: z.number().int().nonnegative(),
   costCentsHigh: z.number().int().nonnegative(),
+  costCentsExpected: z.number().int().nonnegative().optional(),
 })
 
 const MessageBulkSendInputSchema = z.object({
@@ -53,12 +61,45 @@ type MessageBulkSendOutput = z.infer<typeof MessageBulkSendOutputSchema>
 
 function buildEstimateBilling(input: MessageBulkSendInput) {
   if (input.estimateSummary) {
-    const { costCentsLow, costCentsHigh, deliverableCount } = input.estimateSummary
+    const {
+      costCentsLow,
+      costCentsHigh,
+      costCentsExpected,
+      deliverableCount,
+      skippedCount,
+      totalSegmentsExpected,
+    } = input.estimateSummary
+
+    const minorUnitsExpected =
+      costCentsExpected ??
+      (totalSegmentsExpected !== undefined
+        ? segmentsToCostCents(totalSegmentsExpected, AU_PRICE_PER_SEGMENT_CENTS)
+        : computeSkewedExpectedMinorUnits({
+            currency: 'AUD',
+            minorUnitsLow: costCentsLow,
+            minorUnitsHigh: costCentsHigh,
+          }))
+
+    const cost = createMoneyMinorRange({
+      currency: 'AUD',
+      minorUnitsLow: costCentsLow,
+      minorUnitsHigh: costCentsHigh,
+      minorUnitsExpected,
+    })
+
     return {
       billing: {
         costCentsLow,
         costCentsHigh,
+        costCentsExpected: minorUnitsExpected,
         currency: 'AUD',
+        deliverableCount,
+        ...(skippedCount !== undefined ? { skippedCount } : {}),
+        estimation: createEstimation({
+          deliverableCount,
+          ...(skippedCount !== undefined ? { skippedCount } : {}),
+          cost,
+        }),
       },
       acceptedCount: deliverableCount,
     }
@@ -70,11 +111,24 @@ function buildEstimateBilling(input: MessageBulkSendInput) {
   const totalSegments = segmentCounts.reduce((sum, value) => sum + value, 0)
   const costCents = segmentsToCostCents(totalSegments, AU_PRICE_PER_SEGMENT_CENTS)
 
+  const cost = createMoneyMinorRange({
+    currency: 'AUD',
+    minorUnitsLow: costCents,
+    minorUnitsHigh: costCents,
+    minorUnitsExpected: costCents,
+  })
+
   return {
     billing: {
       costCentsLow: costCents,
       costCentsHigh: costCents,
+      costCentsExpected: costCents,
       currency: 'AUD',
+      deliverableCount: input.recipients.length,
+      estimation: createEstimation({
+        deliverableCount: input.recipients.length,
+        cost,
+      }),
     },
     acceptedCount: input.recipients.length,
   }
