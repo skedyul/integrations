@@ -1,4 +1,4 @@
-import skedyul, { isRuntimeContext } from 'skedyul'
+import skedyul, { isRuntimeContext, estimateSmsSegments } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import {
   MessageSendInputSchema,
@@ -32,6 +32,14 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
     if (!input.channel.identifierValue?.trim()) {
       return createValidationError(
         'Cannot send SMS: channel.identifierValue (sender phone number) is empty or missing',
+      )
+    }
+
+    if (context.mode === 'estimate') {
+      const sms = estimateSmsSegments(input.message.content)
+      return createSuccessResponse(
+        { status: 'queued' },
+        { billing: { credits: sms.segments } },
       )
     }
 
