@@ -8,8 +8,8 @@ import {
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import { withTwilioAuth } from '../lib/twilio_client'
 import {
-  AU_PRICE_PER_SEGMENT_CENTS,
   countSmsSegments,
+  parseCostPerSmsCents,
   segmentsToCostCents,
 } from '../lib/sms_segments'
 
@@ -59,7 +59,10 @@ const MessageBulkSendOutputSchema = z.object({
 type MessageBulkSendInput = z.infer<typeof MessageBulkSendInputSchema>
 type MessageBulkSendOutput = z.infer<typeof MessageBulkSendOutputSchema>
 
-function buildEstimateBilling(input: MessageBulkSendInput) {
+function buildEstimateBilling(
+  input: MessageBulkSendInput,
+  pricePerSegmentCents: number,
+) {
   if (input.estimateSummary) {
     const {
       costCentsLow,
@@ -73,7 +76,7 @@ function buildEstimateBilling(input: MessageBulkSendInput) {
     const minorUnitsExpected =
       costCentsExpected ??
       (totalSegmentsExpected !== undefined
-        ? segmentsToCostCents(totalSegmentsExpected, AU_PRICE_PER_SEGMENT_CENTS)
+        ? segmentsToCostCents(totalSegmentsExpected, pricePerSegmentCents)
         : computeSkewedExpectedMinorUnits({
             currency: 'AUD',
             minorUnitsLow: costCentsLow,
@@ -109,7 +112,7 @@ function buildEstimateBilling(input: MessageBulkSendInput) {
     (recipient) => countSmsSegments(recipient.renderedBody).segments,
   )
   const totalSegments = segmentCounts.reduce((sum, value) => sum + value, 0)
-  const costCents = segmentsToCostCents(totalSegments, AU_PRICE_PER_SEGMENT_CENTS)
+  const costCents = segmentsToCostCents(totalSegments, pricePerSegmentCents)
 
   const cost = createMoneyMinorRange({
     currency: 'AUD',
@@ -170,7 +173,8 @@ export const sendSmsBatchRegistry: ToolDefinition<
     }
 
     if (context.mode === 'estimate') {
-      const { billing, acceptedCount } = buildEstimateBilling(input)
+      const pricePerSegmentCents = parseCostPerSmsCents(context.env.COST_PER_SMS)
+      const { billing, acceptedCount } = buildEstimateBilling(input, pricePerSegmentCents)
       return createSuccessResponse(
         {
           status: 'accepted' as const,

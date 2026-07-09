@@ -66,4 +66,13 @@ export default defineEnv({
     description: 'When set to "true", uses hardcoded test responses instead of real Twilio API calls',
     placeholder: 'true',
   },
+  COST_PER_SMS: {
+    label: 'Cost per SMS',
+    scope: 'provision',
+    required: false,
+    visibility: 'visible',
+    default: '0.07',
+    description: 'Retail price per SMS segment in USD (used for cost estimates and billing)',
+    placeholder: '0.07',
+  },
 })

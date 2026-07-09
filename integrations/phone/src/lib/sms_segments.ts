@@ -1,15 +1,22 @@
 export type SmsEncoding = 'GSM-7' | 'UCS-2'
 
-/** Twilio AU outbound SMS base rate per segment (USD). */
-export const TWILIO_AU_COST_PER_SEGMENT_USD = 0.0515
+/** Default retail price per SMS segment (USD). Overridable via COST_PER_SMS provision env. */
+export const DEFAULT_COST_PER_SMS = '0.07'
 
-/** Retail markup over Twilio cost. */
-export const SMS_MARGIN_MULTIPLIER = 1.4
+export function parseCostPerSmsDollars(value?: string | null): number {
+  const parsed = parseFloat(value ?? DEFAULT_COST_PER_SMS)
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return parseFloat(DEFAULT_COST_PER_SMS)
+  }
+  return parsed
+}
 
-/** AU retail price per segment in cents (Twilio + 40% margin, rounded). */
-export const AU_PRICE_PER_SEGMENT_CENTS = Math.round(
-  TWILIO_AU_COST_PER_SEGMENT_USD * SMS_MARGIN_MULTIPLIER * 100,
-)
+export function parseCostPerSmsCents(value?: string | null): number {
+  return Math.round(parseCostPerSmsDollars(value) * 100)
+}
+
+/** Default AU retail price per segment in cents (matches DEFAULT_COST_PER_SMS). */
+export const AU_PRICE_PER_SEGMENT_CENTS = parseCostPerSmsCents()
 
 const GSM_7_BASIC_CHARS =
   '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà'
