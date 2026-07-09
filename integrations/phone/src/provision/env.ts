@@ -67,12 +67,12 @@ export default defineEnv({
     placeholder: 'true',
   },
   COST_PER_SMS: {
-    label: 'Cost per SMS',
+    label: 'Cost per SMS (AUD)',
     scope: 'provision',
     required: false,
     visibility: 'visible',
     default: '0.07',
-    description: 'Retail price per SMS segment in USD (used for cost estimates and billing)',
+    description: 'Retail price per SMS segment in AUD (used for cost estimates and billing)',
     placeholder: '0.07',
   },
 })

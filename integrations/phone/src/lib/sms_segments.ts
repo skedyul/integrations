@@ -1,9 +1,9 @@
 export type SmsEncoding = 'GSM-7' | 'UCS-2'
 
-/** Default retail price per SMS segment (USD). Overridable via COST_PER_SMS provision env. */
+/** Default retail price per SMS segment (AUD). Overridable via COST_PER_SMS provision env. */
 export const DEFAULT_COST_PER_SMS = '0.07'
 
-export function parseCostPerSmsDollars(value?: string | null): number {
+export function parseCostPerSmsAud(value?: string | null): number {
   const parsed = parseFloat(value ?? DEFAULT_COST_PER_SMS)
   if (!Number.isFinite(parsed) || parsed < 0) {
     return parseFloat(DEFAULT_COST_PER_SMS)
@@ -12,7 +12,7 @@ export function parseCostPerSmsDollars(value?: string | null): number {
 }
 
 export function parseCostPerSmsCents(value?: string | null): number {
-  return Math.round(parseCostPerSmsDollars(value) * 100)
+  return Math.round(parseCostPerSmsAud(value) * 100)
 }
 
 /** Default AU retail price per segment in cents (matches DEFAULT_COST_PER_SMS). */
