@@ -8,6 +8,10 @@ import {
 } from 'skedyul'
 
 import { createTwilioClient, withTwilioAuth } from '../lib/twilio_client'
+import {
+  createMockSmsRemoteId,
+  isMockOutboundMessagesEnabled,
+} from '../lib/mock_outbound'
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 
 /**
@@ -39,6 +43,17 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
       const sms = estimateSmsSegments(input.message.content)
       return createSuccessResponse(
         { status: 'queued' },
+        { billing: { credits: sms.segments } },
+      )
+    }
+
+    if (isMockOutboundMessagesEnabled(context.env)) {
+      const sms = estimateSmsSegments(input.message.content)
+      return createSuccessResponse(
+        {
+          status: 'queued',
+          remoteId: createMockSmsRemoteId(),
+        },
         { billing: { credits: sms.segments } },
       )
     }

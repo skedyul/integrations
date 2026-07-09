@@ -59,11 +59,21 @@ export default defineEnv({
     placeholder: 'deepgram',
   },
   ENABLE_TEST_COMPLIANCE_AND_NUMBER: {
-    label: 'Enable Test Mode',
+    label: 'Enable Test Mode (compliance)',
     scope: 'provision',
     required: false,
     visibility: 'visible',
-    description: 'When set to "true", uses hardcoded test responses instead of real Twilio API calls',
+    description:
+      'When set to "true", uses hardcoded test responses for compliance submission and phone number provisioning (does not affect SMS sends)',
+    placeholder: 'true',
+  },
+  MOCK_OUTBOUND_MESSAGES: {
+    label: 'Mock outbound messages',
+    scope: 'provision',
+    required: false,
+    visibility: 'visible',
+    description:
+      'When set to "true", SMS send tools skip Twilio and return mock success responses (safe for testing bulk and single sends)',
     placeholder: 'true',
   },
   COST_PER_SMS: {

@@ -6,6 +6,10 @@ import {
 } from 'skedyul/estimation'
 
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
+import {
+  createMockBulkOperationId,
+  isMockOutboundMessagesEnabled,
+} from '../lib/mock_outbound'
 import { withTwilioAuth } from '../lib/twilio_client'
 import {
   countSmsSegments,
@@ -181,6 +185,17 @@ export const sendSmsBatchRegistry: ToolDefinition<
           acceptedCount,
         },
         { billing },
+      )
+    }
+
+    if (isMockOutboundMessagesEnabled(context.env)) {
+      return createSuccessResponse(
+        {
+          status: 'accepted' as const,
+          operationId: createMockBulkOperationId(),
+          acceptedCount: input.recipients.length,
+        },
+        { billing: { credits: input.recipients.length } },
       )
     }
 
