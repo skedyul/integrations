@@ -54,6 +54,7 @@ export default defineConfig({
       maxRetries: 0,
       mutex: true,
       suppressesQueues: ['petbooqz_api'],
+      timeout: 600_000,
     },
   },
 })
