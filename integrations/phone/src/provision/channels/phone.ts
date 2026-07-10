@@ -48,7 +48,10 @@ export default defineChannel({
       icon: 'MessageSquare',
       receive: 'receive_sms',
       send: 'send_sms',
-      send_batch: 'send_sms_batch',
+      send_batch: {
+        send: 'send_sms_batch',
+        get_status: 'get_sms_bulk_status',
+      },
     },
     voice: {
       label: 'Voice',

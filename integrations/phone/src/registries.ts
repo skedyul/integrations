@@ -30,6 +30,7 @@ import type { ToolRegistry, WebhookRegistry } from 'skedyul'
 
 import { sendSmsRegistry } from './tools/send_sms'
 import { sendSmsBatchRegistry } from './tools/send_sms_batch'
+import { getSmsBulkStatusRegistry } from './tools/get_sms_bulk_status'
 import { submitComplianceDocumentRegistry } from './tools/submit_compliance_document'
 import { checkComplianceStatusRegistry } from './tools/check_compliance_status'
 import { submitNewPhoneNumberRegistry } from './tools/submit_new_phone_number'
@@ -50,6 +51,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Send pre-rendered SMS messages in bulk via Twilio Bulk Messaging API. */
   send_sms_batch: sendSmsBatchRegistry,
+
+  /** Fetch Twilio bulk operation + per-recipient message statuses by operationId. */
+  get_sms_bulk_status: getSmsBulkStatusRegistry,
 
   /** Submit compliance documents to Twilio for regulatory approval. */
   submit_compliance_document: submitComplianceDocumentRegistry,
