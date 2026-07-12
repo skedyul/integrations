@@ -19,7 +19,6 @@ const MessageBulkStatusInputSchema = z.object({
     identifierValue: z.string(),
   }),
   operationId: z.string().min(1),
-  addresses: z.array(z.string()).optional(),
 })
 
 const MessageBulkStatusMessageSchema = z.object({
@@ -34,6 +33,7 @@ const MessageBulkStatusOutputSchema = z.object({
   operationId: z.string(),
   status: z.string(),
   complete: z.boolean(),
+  mock: z.boolean().optional(),
   stats: z
     .object({
       total: z.number().int().nonnegative().optional(),
@@ -140,24 +140,13 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
       isMockOutboundMessagesEnabled(context.env) ||
       isMockBulkOperationId(input.operationId)
     ) {
-      const addresses = input.addresses ?? []
       return createSuccessResponse(
         {
           operationId: input.operationId,
           status: 'COMPLETED',
           complete: true,
-          stats: {
-            total: addresses.length,
-            recipients: addresses.length,
-            sent: addresses.length,
-            delivered: addresses.length,
-            failed: 0,
-          },
-          messages: addresses.map((address) => ({
-            address,
-            status: 'SENT',
-            messageId: `mock-msg-${address}`,
-          })),
+          mock: true,
+          messages: [],
         },
         { billing: { credits: 0 } },
       )
