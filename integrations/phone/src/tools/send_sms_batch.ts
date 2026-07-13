@@ -250,11 +250,27 @@ export const sendSmsBatchRegistry: ToolDefinition<
           )
         }
 
-        const operationId =
-          res.headers.get('operationid') ??
-          res.headers.get('operationId') ??
-          res.headers.get('OperationId') ??
-          undefined
+        const responseText = await res.text()
+        let operationId: string | undefined
+
+        if (responseText.trim()) {
+          try {
+            const parsed = JSON.parse(responseText) as { operationId?: unknown }
+            if (typeof parsed.operationId === 'string' && parsed.operationId.length > 0) {
+              operationId = parsed.operationId
+            }
+          } catch {
+            // Non-JSON success body; fall back to headers below.
+          }
+        }
+
+        if (!operationId) {
+          operationId =
+            res.headers.get('operationid') ??
+            res.headers.get('operationId') ??
+            res.headers.get('OperationId') ??
+            undefined
+        }
 
         return { operationId, status: res.status }
       })
