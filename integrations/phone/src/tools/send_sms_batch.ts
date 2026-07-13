@@ -214,7 +214,8 @@ export const sendSmsBatchRegistry: ToolDefinition<
         channel: 'SMS',
       },
       content: {
-        text: '{{ body }}',
+        // Twilio Bulk Messaging requires a default filter on every template variable.
+        text: "{{ body | default: '' }}",
       },
       to: input.recipients.map((recipient) => ({
         address: recipient.address.trim(),
