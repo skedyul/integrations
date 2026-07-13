@@ -255,25 +255,16 @@ export const sendSmsBatchRegistry: ToolDefinition<
 
         if (responseText.trim()) {
           try {
-            const parsed = JSON.parse(responseText) as {
-              operationId?: unknown
-              chunk?: unknown
-            }
-            const rawChunk = parsed.chunk ?? parsed.operationId
-            if (typeof rawChunk === 'string' && rawChunk.length > 0) {
-              chunk = rawChunk
+            const parsed = JSON.parse(responseText) as { operationId?: unknown }
+            if (
+              typeof parsed.operationId === 'string' &&
+              parsed.operationId.length > 0
+            ) {
+              chunk = parsed.operationId
             }
           } catch {
-            // Non-JSON success body; fall back to headers below.
+            // Twilio bulk send should return JSON; leave chunk undefined if not.
           }
-        }
-
-        if (!chunk) {
-          chunk =
-            res.headers.get('operationid') ??
-            res.headers.get('operationId') ??
-            res.headers.get('OperationId') ??
-            undefined
         }
 
         return { chunk, status: res.status }
