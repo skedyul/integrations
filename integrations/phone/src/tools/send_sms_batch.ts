@@ -7,7 +7,7 @@ import {
 
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import {
-  createMockBulkOperationId,
+  createMockBulkChunkId,
   isMockOutboundMessagesEnabled,
 } from '../lib/mock_outbound'
 import { withTwilioAuth } from '../lib/twilio_client'
@@ -55,7 +55,7 @@ const MessageBulkSendInputSchema = z.object({
 
 const MessageBulkSendOutputSchema = z.object({
   status: z.enum(['accepted', 'failed']),
-  operationId: z.string().optional(),
+  chunk: z.string().optional(),
   acceptedCount: z.number().int().nonnegative(),
   rejectedCount: z.number().int().nonnegative().optional(),
 })
@@ -192,7 +192,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
       return createSuccessResponse(
         {
           status: 'accepted' as const,
-          operationId: createMockBulkOperationId(),
+          chunk: createMockBulkChunkId(),
           acceptedCount: input.recipients.length,
         },
         { billing: { credits: input.recipients.length } },
@@ -251,34 +251,38 @@ export const sendSmsBatchRegistry: ToolDefinition<
         }
 
         const responseText = await res.text()
-        let operationId: string | undefined
+        let chunk: string | undefined
 
         if (responseText.trim()) {
           try {
-            const parsed = JSON.parse(responseText) as { operationId?: unknown }
-            if (typeof parsed.operationId === 'string' && parsed.operationId.length > 0) {
-              operationId = parsed.operationId
+            const parsed = JSON.parse(responseText) as {
+              operationId?: unknown
+              chunk?: unknown
+            }
+            const rawChunk = parsed.chunk ?? parsed.operationId
+            if (typeof rawChunk === 'string' && rawChunk.length > 0) {
+              chunk = rawChunk
             }
           } catch {
             // Non-JSON success body; fall back to headers below.
           }
         }
 
-        if (!operationId) {
-          operationId =
+        if (!chunk) {
+          chunk =
             res.headers.get('operationid') ??
             res.headers.get('operationId') ??
             res.headers.get('OperationId') ??
             undefined
         }
 
-        return { operationId, status: res.status }
+        return { chunk, status: res.status }
       })
 
       return createSuccessResponse(
         {
           status: 'accepted' as const,
-          operationId: response.operationId,
+          chunk: response.chunk,
           acceptedCount: input.recipients.length,
         },
         { billing: { credits: input.recipients.length } },
