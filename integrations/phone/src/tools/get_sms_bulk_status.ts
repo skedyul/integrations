@@ -5,7 +5,7 @@ import {
   createPhoneError,
 } from '../lib/response'
 import {
-  isMockBulkChunkId,
+  isMockExternalChunkId,
   isMockOutboundMessagesEnabled,
 } from '../lib/mock_outbound'
 import { withTwilioAuth } from '../lib/twilio_client'
@@ -18,7 +18,7 @@ const MessageBulkStatusInputSchema = z.object({
     handle: z.string(),
     identifierValue: z.string(),
   }),
-  chunk: z.string().min(1),
+  externalChunkId: z.string().min(1),
 })
 
 const MessageBulkStatusMessageSchema = z.object({
@@ -30,7 +30,7 @@ const MessageBulkStatusMessageSchema = z.object({
 })
 
 const MessageBulkStatusOutputSchema = z.object({
-  chunk: z.string(),
+  externalChunkId: z.string(),
   status: z.string(),
   complete: z.boolean(),
   mock: z.boolean().optional(),
@@ -114,22 +114,22 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
   name: 'get_sms_bulk_status',
   label: 'Get SMS Bulk Status',
   description:
-    'Fetch Twilio Bulk Messaging chunk status and per-recipient message statuses by chunk id',
+    'Fetch Twilio Bulk Messaging status and per-recipient message statuses by externalChunkId',
   inputSchema: MessageBulkStatusInputSchema,
   outputSchema: MessageBulkStatusOutputSchema,
   handler: async (input, context) => {
-    if (!input.chunk?.trim()) {
+    if (!input.externalChunkId?.trim()) {
       return createValidationError(
-        'Cannot get SMS bulk status: chunk is required',
+        'Cannot get SMS bulk status: externalChunkId is required',
       )
     }
 
-    const chunk = input.chunk.trim()
+    const externalChunkId = input.externalChunkId.trim()
 
     if (context.mode === 'estimate') {
       return createSuccessResponse(
         {
-          chunk,
+          externalChunkId,
           status: 'COMPLETED',
           complete: true,
           messages: [],
@@ -140,11 +140,11 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
 
     if (
       isMockOutboundMessagesEnabled(context.env) ||
-      isMockBulkChunkId(chunk)
+      isMockExternalChunkId(externalChunkId)
     ) {
       return createSuccessResponse(
         {
-          chunk,
+          externalChunkId,
           status: 'COMPLETED',
           complete: true,
           mock: true,
@@ -168,13 +168,13 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
     try {
       const result = await withTwilioAuth(async () => {
         const operation = (await fetchJson(
-          `${TWILIO_BULK_MESSAGES_URL}/Operations/${encodeURIComponent(chunk)}`,
+          `${TWILIO_BULK_MESSAGES_URL}/Operations/${encodeURIComponent(externalChunkId)}`,
           authHeader,
         )) as TwilioOperationResponse
 
         const messages: MessageBulkStatusOutput['messages'] = []
         let pageUrl: string | null =
-          `${TWILIO_BULK_MESSAGES_URL}?operation_id=${encodeURIComponent(chunk)}`
+          `${TWILIO_BULK_MESSAGES_URL}?operation_id=${encodeURIComponent(externalChunkId)}`
 
         while (pageUrl) {
           const body = (await fetchJson(pageUrl, authHeader)) as {
@@ -201,7 +201,7 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
 
         const status = (operation.status ?? 'UNKNOWN').toUpperCase()
         return {
-          chunk: operation.id ?? chunk,
+          externalChunkId: operation.id ?? externalChunkId,
           status,
           complete: status === 'COMPLETED',
           stats: operation.stats,

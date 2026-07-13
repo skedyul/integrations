@@ -7,7 +7,7 @@ import {
 
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import {
-  createMockBulkChunkId,
+  createMockExternalChunkId,
   isMockOutboundMessagesEnabled,
 } from '../lib/mock_outbound'
 import { withTwilioAuth } from '../lib/twilio_client'
@@ -55,7 +55,7 @@ const MessageBulkSendInputSchema = z.object({
 
 const MessageBulkSendOutputSchema = z.object({
   status: z.enum(['accepted', 'failed']),
-  chunk: z.string().optional(),
+  externalChunkId: z.string().optional(),
   acceptedCount: z.number().int().nonnegative(),
   rejectedCount: z.number().int().nonnegative().optional(),
 })
@@ -192,7 +192,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
       return createSuccessResponse(
         {
           status: 'accepted' as const,
-          chunk: createMockBulkChunkId(),
+          externalChunkId: createMockExternalChunkId(),
           acceptedCount: input.recipients.length,
         },
         { billing: { credits: input.recipients.length } },
@@ -251,7 +251,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
         }
 
         const responseText = await res.text()
-        let chunk: string | undefined
+        let externalChunkId: string | undefined
 
         if (responseText.trim()) {
           try {
@@ -260,20 +260,20 @@ export const sendSmsBatchRegistry: ToolDefinition<
               typeof parsed.operationId === 'string' &&
               parsed.operationId.length > 0
             ) {
-              chunk = parsed.operationId
+              externalChunkId = parsed.operationId
             }
           } catch {
-            // Twilio bulk send should return JSON; leave chunk undefined if not.
+            // Twilio bulk send should return JSON; leave externalChunkId undefined if not.
           }
         }
 
-        return { chunk, status: res.status }
+        return { externalChunkId, status: res.status }
       })
 
       return createSuccessResponse(
         {
           status: 'accepted' as const,
-          chunk: response.chunk,
+          externalChunkId: response.externalChunkId,
           acceptedCount: input.recipients.length,
         },
         { billing: { credits: input.recipients.length } },
