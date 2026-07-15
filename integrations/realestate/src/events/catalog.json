@@ -1,0 +1,9 @@
+[
+  {
+    "name": "enquiry.created",
+    "label": "Enquiry created",
+    "description": "A new realestate.com.au enquiry was received for a linked agency",
+    "group": "Leads",
+    "icon": "UserPlus"
+  }
+]

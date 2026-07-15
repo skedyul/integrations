@@ -1,0 +1,33 @@
+{
+  "enquiry.created": {
+    "webhook": {
+      "event_type": "EnquiryCreated",
+      "event_id": "c5d6e7f8-9012-3456-7890-abcdef123456",
+      "event_time": "2026-01-13T03:45:12.789Z",
+      "owner_id": "ABCDEF",
+      "subscription_id": "d7e8f9a0-1234-5678-9012-3456789abcde"
+    },
+    "agency": {
+      "id": "agency_example",
+      "agency_id": "ABCDEF",
+      "integration_id": "123e4567-e89b-12d3-a456-426614174000"
+    },
+    "enquiry": {
+      "rea_enquiry_id": "2bb121ad-2849-4b20-bc40-19e4ae371b7e",
+      "rea_agency_id": "ABCDEF",
+      "enquiry_type": "REALESTATE_COM_AU_LISTING",
+      "comments": "Hi, I am interested in this property.",
+      "first_name": "Sarah",
+      "last_name": "Smith",
+      "email": "sarah@example.com",
+      "phone": "0401234567",
+      "postcode": "4020",
+      "preferred_contact_method": "PHONE",
+      "received_at": "2017-07-24T10:58:32.000Z",
+      "processed_at": "2017-07-26T03:21:25.090Z",
+      "listing_id": "100012345",
+      "listing_address": "1 Test Street, Melbourne, Vic 3000",
+      "source": "SPONSORED_CONTENT / My campaign"
+    }
+  }
+}

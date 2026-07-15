@@ -1,0 +1,44 @@
+name: Sync REA enquiry from webhook
+description: >
+  Example workflow triggered by app.realestate.enquiry.created. Upserts a CRM
+  lead/prospect from the REA enquiry payload emitted by the webhook handler.
+
+trigger:
+  type: app_event
+  event: app.realestate.enquiry.created
+
+inputs:
+  webhook:
+    type: object
+    description: REA webhook metadata
+  agency:
+    type: object
+    description: Linked REA agency context
+  enquiry:
+    type: object
+    description: Normalized REA enquiry fields
+
+steps:
+  - id: upsert_lead
+    name: Upsert lead from REA enquiry
+    action: crm.instance.upsert
+    config:
+      model: lead
+      match:
+        rea_enquiry_id: '{{ enquiry.rea_enquiry_id }}'
+      values:
+        first_name: '{{ enquiry.first_name }}'
+        last_name: '{{ enquiry.last_name }}'
+        email: '{{ enquiry.email }}'
+        phone: '{{ enquiry.phone }}'
+        postcode: '{{ enquiry.postcode }}'
+        rea_enquiry_id: '{{ enquiry.rea_enquiry_id }}'
+        rea_agency_id: '{{ enquiry.rea_agency_id }}'
+        enquiry_type: '{{ enquiry.enquiry_type }}'
+        comments: '{{ enquiry.comments }}'
+        received_at: '{{ enquiry.received_at }}'
+        processed_at: '{{ enquiry.processed_at }}'
+        preferred_contact_method: '{{ enquiry.preferred_contact_method }}'
+        listing_id: '{{ enquiry.listing_id }}'
+        listing_address: '{{ enquiry.listing_address }}'
+        source: '{{ enquiry.source }}'
