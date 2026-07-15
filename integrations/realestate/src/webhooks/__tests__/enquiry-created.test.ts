@@ -12,7 +12,6 @@ describe('parseReaEventPayload', () => {
         subscription_id: 'sub-1',
       },
       agency: {
-        id: 'agency-1',
         agency_id: 'ABCDEF',
         integration_id: 'integration-1',
       },

@@ -1,15 +1,6 @@
 import { defineNavigation } from 'skedyul'
 
 export default defineNavigation({
-  context: {
-    agency: {
-      model: 'agency',
-      mode: 'first',
-      filters: {
-        status: { equals: 'ACTIVE' },
-      },
-    },
-  },
   sidebar: {
     sections: [
       {
@@ -18,7 +9,6 @@ export default defineNavigation({
             label: 'Leads',
             href: '/leads',
             icon: 'Users',
-            hidden: '{{ agency == blank }}',
           },
         ],
       },

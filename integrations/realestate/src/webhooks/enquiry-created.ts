@@ -1,11 +1,11 @@
 import type { WebhookDefinition, WebhookHandler, WebhookResponse } from 'skedyul'
+import { isRuntimeWebhookContext } from 'skedyul'
 import { ReaClient } from '../lib/rea-client'
 import {
   buildEnquiryCreatedPayload,
   normalizeReaWebhookEvents,
 } from '../lib/rea-enquiry'
-import { emitReaEvent } from '../lib/emit-rea-event'
-import { resolveActiveAgencyForOwnerId } from '../lib/resolve-agency-for-owner'
+import { createReaEvent } from '../lib/create-rea-event'
 import {
   cacheSigningKeys,
   getCachedSigningKeys,
@@ -31,7 +31,18 @@ async function loadSigningKeys(env: ReaClientEnv) {
 }
 
 const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<WebhookResponse> => {
-  const env = context.env as ReaClientEnv
+  if (!isRuntimeWebhookContext(context)) {
+    console.error('[REA] enquiry_created webhook requires install-scoped registration')
+    return {
+      status: 500,
+      body: { error: 'This webhook requires a runtime context with appInstallationId' },
+    }
+  }
+
+  const env = context.env as ReaClientEnv & {
+    REA_AGENCY_ID?: string
+    REA_INTEGRATION_ID?: string
+  }
   const rawBody = getRawBodyString(request)
   const signatureHeader = getHeaderValue(request.headers, 'x-rea-signature')
 
@@ -100,6 +111,17 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
     return { status: 200, body: { status: 'validated' } }
   }
 
+  const expectedAgencyId = env.REA_AGENCY_ID?.trim().toUpperCase()
+  const integrationId = env.REA_INTEGRATION_ID?.trim()
+
+  if (!expectedAgencyId || !integrationId) {
+    console.error('[REA] Install env missing REA_AGENCY_ID or REA_INTEGRATION_ID')
+    return {
+      status: 500,
+      body: { error: 'Install configuration incomplete' },
+    }
+  }
+
   const client = ReaClient.fromEnv(env)
   const results: Array<Record<string, unknown>> = []
 
@@ -117,31 +139,13 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
       continue
     }
 
-    let agency
-    try {
-      agency = await resolveActiveAgencyForOwnerId(webhookEvent.ownerId)
-    } catch (error) {
-      console.error(
-        `[REA] Agency lookup failed for owner ${webhookEvent.ownerId}:`,
-        error,
-      )
-      return {
-        status: 500,
-        body: {
-          error: 'Failed to resolve agency',
-          event_id: webhookEvent.eventId,
-          owner_id: webhookEvent.ownerId,
-        },
-      }
-    }
-
-    if (!agency) {
+    if (webhookEvent.ownerId !== expectedAgencyId) {
       console.log(
-        `[REA] No active agency for owner ${webhookEvent.ownerId}, ignoring ${webhookEvent.eventType}`,
+        `[REA] Ignoring enquiry for owner ${webhookEvent.ownerId} (expected ${expectedAgencyId})`,
       )
       results.push({
         status: 'ignored',
-        reason: 'agency_not_linked',
+        reason: 'owner_mismatch',
         event_type: webhookEvent.eventType,
         event_id: webhookEvent.eventId,
         owner_id: webhookEvent.ownerId,
@@ -169,7 +173,10 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
 
     const payload = buildEnquiryCreatedPayload({
       webhookEvent,
-      agency,
+      agency: {
+        agency_id: expectedAgencyId,
+        integration_id: integrationId,
+      },
       enquiry,
     })
 
@@ -192,24 +199,21 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
     }
 
     try {
-      const { emitted } = await emitReaEvent(
-        agency.appInstallationId,
-        'enquiry.created',
-        validatedPayload,
-        webhookEvent.eventId,
-      )
+      const result = await createReaEvent('enquiry.created', validatedPayload, {
+        correlationId: webhookEvent.eventId,
+      })
 
       console.log(
-        `[REA] Processed enquiry_created owner=${webhookEvent.ownerId} event_id=${webhookEvent.eventId} emitted=${emitted}`,
+        `[REA] Processed enquiry_created owner=${webhookEvent.ownerId} event_id=${webhookEvent.eventId} emitted=${result.emitted}`,
       )
 
       results.push({
         status: 'ok',
         app_event: 'enquiry.created',
-        emitted,
+        emitted: result.emitted,
         event_id: webhookEvent.eventId,
         owner_id: webhookEvent.ownerId,
-        agency_id: agency.id,
+        agency_id: expectedAgencyId,
       })
     } catch (error) {
       console.error(
@@ -238,7 +242,7 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
 export const enquiryCreatedWebhook: WebhookDefinition = {
   name: 'enquiry_created',
   description:
-    'Receive REA EnquiryCreated lead webhooks. Single provision-level endpoint for all linked agencies.',
+    'Receive REA EnquiryCreated lead webhooks for this workplace installation.',
   methods: ['POST'],
   type: 'WEBHOOK',
   handler: enquiryCreatedHandler,

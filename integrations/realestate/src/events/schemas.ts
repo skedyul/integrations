@@ -19,7 +19,6 @@ export const ReaWebhookContextSchema = z
 
 export const ReaAgencyContextSchema = z
   .object({
-    id: z.string().min(1),
     agency_id: z.string().min(1),
     integration_id: z.string().min(1),
   })

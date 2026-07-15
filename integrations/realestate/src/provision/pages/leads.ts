@@ -21,16 +21,6 @@ export default definePage({
   path: '/leads',
   navigation: true,
 
-  context: {
-    agency: {
-      model: 'agency',
-      mode: 'first',
-      filters: {
-        status: { equals: 'ACTIVE' },
-      },
-    },
-  },
-
   blocks: [
     {
       type: 'card',

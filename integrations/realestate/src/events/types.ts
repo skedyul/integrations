@@ -13,7 +13,6 @@ export interface ReaWebhookContext {
 }
 
 export interface ReaAgencyContext {
-  id: string
   agency_id: string
   integration_id: string
 }

@@ -1,10 +1,10 @@
 import type {
   NormalizedReaWebhookEvent,
+  ReaAgencyContext,
   ReaEnquiryRecord,
   ReaEnquiryEntity,
   ReaEnquiryEventPayload,
 } from '../events/types'
-import type { ActiveAgencyRecord } from './resolve-agency-for-owner'
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
@@ -117,7 +117,7 @@ export function transformReaEnquiryRecord(
 
 export function buildEnquiryCreatedPayload(params: {
   webhookEvent: NormalizedReaWebhookEvent
-  agency: ActiveAgencyRecord
+  agency: ReaAgencyContext
   enquiry: ReaEnquiryRecord
 }): ReaEnquiryEventPayload {
   return {
@@ -129,7 +129,6 @@ export function buildEnquiryCreatedPayload(params: {
       subscription_id: params.webhookEvent.subscriptionId,
     },
     agency: {
-      id: params.agency.id,
       agency_id: params.agency.agency_id,
       integration_id: params.agency.integration_id,
     },

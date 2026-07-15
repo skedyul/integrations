@@ -34,4 +34,18 @@ export default defineEnv({
       'Your realestate.com.au agency ID (6 uppercase letters). Your agency must authorize this partner integration with REA before install.',
     placeholder: 'ABCDEF',
   },
+  REA_INTEGRATION_ID: {
+    label: 'REA Integration ID',
+    scope: 'install',
+    required: false,
+    visibility: 'system',
+    description: 'REA integration ID validated at install time',
+  },
+  REA_SUBSCRIPTION_ID: {
+    label: 'REA Subscription ID',
+    scope: 'install',
+    required: false,
+    visibility: 'system',
+    description: 'REA webhook subscription ID for this agency',
+  },
 })

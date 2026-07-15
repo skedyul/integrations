@@ -4,7 +4,6 @@ import {
   normalizeReaWebhookEvents,
   transformReaEnquiryRecord,
 } from '../rea-enquiry'
-import type { ActiveAgencyRecord } from '../resolve-agency-for-owner'
 
 describe('normalizeReaWebhookEvents', () => {
   it('parses EnquiryCreated events from webhook payload', () => {
@@ -70,13 +69,6 @@ describe('transformReaEnquiryRecord', () => {
 
 describe('buildEnquiryCreatedPayload', () => {
   it('builds nested event payload envelope', () => {
-    const agency: ActiveAgencyRecord = {
-      id: 'agency-1',
-      agency_id: 'ABCDEF',
-      integration_id: 'integration-1',
-      appInstallationId: 'ainst_test',
-    }
-
     const payload = buildEnquiryCreatedPayload({
       webhookEvent: {
         resourceUrl:
@@ -90,7 +82,10 @@ describe('buildEnquiryCreatedPayload', () => {
         ownerType: 'agency',
         subscriptionId: 'sub-1',
       },
-      agency,
+      agency: {
+        agency_id: 'ABCDEF',
+        integration_id: 'integration-1',
+      },
       enquiry: {
         id: '2bb121ad-2849-4b20-bc40-19e4ae371b7e',
         agencyId: 'ABCDEF',

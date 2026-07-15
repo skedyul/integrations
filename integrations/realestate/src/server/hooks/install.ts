@@ -1,10 +1,13 @@
 import {
   AuthenticationError,
-  instance,
   MissingRequiredFieldError,
   type InstallHandlerContext,
   type InstallHandlerResult,
 } from 'skedyul'
+import {
+  ensureInstallReaWebhook,
+  ensureReaAgencyLeadSubscription,
+} from '../../lib/ensure-rea-webhooks'
 import { ReaClient } from '../../lib/rea-client'
 import {
   REA_AGENCY_ID_PATTERN,
@@ -50,32 +53,25 @@ export default async function install(
     )
   }
 
-  const existingAgencies = await instance.list('agency', {
-    filter: { agency_id: agencyId },
-    limit: 1,
-  })
+  const registration = await ensureInstallReaWebhook()
+  ctx.log.info(`[REA Install] Skedyul webhook URL: ${registration.url}`)
 
-  if (existingAgencies.data.length > 0) {
-    const existing = existingAgencies.data[0] as { id: string }
-    await instance.update('agency', existing.id, {
-      integration_id: integration.integrationId,
-      status: 'ACTIVE',
-    })
-    ctx.log.info(`[REA Install] Updated existing agency record: ${existing.id}`)
-  } else {
-    const created = await instance.create('agency', {
-      agency_id: agencyId,
-      integration_id: integration.integrationId,
-      status: 'ACTIVE',
-    })
-    ctx.log.info(`[REA Install] Created agency record: ${(created as { id: string }).id}`)
-  }
+  const subscription = await ensureReaAgencyLeadSubscription(
+    clientEnv,
+    agencyId,
+    registration.url,
+  )
+  ctx.log.info(
+    `[REA Install] REA lead subscription: ${subscription.subscriptionId} (${subscription.status ?? 'unknown'})`,
+  )
 
   ctx.log.info('[REA Install] Installation completed successfully')
 
   return {
     env: {
       REA_AGENCY_ID: agencyId,
+      REA_INTEGRATION_ID: integration.integrationId,
+      REA_SUBSCRIPTION_ID: subscription.subscriptionId,
     },
   }
 }

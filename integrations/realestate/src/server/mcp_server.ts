@@ -2,6 +2,7 @@ import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import provisionHandler from './hooks/provision'
+import uninstallHandler from './hooks/uninstall'
 import pkg from '../../package.json'
 
 function getComputeLayer(): 'serverless' | 'dedicated' {
@@ -34,6 +35,10 @@ const skedyulServer = server.create({
     provision: {
       handler: provisionHandler,
       timeout: 300000,
+    },
+    uninstall: {
+      handler: uninstallHandler,
+      timeout: 60000,
     },
   },
 })

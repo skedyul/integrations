@@ -155,11 +155,67 @@ export class ReaClient {
 
   async createLeadWebhookSubscription(
     webhookUrl: string,
+    owner?: { ownerId: string; ownerType: 'agency' },
   ): Promise<ReaWebhookSubscription> {
-    return this.postJson<ReaWebhookSubscription>('/webhooks/v1/subscriptions', {
+    const body: Record<string, unknown> = {
       eventType: 'EnquiryCreated',
       eventCategory: 'lead',
       webhookUrl,
+    }
+
+    if (owner) {
+      body.ownerId = owner.ownerId
+      body.ownerType = owner.ownerType
+    }
+
+    return this.postJson<ReaWebhookSubscription>('/webhooks/v1/subscriptions', body)
+  }
+
+  async deleteWebhookSubscription(subscriptionId: string): Promise<void> {
+    const token = await this.getAccessToken()
+    const response = await fetch(
+      `${this.baseUrl}/webhooks/v1/subscriptions/${encodeURIComponent(subscriptionId)}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    )
+
+    if (!response.ok && response.status !== 404) {
+      const text = await response.text()
+      throw new Error(
+        `REA DELETE subscription ${subscriptionId} failed (${response.status}): ${text.slice(0, 300)}`,
+      )
+    }
+  }
+
+  findLeadSubscription(
+    subscriptions: ReaWebhookSubscription[],
+    options: {
+      webhookUrl?: string
+      ownerId?: string
+      allOwners?: boolean
+    },
+  ): ReaWebhookSubscription | undefined {
+    return subscriptions.find((subscription) => {
+      if (subscription.eventType !== 'EnquiryCreated') return false
+      if (subscription.eventCategory !== 'lead') return false
+
+      if (options.allOwners) {
+        return !subscription.ownerId
+      }
+
+      if (options.ownerId && subscription.ownerId !== options.ownerId) {
+        return false
+      }
+
+      if (options.webhookUrl && subscription.webhookUrl !== options.webhookUrl) {
+        return false
+      }
+
+      return true
     })
   }
 

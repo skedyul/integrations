@@ -8,12 +8,12 @@ import {
 } from './rea-types'
 import { cacheSigningKeys } from './rea-webhook-signature'
 
-export interface ProvisionReaWebhookRegistration {
+export interface InstallReaWebhookRegistration {
   id: string
   url: string
 }
 
-export async function ensureProvisionReaWebhook(): Promise<ProvisionReaWebhookRegistration> {
+export async function ensureInstallReaWebhook(): Promise<InstallReaWebhookRegistration> {
   const { webhooks } = await webhook.list({ name: ENQUIRY_CREATED_WEBHOOK_NAME })
   const existing = webhooks[0]
 
@@ -25,20 +25,18 @@ export async function ensureProvisionReaWebhook(): Promise<ProvisionReaWebhookRe
   return { id: created.id, url: created.url }
 }
 
-export async function ensureReaLeadSubscription(
+export async function ensureReaAgencyLeadSubscription(
   env: ReaClientEnv,
+  agencyId: string,
   webhookUrl: string,
 ): Promise<{ subscriptionId: string; status?: string }> {
   const client = ReaClient.fromEnv(env)
   const subscriptions = await client.listWebhookSubscriptions()
 
-  const existing = subscriptions.find(
-    (subscription) =>
-      subscription.eventType === REA_LEAD_EVENT_TYPE &&
-      subscription.eventCategory === REA_LEAD_EVENT_CATEGORY &&
-      subscription.webhookUrl === webhookUrl &&
-      !subscription.ownerId,
-  )
+  const existing = client.findLeadSubscription(subscriptions, {
+    ownerId: agencyId,
+    webhookUrl,
+  })
 
   if (existing) {
     return {
@@ -47,10 +45,44 @@ export async function ensureReaLeadSubscription(
     }
   }
 
-  const created = await client.createLeadWebhookSubscription(webhookUrl)
+  const conflicting = client.findLeadSubscription(subscriptions, {
+    ownerId: agencyId,
+  })
+
+  if (conflicting) {
+    throw new Error(
+      `REA subscription already exists for agency ${agencyId} with a different webhook URL. Delete subscription ${conflicting.subscriptionId} in REA before reinstalling.`,
+    )
+  }
+
+  const created = await client.createLeadWebhookSubscription(webhookUrl, {
+    ownerId: agencyId,
+    ownerType: 'agency',
+  })
+
   return {
     subscriptionId: created.subscriptionId,
     status: created.status,
+  }
+}
+
+export async function removeAllAgenciesReaLeadSubscription(
+  env: ReaClientEnv,
+): Promise<{ deleted: boolean; subscriptionId?: string }> {
+  const client = ReaClient.fromEnv(env)
+  const subscriptions = await client.listWebhookSubscriptions()
+
+  const existing = client.findLeadSubscription(subscriptions, { allOwners: true })
+
+  if (!existing) {
+    return { deleted: false }
+  }
+
+  await client.deleteWebhookSubscription(existing.subscriptionId)
+
+  return {
+    deleted: true,
+    subscriptionId: existing.subscriptionId,
   }
 }
 
@@ -59,4 +91,10 @@ export async function prefetchReaSigningKeys(env: ReaClientEnv): Promise<number>
   const response = await client.getSigningKeys()
   cacheSigningKeys(response.keys ?? [])
   return response.keys?.length ?? 0
+}
+
+export {
+  ENQUIRY_CREATED_WEBHOOK_NAME,
+  REA_LEAD_EVENT_CATEGORY,
+  REA_LEAD_EVENT_TYPE,
 }
