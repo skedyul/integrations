@@ -9,7 +9,7 @@ This package contains official Skedyul integration apps that connect external se
 | [Email](./integrations/email/) | Send and receive emails | Auto-provisioned addresses, attachments, Mailgun provider |
 | [Meta](./integrations/meta/) | WhatsApp, Instagram, Messenger | OAuth authentication, message sending/receiving |
 | [Phone](./integrations/phone/) | SMS and voice via Twilio | Compliance workflow, call forwarding, webhooks |
-| [BFT](./integrations/bft/) | Body Fit Training scraper | Schedule sync, package management |
+| [realestate.com.au](./integrations/realestate/) | REA Partner Platform leads | Lead webhooks, enquiry sync, agency linking |
 | [Petbooqz](./integrations/petbooqz/) | Veterinary practice management | Appointments, clients, patients, AI agents |
 
 ## Architecture
