@@ -43,4 +43,4 @@ pnpm build
 | ----- | ----------- |
 | `enquiry.created` | A new REA enquiry was received for a linked agency |
 
-Subscribe workflows to `app.realestate.enquiry.created` to upsert CRM lead/prospect records. See `workflows/examples/sync-enquiry-from-webhook.yml`.
+Subscribe workflows to `app.realestate.enquiry.created` to upsert CRM lead/prospect records from the enquiry payload.
