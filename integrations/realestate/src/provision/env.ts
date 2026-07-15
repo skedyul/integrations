@@ -28,24 +28,10 @@ export default defineEnv({
   REA_AGENCY_ID: {
     label: 'REA Agency ID',
     scope: 'install',
-    required: true,
+    required: false,
     visibility: 'visible',
     description:
-      'Your realestate.com.au agency ID (6 uppercase letters). Your agency must authorize this partner integration with REA before install.',
+      'Optional. Your 6-letter realestate.com.au agency code (e.g. ABCDEF). Leave blank if your partner account has only one authorized agency — it will be detected automatically. Otherwise authorize your agency in Ignite first, then enter the code here.',
     placeholder: 'ABCDEF',
-  },
-  REA_INTEGRATION_ID: {
-    label: 'REA Integration ID',
-    scope: 'install',
-    required: false,
-    visibility: 'system',
-    description: 'REA integration ID validated at install time',
-  },
-  REA_SUBSCRIPTION_ID: {
-    label: 'REA Subscription ID',
-    scope: 'install',
-    required: false,
-    visibility: 'system',
-    description: 'REA webhook subscription ID for this agency',
   },
 })

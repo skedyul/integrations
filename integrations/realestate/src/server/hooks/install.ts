@@ -1,6 +1,5 @@
 import {
   AuthenticationError,
-  MissingRequiredFieldError,
   type InstallHandlerContext,
   type InstallHandlerResult,
 } from 'skedyul'
@@ -14,17 +13,48 @@ import {
   REA_REQUIRED_LEAD_SCOPE,
   type ReaClientEnv,
 } from '../../lib/rea-types'
+import type { ReaIntegrationRecord } from '../../events/types'
+
+const IGNITE_INTEGRATIONS_URL =
+  'https://ignite.realestate.com.au/manage/data-and-integrations'
+
+function resolveAgencyIntegration(
+  integrations: ReaIntegrationRecord[],
+  agencyId?: string,
+): ReaIntegrationRecord {
+  if (agencyId) {
+    const match = integrations.find((integration) => integration.ownerId === agencyId)
+    if (!match) {
+      throw new AuthenticationError(
+        `No authorized REA integration found for agency ${agencyId}. The agency must authorize your partner account with ${REA_REQUIRED_LEAD_SCOPE} scope in Ignite before installing. ${IGNITE_INTEGRATIONS_URL}`,
+      )
+    }
+    return match
+  }
+
+  if (integrations.length === 0) {
+    throw new AuthenticationError(
+      `No agencies have authorized your partner account for ${REA_REQUIRED_LEAD_SCOPE}. Ask the agency to authorize you in Ignite first: ${IGNITE_INTEGRATIONS_URL}`,
+    )
+  }
+
+  if (integrations.length === 1) {
+    return integrations[0]!
+  }
+
+  const agencyIds = integrations.map((integration) => integration.ownerId).join(', ')
+  throw new AuthenticationError(
+    `Multiple agencies are authorized (${agencyIds}). Enter your 6-letter REA Agency ID to select which agency to connect.`,
+  )
+}
 
 export default async function install(
   ctx: InstallHandlerContext,
 ): Promise<InstallHandlerResult> {
-  const agencyId = ctx.env.REA_AGENCY_ID?.trim().toUpperCase()
+  const rawAgencyId = ctx.env.REA_AGENCY_ID?.trim().toUpperCase()
+  const agencyId = rawAgencyId || undefined
 
-  if (!agencyId) {
-    throw new MissingRequiredFieldError('REA_AGENCY_ID')
-  }
-
-  if (!REA_AGENCY_ID_PATTERN.test(agencyId)) {
+  if (agencyId && !REA_AGENCY_ID_PATTERN.test(agencyId)) {
     throw new AuthenticationError(
       'REA Agency ID must be exactly 6 uppercase letters (e.g. ABCDEF).',
     )
@@ -42,23 +72,21 @@ export default async function install(
     )
   }
 
-  ctx.log.info(`[REA Install] Validating agency ${agencyId} for workplace ${ctx.workplace.subdomain}`)
-
   const client = ReaClient.fromEnv(clientEnv)
-  const integration = await client.findIntegrationForAgency(agencyId)
+  const leadIntegrations = await client.listLeadIntegrations()
+  const integration = resolveAgencyIntegration(leadIntegrations, agencyId)
+  const resolvedAgencyId = integration.ownerId
 
-  if (!integration) {
-    throw new AuthenticationError(
-      `No authorized REA integration found for agency ${agencyId}. The agency must authorize your partner account with ${REA_REQUIRED_LEAD_SCOPE} scope before installing.`,
-    )
-  }
+  ctx.log.info(
+    `[REA Install] Connecting agency ${resolvedAgencyId} for workplace ${ctx.workplace.subdomain}`,
+  )
 
   const registration = await ensureInstallReaWebhook()
   ctx.log.info(`[REA Install] Skedyul webhook URL: ${registration.url}`)
 
   const subscription = await ensureReaAgencyLeadSubscription(
     clientEnv,
-    agencyId,
+    resolvedAgencyId,
     registration.url,
   )
   ctx.log.info(
@@ -69,7 +97,7 @@ export default async function install(
 
   return {
     env: {
-      REA_AGENCY_ID: agencyId,
+      REA_AGENCY_ID: resolvedAgencyId,
       REA_INTEGRATION_ID: integration.integrationId,
       REA_SUBSCRIPTION_ID: subscription.subscriptionId,
     },

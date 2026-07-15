@@ -24,11 +24,13 @@ On provision, the app prefetches REA signing keys and removes any legacy partner
 
 ### Install (workplace)
 
-Each agency customer provides their **REA Agency ID** (6 uppercase letters, e.g. `ABCDEF`). The install handler:
+Each agency customer authorizes your partner account in **Ignite** ([manage integrations](https://ignite.realestate.com.au/manage/data-and-integrations)). The install handler then:
 
-1. Validates that REA has authorized your partner account for that agency with `lead:enquiries:read` scope
+1. Resolves the agency — automatically when only one agency has authorized your account, or from the optional **REA Agency ID** field when multiple agencies exist
 2. Registers an install-scoped Skedyul webhook URL
 3. Creates a per-agency REA subscription pointing at that URL
+
+`REA Integration ID` and `REA Subscription ID` are set by the install handler — users never enter them.
 
 Agencies must authorize your partner account via REA before install will succeed.
 

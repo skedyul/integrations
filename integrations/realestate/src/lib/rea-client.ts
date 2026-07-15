@@ -136,13 +136,16 @@ export class ReaClient {
   }
 
   async findIntegrationForAgency(agencyId: string): Promise<ReaIntegrationRecord | null> {
-    const integrations = await this.listIntegrations()
+    const integrations = await this.listLeadIntegrations()
     return (
-      integrations.find(
-        (integration) =>
-          integration.ownerId === agencyId &&
-          integration.scopes?.includes(REA_REQUIRED_LEAD_SCOPE),
-      ) ?? null
+      integrations.find((integration) => integration.ownerId === agencyId) ?? null
+    )
+  }
+
+  async listLeadIntegrations(): Promise<ReaIntegrationRecord[]> {
+    const integrations = await this.listIntegrations()
+    return integrations.filter((integration) =>
+      integration.scopes?.includes(REA_REQUIRED_LEAD_SCOPE),
     )
   }
 
