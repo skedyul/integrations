@@ -80,19 +80,20 @@ Meta sends different `object` values on the same callback URL:
 
 ### 2. Configure Webhooks (single URL)
 
-On each app version deploy, the provision hook registers a single `receive_meta` webhook with Skedyul. Use the returned URL in the Meta App Dashboard:
+On each app version deploy, the provision hook:
 
-Set webhook URL: `{SKEDYUL_API_URL}/api/webhooks/{registration_id}`
+1. Registers `receive_meta` with Skedyul via `webhook.create`
+2. Calls the Meta Graph API `/{app-id}/subscriptions` edge to set the callback URL and subscribe to:
+   - `whatsapp_business_account`: `messages`, `message_deliveries`, `message_reads`
+   - `page`: `messages`, `messaging_postbacks`, `message_reads`
+   - `instagram`: `messages`
 
-(The registration is created automatically during provisioning; reuse the same URL across redeploys when the registration already exists.)
+Meta verifies the callback URL with a GET challenge during that API call, so the webhook must already be registered and reachable.
 
-Subscribe in Meta App Dashboard:
+If automatic configuration fails (or provision env vars are missing), open **Account → Webhook Configuration** in the app UI for the callback URL and Meta dashboard link, or configure manually in the [Meta App Dashboard](https://developers.facebook.com/apps/) under **Webhooks**:
 
-- **WhatsApp**: `messages`, `message_deliveries`, `message_reads`
-- **Page (Messenger)**: `messages`, `messaging_postbacks`, `message_reads`
-- **Instagram**: `messages`
-
-Verify token must match `META_WEBHOOK_VERIFY_TOKEN`.
+- Callback URL: the Skedyul `receive_meta` URL from provision
+- Verify token: must match `META_WEBHOOK_VERIFY_TOKEN`
 
 ### 3. OAuth scopes
 

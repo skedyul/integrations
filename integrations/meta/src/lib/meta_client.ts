@@ -530,4 +530,80 @@ export class MetaClient {
       )
     }
   }
+
+  /**
+   * App access token for app-level Graph API calls (e.g. webhook subscriptions).
+   */
+  getAppAccessToken(): string {
+    return `${this.appId}|${this.appSecret}`
+  }
+
+  /**
+   * List app-level webhook subscriptions configured on the Meta app.
+   */
+  async listAppSubscriptions(): Promise<
+    Array<{
+      object: string
+      callback_url: string
+      active: boolean
+      fields: Array<{ name: string; version?: string }>
+    }>
+  > {
+    const url = new URL(`${this.baseUrl}/${this.appId}/subscriptions`)
+    url.searchParams.set('access_token', this.getAppAccessToken())
+
+    const response = await fetch(url.toString(), { method: 'GET' })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      throw new Error(
+        `Failed to list Meta app subscriptions: ${JSON.stringify(errorResponse)}`,
+      )
+    }
+
+    const data = (await response.json()) as {
+      data?: Array<{
+        object: string
+        callback_url: string
+        active: boolean
+        fields: Array<{ name: string; version?: string }>
+      }>
+    }
+
+    return data.data ?? []
+  }
+
+  /**
+   * Create or update an app-level webhook subscription.
+   *
+   * Meta verifies the callback URL with a GET challenge before accepting the subscription.
+   */
+  async upsertAppSubscription(params: {
+    object: string
+    callbackUrl: string
+    verifyToken: string
+    fields: string[]
+  }): Promise<void> {
+    const url = new URL(`${this.baseUrl}/${this.appId}/subscriptions`)
+    const body = new URLSearchParams({
+      object: params.object,
+      callback_url: params.callbackUrl,
+      verify_token: params.verifyToken,
+      fields: params.fields.join(','),
+      access_token: this.getAppAccessToken(),
+    })
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      throw new Error(
+        `Failed to configure Meta app subscription for ${params.object}: ${JSON.stringify(errorResponse)}`,
+      )
+    }
+  }
 }
