@@ -51,7 +51,7 @@ Inbound webhooks resolve the installation via token exchange (lookup CRM record 
 | `send_messenger` | Send Messenger message to a PSID |
 | `send_instagram` | Send Instagram Direct message |
 | `add_whatsapp_number` | Provision WhatsApp channel from WABA number |
-| `add_facebook_page` | Provision Messenger channel from connected page |
+| `add_facebook_page` | Store page on internal model + create Messenger channel (`identifierValue` = page ID) |
 | `add_instagram_account` | Provision Instagram channel from connected account |
 | `remove_whatsapp_number` | Remove WhatsApp number, channel, and subscriptions |
 | `remove_facebook_page` | Remove Facebook Page, Messenger channel, and subscriptions |

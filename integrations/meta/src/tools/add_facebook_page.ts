@@ -3,11 +3,11 @@ import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
 import { instance, communicationChannel } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
+import { requireMetaAccessToken } from '../lib/meta_install_env'
 import {
   createSuccessResponse,
   createValidationError,
   createAuthError,
-  createNotFoundError,
   createMetaError,
 } from '../lib/response'
 
@@ -31,7 +31,8 @@ export const addFacebookPageRegistry: ToolDefinition<
 > = {
   name: 'add_facebook_page',
   label: 'Add Facebook Page',
-  description: 'Adds a Facebook Page as a Messenger communication channel',
+  description:
+    'Stores a Facebook Page on the internal model and creates a Messenger communication channel',
   inputSchema: AddFacebookPageInputSchema,
   outputSchema: AddFacebookPageOutputSchema,
   handler: async (input, context) => {
@@ -40,27 +41,22 @@ export const addFacebookPageRegistry: ToolDefinition<
     }
 
     const { page_id, name } = input
-    const META_APP_ID = context.env.META_APP_ID || process.env.META_APP_ID
-    const META_APP_SECRET = context.env.META_APP_SECRET || process.env.META_APP_SECRET
-    const GRAPH_API_VERSION = context.env.GRAPH_API_VERSION || process.env.GRAPH_API_VERSION
+    const { env } = context
+    const META_APP_ID = env.META_APP_ID || process.env.META_APP_ID
+    const META_APP_SECRET = env.META_APP_SECRET || process.env.META_APP_SECRET
+    const GRAPH_API_VERSION = env.GRAPH_API_VERSION || process.env.GRAPH_API_VERSION
 
     if (!META_APP_ID || !META_APP_SECRET || !GRAPH_API_VERSION) {
       return createAuthError('Meta app credentials are not configured.')
     }
 
-    const pages = await instance.list('facebook_page', {
-      filter: { page_id },
-      limit: 1,
-    })
-
-    if (pages.data.length === 0) {
-      return createNotFoundError('Facebook page', page_id)
-    }
-
-    const page = pages.data[0] as {
-      id: string
-      name?: string
-      access_token?: string | null
+    let accessToken: string
+    try {
+      accessToken = requireMetaAccessToken(env)
+    } catch (error) {
+      return createAuthError(
+        error instanceof Error ? error.message : 'Please complete the OAuth flow first.',
+      )
     }
 
     const existingChannels = await communicationChannel.list({
@@ -72,9 +68,52 @@ export const addFacebookPageRegistry: ToolDefinition<
       return createValidationError(`Facebook page ${page_id} is already added as a channel`)
     }
 
+    const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
+
+    let pageFromMeta: { id: string; name: string; access_token?: string }
+    try {
+      const pagesResponse = await client.getPages(accessToken)
+      const match = pagesResponse.data.find((page) => page.id === page_id)
+      if (!match) {
+        return createValidationError(
+          `Facebook page ${page_id} was not found on your connected Meta account`,
+        )
+      }
+      pageFromMeta = match
+    } catch (error) {
+      return createMetaError(
+        `Failed to fetch Facebook Page from Meta: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+
+    const existingPages = await instance.list('facebook_page', {
+      filter: { page_id },
+      limit: 1,
+    })
+
+    let pageInstance: { id: string; name?: string }
+    const pageRecord = {
+      page_id: pageFromMeta.id,
+      name: pageFromMeta.name,
+      access_token: pageFromMeta.access_token ?? null,
+    }
+
+    try {
+      if (existingPages.data.length > 0) {
+        const existing = existingPages.data[0] as { id: string }
+        pageInstance = await instance.update('facebook_page', existing.id, pageRecord)
+      } else {
+        pageInstance = await instance.create('facebook_page', pageRecord)
+      }
+    } catch (err) {
+      return createMetaError(
+        `Failed to store Facebook Page: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      )
+    }
+
     try {
       await communicationChannel.create('messenger', {
-        name: name ?? page.name ?? `Messenger ${page_id}`,
+        name: name ?? pageFromMeta.name ?? `Messenger ${page_id}`,
         identifierValue: page_id,
       })
     } catch (channelErr) {
@@ -84,10 +123,9 @@ export const addFacebookPageRegistry: ToolDefinition<
       )
     }
 
-    if (page.access_token) {
+    if (pageFromMeta.access_token) {
       try {
-        const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
-        await client.subscribePageToWebhooks(page_id, page.access_token)
+        await client.subscribePageToWebhooks(page_id, pageFromMeta.access_token)
       } catch (err) {
         console.warn('[AddFacebookPage] Webhook subscription failed (manual setup may be required):', err)
       }
@@ -97,12 +135,12 @@ export const addFacebookPageRegistry: ToolDefinition<
       {
         status: 'success',
         pageId: page_id,
-        message: `Successfully added Facebook Page ${page.name ?? page_id} as Messenger channel`,
+        message: `Successfully added Facebook Page ${pageFromMeta.name} as Messenger channel`,
       },
       {
         billing: { credits: 1 },
         effect: {
-          redirect: `/facebook-pages/${page.id}/overview`,
+          redirect: `/facebook-pages/${pageInstance.id}/overview`,
         },
       },
     )

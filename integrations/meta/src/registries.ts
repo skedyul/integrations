@@ -10,6 +10,7 @@ import { sendInstagramRegistry } from './tools/send_instagram'
 import { fetchRegisteredWABusinessNumbersRegistry } from './tools/fetch_registered_wa_business_numbers'
 import { fetchMetaConnectionRegistry } from './tools/fetch_meta_connection'
 import { addWhatsAppNumberRegistry } from './tools/add_whatsapp_number'
+import { fetchFacebookPagesRegistry } from './tools/fetch_facebook_pages'
 import { addFacebookPageRegistry } from './tools/add_facebook_page'
 import { addInstagramAccountRegistry } from './tools/add_instagram_account'
 import { removeWhatsAppNumberRegistry } from './tools/remove_whatsapp_number'
@@ -22,6 +23,7 @@ export const toolRegistry: ToolRegistry = {
   send_instagram: sendInstagramRegistry,
   fetch_registered_wa_business_numbers: fetchRegisteredWABusinessNumbersRegistry,
   fetch_meta_connection: fetchMetaConnectionRegistry,
+  fetch_facebook_pages: fetchFacebookPagesRegistry,
   add_whatsapp_number: addWhatsAppNumberRegistry,
   add_facebook_page: addFacebookPageRegistry,
   add_instagram_account: addInstagramAccountRegistry,

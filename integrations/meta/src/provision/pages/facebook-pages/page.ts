@@ -21,6 +21,9 @@ export default definePage({
       model: 'facebook_page',
       mode: 'many',
     },
+    available_facebook_pages: {
+      tool: 'fetch_facebook_pages',
+    },
   },
 
   blocks: [
@@ -62,9 +65,9 @@ export default definePage({
                   id: 'page_id',
                   row: 0,
                   col: 0,
-                  iterable: '{{ facebook_pages }}',
+                  iterable: '{{ available_facebook_pages }}',
                   itemTemplate: {
-                    value: '{{ item.page_id }}',
+                    value: '{{ item.id }}',
                     label: '{{ item.name }}',
                   },
                   label: 'Facebook Page',
@@ -119,8 +122,8 @@ export default definePage({
                 href: '/facebook-pages/{{ item.id }}/overview',
               },
             },
-            title: 'Facebook Pages',
-            emptyMessage: 'No Facebook Pages found. Connect your Meta account to get started.',
+            title: 'Added Facebook Pages',
+            emptyMessage: 'No Facebook Pages added yet. Connect your Meta account, then add a page to enable Messenger.',
           },
         ],
         layout: {

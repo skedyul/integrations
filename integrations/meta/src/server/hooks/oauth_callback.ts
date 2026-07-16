@@ -93,7 +93,6 @@ export default async function oauthCallback(
 
     const phoneNumbersResponse = await client.getPhoneNumbers(waba.id, longLivedToken)
 
-    let pages: Array<{ id: string; name: string; access_token?: string }> = []
     let instagramAccounts: Array<{
       id: string
       username: string
@@ -102,42 +101,16 @@ export default async function oauthCallback(
     }> = []
 
     try {
-      const pagesResponse = await client.getPages(longLivedToken)
-      pages = pagesResponse.data
-      ctx.log.info(`[Meta OAuth] Found ${pages.length} Facebook Pages`)
-
       const instagramResponse = await client.getInstagramAccounts(longLivedToken)
       instagramAccounts = instagramResponse.data
       ctx.log.info(`[Meta OAuth] Found ${instagramAccounts.length} Instagram accounts`)
     } catch (err) {
-      ctx.log.warn('[Meta OAuth] Failed to fetch Pages/Instagram (may not have permissions):', err)
+      ctx.log.warn('[Meta OAuth] Failed to fetch Instagram (may not have permissions):', err)
     }
 
     await runWithConfig(
       { ...currentConfig, apiToken: scopedToken },
       async () => {
-        for (const pageData of pages) {
-          const existingPages = await instance.list('facebook_page', {
-            filter: { page_id: pageData.id },
-            limit: 1,
-          })
-
-          if (existingPages.data.length > 0) {
-            const existing = existingPages.data[0] as { id: string }
-            await instance.update('facebook_page', existing.id, {
-              page_id: pageData.id,
-              name: pageData.name,
-              access_token: pageData.access_token || null,
-            })
-          } else {
-            await instance.create('facebook_page', {
-              page_id: pageData.id,
-              name: pageData.name,
-              access_token: pageData.access_token || null,
-            })
-          }
-        }
-
         for (const instagramData of instagramAccounts) {
           const existingAccounts = await instance.list('instagram_account', {
             filter: { instagram_account_id: instagramData.id },
