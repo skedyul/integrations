@@ -80,7 +80,11 @@ Meta sends different `object` values on the same callback URL:
 
 ### 2. Configure Webhooks (single URL)
 
+On each app version deploy, the provision hook registers a single `receive_meta` webhook with Skedyul. Use the returned URL in the Meta App Dashboard:
+
 Set webhook URL: `{SKEDYUL_API_URL}/api/webhooks/{registration_id}`
+
+(The registration is created automatically during provisioning; reuse the same URL across redeploys when the registration already exists.)
 
 Subscribe in Meta App Dashboard:
 
