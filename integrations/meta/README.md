@@ -35,11 +35,11 @@ src/
 
 ## Channels
 
-| Handle | Business identifier | Thread routing (1:1) | Group routing |
-|--------|---------------------|----------------------|---------------|
-| `whatsapp` | E.164 business phone | Sender phone (`routingAddress`) | `externalId` = WhatsApp `group_id` |
-| `messenger` | Facebook `page_id` | Sender PSID | N/A |
-| `instagram` | `instagram_account_id` | Sender IGSID | N/A |
+| Handle | Business endpoint (`identifierValue`) | Channel contact field (`identifier: true`) | Thread routing |
+|--------|-------------------------------------|--------------------------------------------|----------------|
+| `whatsapp` | E.164 business phone | `phone` (customer phone) | Sender phone (`routingAddress`) |
+| `messenger` | Facebook `page_id` | `psid` (sender PSID) | Sender PSID |
+| `instagram` | `instagram_account_id` | `igsid` (sender IGSID) | Sender IGSID |
 
 Inbound webhooks resolve the installation via token exchange (lookup CRM record by Meta resource ID, then find the matching `communicationChannel`).
 
@@ -125,6 +125,9 @@ OAuth yields a long-lived user token (~60 days). Re-run the Meta OAuth connect f
 | `META_WEBHOOK_VERIFY_TOKEN` | Provision | Webhook verification token |
 | `GRAPH_API_VERSION` | Provision | e.g. `v24.0` |
 | `META_ACCESS_TOKEN` | Install | Long-lived token (set by OAuth) |
+| `META_WABA_ID` | Install | Connected WABA ID (set by OAuth) |
+| `META_BUSINESS_NAME` | Install | Business name (set by OAuth) |
+| `META_CONNECTION_STATUS` | Install | `connected` / `pending` / `error` |
 
 ## Development
 

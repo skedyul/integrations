@@ -13,8 +13,8 @@ export default defineChannel({
 
   fields: [
     {
-      handle: 'page_id',
-      label: 'Page ID',
+      handle: 'psid',
+      label: 'Messenger PSID',
       identifier: true,
       definition: 'string',
       visibility: {

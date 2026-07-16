@@ -13,8 +13,8 @@ export default defineChannel({
 
   fields: [
     {
-      handle: 'instagram_account_id',
-      label: 'Instagram Account ID',
+      handle: 'igsid',
+      label: 'Instagram Scoped ID',
       identifier: true,
       definition: 'string',
       visibility: {
