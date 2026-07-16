@@ -53,6 +53,9 @@ Inbound webhooks resolve the installation via token exchange (lookup CRM record 
 | `add_whatsapp_number` | Provision WhatsApp channel from WABA number |
 | `add_facebook_page` | Provision Messenger channel from connected page |
 | `add_instagram_account` | Provision Instagram channel from connected account |
+| `remove_whatsapp_number` | Remove WhatsApp number, channel, and subscriptions |
+| `remove_facebook_page` | Remove Facebook Page, Messenger channel, and subscriptions |
+| `remove_instagram_account` | Remove Instagram account, channel, and subscriptions |
 | `fetch_registered_wa_business_numbers` | List WABA numbers from Meta |
 
 ## Webhooks

@@ -93,5 +93,85 @@ export default definePage({
         },
       },
     },
+    {
+      type: 'card',
+      restructurable: false,
+      header: {
+        title: 'Danger Zone',
+        description: 'Irreversible actions for this WhatsApp number.',
+      },
+      form: {
+        id: 'whatsapp-danger-zone-form',
+        fields: [
+          {
+            component: 'fieldsetting',
+            id: 'remove_whatsapp_number',
+            row: 0,
+            col: 0,
+            label: 'Remove WhatsApp Number',
+            description: 'Remove this number and its messaging channel from Skedyul.',
+            mode: 'setting',
+            button: {
+              label: 'Remove',
+              variant: 'destructive',
+            },
+            modalForm: {
+              header: {
+                title: 'Remove WhatsApp Number',
+                description: 'This action cannot be undone.',
+              },
+              handler: 'remove_whatsapp_number',
+              fields: [
+                {
+                  component: 'alert',
+                  id: 'warning',
+                  row: 0,
+                  col: 0,
+                  title: 'Are you sure?',
+                  description: [
+                    'Removing {{ whatsapp_phone_number.phone }} will:',
+                    '',
+                    '• Delete the WhatsApp channel and subscriptions',
+                    '• Remove this number from your Meta app installation',
+                    '',
+                    'Message history will be preserved. Reconnect Meta OAuth to add the number again.',
+                  ].join('\n'),
+                  variant: 'destructive',
+                  icon: 'AlertTriangle',
+                },
+                {
+                  component: 'input',
+                  id: 'whatsapp_phone_number_id',
+                  row: 1,
+                  col: 0,
+                  type: 'hidden',
+                  value: '{{ whatsapp_phone_number.id }}',
+                },
+              ],
+              layout: {
+                type: 'form',
+                rows: [
+                  { columns: [{ field: 'warning', colSpan: 12 }] },
+                  { columns: [{ field: 'whatsapp_phone_number_id', colSpan: 0 }] },
+                ],
+              },
+              actions: [
+                {
+                  handle: 'remove_whatsapp_number',
+                  label: 'Remove WhatsApp Number',
+                  handler: 'remove_whatsapp_number',
+                  icon: 'Trash2',
+                  variant: 'destructive',
+                },
+              ],
+            },
+          },
+        ],
+        layout: {
+          type: 'form',
+          rows: [{ columns: [{ field: 'remove_whatsapp_number', colSpan: 12 }] }],
+        },
+      },
+    },
   ],
 })
