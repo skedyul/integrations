@@ -110,6 +110,8 @@ After OAuth, add each channel from the app UI:
 - **Facebook Pages** → select page for Messenger
 - **Instagram Accounts** → select IG Business account
 
+Each installation supports **one Meta account**. OAuth persists connection details on install env — there is no separate `meta_connection` CRM record.
+
 ## Token refresh
 
 OAuth yields a long-lived user token (~60 days). Re-run the Meta OAuth connect flow before expiry. The integration surfaces `AppAuthInvalidError` when Meta rejects an expired token.

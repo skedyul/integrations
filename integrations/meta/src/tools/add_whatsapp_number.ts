@@ -4,6 +4,10 @@ import { AppAuthInvalidError, isRuntimeContext } from 'skedyul'
 import { instance, communicationChannel } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
 import {
+  requireMetaAccessToken,
+  requireMetaWabaId,
+} from '../lib/meta_install_env'
+import {
   createSuccessResponse,
   createValidationError,
   createAuthError,
@@ -82,28 +86,18 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       )
     }
 
-    // 1. Fetch the meta_connection instance
-    console.log('[AddWhatsAppNumber] Fetching meta_connection...')
-    const metaConnections = await instance.list('meta_connection', {
-      filter: {},
-      limit: 1,
-    })
-
-    if (metaConnections.data.length === 0) {
-      return createNotFoundError('Meta connection', 'Please complete the OAuth flow first.')
+    // 1. Read WABA from installation env (single Meta connection per install)
+    let wabaId: string
+    let accessToken: string
+    try {
+      wabaId = requireMetaWabaId(env)
+      accessToken = requireMetaAccessToken(env)
+    } catch (error) {
+      return createAuthError(
+        error instanceof Error ? error.message : 'Please complete the OAuth flow first.',
+      )
     }
 
-    const metaConnection = metaConnections.data[0] as {
-      id: string
-      waba_id?: string
-    }
-
-    if (!metaConnection.waba_id) {
-      return createValidationError('Meta connection is missing WABA ID. Please reconnect your Meta account.')
-    }
-
-    // 2. Fetch phone number details from Meta API
-    console.log('[AddWhatsAppNumber] Fetching phone number details from Meta API...')
     const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
     let phoneNumberDetails: {
@@ -114,10 +108,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
     }
 
     try {
-      const phoneNumbersResponse = await client.getPhoneNumbers(
-        metaConnection.waba_id,
-        META_ACCESS_TOKEN,
-      )
+      const phoneNumbersResponse = await client.getPhoneNumbers(wabaId, accessToken)
 
       const phoneNumber = phoneNumbersResponse.data.find(
         (pn) => pn.id === phone_number_id,
@@ -168,7 +159,6 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       display_name: phoneNumberDetails.verified_name,
       quality_rating: phoneNumberDetails.quality_rating,
       name: name ?? undefined,
-      meta_connection: metaConnection.id,
     }
 
     console.log(

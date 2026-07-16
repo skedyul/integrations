@@ -4,7 +4,6 @@
  * Re-exports all model definitions.
  */
 
-export { default as metaConnection } from './meta-connection'
 export { default as metaAppWebhook } from './meta-app-webhook'
 export { default as facebookPage } from './facebook-page'
 export { default as instagramAccount } from './instagram-account'

@@ -1,8 +1,11 @@
 import type { ToolDefinition } from 'skedyul'
 import { z } from 'skedyul'
 import { AppAuthInvalidError, isRuntimeContext } from 'skedyul'
-import { instance } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
+import {
+  requireMetaAccessToken,
+  requireMetaWabaId,
+} from '../lib/meta_install_env'
 import {
   createSuccessResponse,
   createValidationError,
@@ -62,12 +65,11 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
     const META_APP_ID = env.META_APP_ID || process.env.META_APP_ID
     const META_APP_SECRET = env.META_APP_SECRET || process.env.META_APP_SECRET
     const GRAPH_API_VERSION = env.GRAPH_API_VERSION || process.env.GRAPH_API_VERSION
-    const META_ACCESS_TOKEN = env.META_ACCESS_TOKEN
 
-    if (!META_ACCESS_TOKEN) {
-      throw new Error(
-        'META_ACCESS_TOKEN is not configured. Please complete the OAuth flow.',
-      )
+    try {
+      requireMetaAccessToken(env)
+    } catch {
+      return createSuccessResponse([])
     }
 
     if (!META_APP_ID || !META_APP_SECRET) {
@@ -82,36 +84,18 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
       )
     }
 
-    // Fetch the meta_connection instance to get waba_id
-    const metaConnections = await instance.list('meta_connection', {
-      filter: {},
-      limit: 1,
-    })
-
-    if (metaConnections.data.length === 0) {
-      // No meta connection found - return empty array
+    let wabaId: string
+    try {
+      wabaId = requireMetaWabaId(env)
+    } catch {
       return createSuccessResponse([])
     }
 
-    const metaConnection = metaConnections.data[0] as {
-      waba_id?: string
-      status?: string
-    }
-
-    if (!metaConnection.waba_id) {
-      // No WABA ID - return empty array
-      return createSuccessResponse([])
-    }
-
-    // Initialize Meta client
+    const accessToken = requireMetaAccessToken(env)
     const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
     try {
-      // Fetch phone numbers from Meta Graph API
-      const phoneNumbersResponse = await client.getPhoneNumbers(
-        metaConnection.waba_id,
-        META_ACCESS_TOKEN,
-      )
+      const phoneNumbersResponse = await client.getPhoneNumbers(wabaId, accessToken)
 
       // Transform to output format
       const phoneNumbers = phoneNumbersResponse.data.map((phoneNumber) => ({

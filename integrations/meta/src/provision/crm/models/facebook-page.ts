@@ -15,13 +15,6 @@ export default defineModel({
   description: 'Connected Facebook Pages for Messenger',
   scope: 'internal',
 
-  requires: [
-    {
-      model: 'meta_connection',
-      where: { status: { eq: 'connected' } },
-    },
-  ],
-
   fields: [
     {
       handle: 'page_id',

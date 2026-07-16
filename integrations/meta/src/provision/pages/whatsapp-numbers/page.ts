@@ -17,8 +17,7 @@ export default definePage({
 
   context: {
     meta_connection: {
-      model: 'meta_connection',
-      mode: 'first',
+      tool: 'fetch_meta_connection',
     },
     whatsapp_phone_numbers: {
       model: 'whatsapp_phone_number',
@@ -43,12 +42,10 @@ export default definePage({
             col: 0,
             label: 'WhatsApp Number',
             description: [
-              "{%- if meta_connection == blank -%}",
-              "Connect your Meta account to add WhatsApp numbers",
-              "{%- elsif meta_connection.status != 'connected' -%}",
-              "Meta account must be connected before adding WhatsApp numbers",
+              "{%- if meta_connection.status != 'connected' -%}",
+              'Connect your Meta account to add WhatsApp numbers',
               "{%- else -%}",
-              "Click to add a registered WhatsApp number to your business",
+              'Click to add a registered WhatsApp number to your business',
               "{%- endif -%}",
             ].join(''),
             mode: 'field',
@@ -56,12 +53,7 @@ export default definePage({
               label: 'Add WhatsApp Number',
               variant: 'outline',
               size: 'sm',
-              disabled: [
-                "{%- if meta_connection == blank -%}true",
-                "{%- elsif meta_connection.status == 'connected' -%}false",
-                "{%- else -%}true",
-                "{%- endif -%}",
-              ].join(''),
+              disabled: "{%- if meta_connection.status == 'connected' -%}false{%- else -%}true{%- endif -%}",
             },
             modalForm: {
               header: {
@@ -125,12 +117,7 @@ export default definePage({
                   handler: 'add_whatsapp_number',
                   icon: 'MessageSquare',
                   variant: 'primary',
-                  disabled: [
-                    "{%- if meta_connection == blank -%}true",
-                    "{%- elsif meta_connection.status == 'connected' -%}false",
-                    "{%- else -%}true",
-                    "{%- endif -%}",
-                  ].join(''),
+                  disabled: "{%- if meta_connection.status == 'connected' -%}false{%- else -%}true{%- endif -%}",
                 },
               ],
             },

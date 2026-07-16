@@ -18,8 +18,7 @@ export default definePage({
 
   context: {
     meta_connection: {
-      model: 'meta_connection',
-      mode: 'first',
+      tool: 'fetch_meta_connection',
     },
     meta_app_webhook: {
       model: 'meta_app_webhook',

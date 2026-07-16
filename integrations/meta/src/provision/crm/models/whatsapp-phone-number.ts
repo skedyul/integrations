@@ -2,7 +2,6 @@
  * WhatsApp Phone Number Model
  *
  * WhatsApp phone numbers from the connected WABA.
- * Requires a meta connection before provisioning.
  */
 
 import { defineModel } from 'skedyul'
@@ -14,13 +13,6 @@ export default defineModel({
   labelTemplate: '{{ phone }}',
   description: 'WhatsApp phone numbers for messaging',
   scope: 'internal',
-
-  requires: [
-    {
-      model: 'meta_connection',
-      where: { status: { eq: 'connected' } },
-    },
-  ],
 
   fields: [
     {

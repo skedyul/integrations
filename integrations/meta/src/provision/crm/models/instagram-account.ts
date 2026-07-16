@@ -15,13 +15,6 @@ export default defineModel({
   description: 'Connected Instagram Business accounts for Direct Messages',
   scope: 'internal',
 
-  requires: [
-    {
-      model: 'meta_connection',
-      where: { status: { eq: 'connected' } },
-    },
-  ],
-
   fields: [
     {
       handle: 'instagram_account_id',

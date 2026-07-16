@@ -15,8 +15,7 @@ export default definePage({
 
   context: {
     meta_connection: {
-      model: 'meta_connection',
-      mode: 'first',
+      tool: 'fetch_meta_connection',
     },
     instagram_accounts: {
       model: 'instagram_account',
@@ -38,10 +37,8 @@ export default definePage({
             col: 0,
             label: 'Instagram Account',
             description: [
-              "{%- if meta_connection == blank -%}",
+              "{%- if meta_connection.status != 'connected' -%}",
               'Connect your Meta account to add Instagram accounts',
-              "{%- elsif meta_connection.status != 'connected' -%}",
-              'Meta account must be connected before adding Instagram accounts',
               "{%- else -%}",
               'Add a connected Instagram Business account as a Direct messaging channel',
               "{%- endif -%}",
@@ -51,12 +48,7 @@ export default definePage({
               label: 'Add Instagram Account',
               variant: 'outline',
               size: 'sm',
-              disabled: [
-                "{%- if meta_connection == blank -%}true",
-                "{%- elsif meta_connection.status == 'connected' -%}false",
-                "{%- else -%}true",
-                "{%- endif -%}",
-              ].join(''),
+              disabled: "{%- if meta_connection.status == 'connected' -%}false{%- else -%}true{%- endif -%}",
             },
             modalForm: {
               header: {

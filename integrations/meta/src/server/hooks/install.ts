@@ -43,6 +43,15 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   console.log(`[Meta Install] Installing for workplace ${ctx.workplace.subdomain}`)
   console.log(`[Meta Install] Meta App ID: ${META_APP_ID?.slice(0, 4)}...`)
 
+  if (ctx.env.META_ACCESS_TOKEN) {
+    throw new Error(
+      'This installation already has a Meta account connected. Each installation supports one Meta connection.',
+    )
+  }
+
+  // OAuth callback persists install env: META_ACCESS_TOKEN, META_WABA_ID,
+  // META_BUSINESS_NAME, META_CONNECTION_STATUS
+
   // Construct OAuth redirect URI
   // Stable format: /api/callbacks/oauth/<app-handle>/<app-version-handle>
   // This works even if the app is reprovisioned, as handles are stable

@@ -15,8 +15,7 @@ export default definePage({
 
   context: {
     meta_connection: {
-      model: 'meta_connection',
-      mode: 'first',
+      tool: 'fetch_meta_connection',
     },
     facebook_pages: {
       model: 'facebook_page',
@@ -38,10 +37,8 @@ export default definePage({
             col: 0,
             label: 'Facebook Page',
             description: [
-              "{%- if meta_connection == blank -%}",
+              "{%- if meta_connection.status != 'connected' -%}",
               'Connect your Meta account to add Facebook Pages',
-              "{%- elsif meta_connection.status != 'connected' -%}",
-              'Meta account must be connected before adding Facebook Pages',
               "{%- else -%}",
               'Add a connected Facebook Page as a Messenger channel',
               "{%- endif -%}",
@@ -51,12 +48,7 @@ export default definePage({
               label: 'Add Facebook Page',
               variant: 'outline',
               size: 'sm',
-              disabled: [
-                "{%- if meta_connection == blank -%}true",
-                "{%- elsif meta_connection.status == 'connected' -%}false",
-                "{%- else -%}true",
-                "{%- endif -%}",
-              ].join(''),
+              disabled: "{%- if meta_connection.status == 'connected' -%}false{%- else -%}true{%- endif -%}",
             },
             modalForm: {
               header: {
