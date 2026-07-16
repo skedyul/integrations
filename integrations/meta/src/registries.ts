@@ -22,14 +22,8 @@ export const toolRegistry: ToolRegistry = {
   add_instagram_account: addInstagramAccountRegistry,
 }
 
-import {
-  receiveMetaRegistry,
-  receiveWhatsAppRegistry,
-} from './webhooks/receive_meta'
+import { receiveMetaRegistry } from './webhooks/receive_meta'
 
 export const webhookRegistry: WebhookRegistry = {
-  /** Unified Meta webhook (WhatsApp, Messenger, Instagram) */
   receive_meta: receiveMetaRegistry,
-  /** Alias for backward-compatible Meta app dashboard configs */
-  receive_whatsapp: receiveWhatsAppRegistry,
 }

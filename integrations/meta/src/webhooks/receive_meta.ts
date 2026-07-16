@@ -99,10 +99,3 @@ export const receiveMetaRegistry: WebhookDefinition = {
   methods: ['GET', 'POST'],
   handler: handleReceiveMeta,
 }
-
-/** @deprecated Use receive_meta — kept for existing Meta app dashboard configs */
-export const receiveWhatsAppRegistry: WebhookDefinition = {
-  ...receiveMetaRegistry,
-  name: 'receive_whatsapp',
-  description: 'Receives incoming Meta messages (WhatsApp, Messenger, Instagram)',
-}

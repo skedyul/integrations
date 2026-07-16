@@ -60,7 +60,6 @@ Inbound webhooks resolve the installation via token exchange (lookup CRM record 
 | Webhook | Description |
 |---------|-------------|
 | `receive_meta` | Unified webhook for WhatsApp, Messenger, and Instagram |
-| `receive_whatsapp` | Alias for `receive_meta` (backward compatible) |
 
 Meta sends different `object` values on the same callback URL:
 
