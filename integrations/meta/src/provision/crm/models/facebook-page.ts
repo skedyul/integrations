@@ -36,15 +36,6 @@ export default defineModel({
       owner: 'app',
     },
     {
-      handle: 'access_token',
-      label: 'Page Access Token',
-      type: 'string',
-      requirement: 'optional',
-      system: true,
-      description: 'Page-specific access token for Messenger API',
-      owner: 'app',
-    },
-    {
       handle: 'category',
       label: 'Category',
       type: 'string',
@@ -54,4 +45,12 @@ export default defineModel({
       owner: 'app',
     },
   ],
+
+  env: {
+    ACCESS_TOKEN: {
+      label: 'Page Access Token',
+      visibility: 'encrypted',
+      description: 'Page-specific access token for Messenger API',
+    },
+  },
 })

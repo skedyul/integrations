@@ -95,15 +95,21 @@ export const addFacebookPageRegistry: ToolDefinition<
     const pageRecord = {
       page_id: pageFromMeta.id,
       name: pageFromMeta.name,
-      access_token: pageFromMeta.access_token ?? null,
     }
+    const pageEnv = pageFromMeta.access_token
+      ? { ACCESS_TOKEN: pageFromMeta.access_token }
+      : undefined
 
     try {
       if (existingPages.data.length > 0) {
         const existing = existingPages.data[0] as { id: string }
-        pageInstance = await instance.update('facebook_page', existing.id, pageRecord)
+        pageInstance = await instance.update('facebook_page', existing.id, pageRecord, {
+          env: pageEnv,
+        })
       } else {
-        pageInstance = await instance.create('facebook_page', pageRecord)
+        pageInstance = await instance.create('facebook_page', pageRecord, {
+          env: pageEnv,
+        })
       }
     } catch (err) {
       return createMetaError(

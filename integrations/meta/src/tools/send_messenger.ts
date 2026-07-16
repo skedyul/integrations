@@ -53,10 +53,18 @@ export const sendMessengerRegistry: ToolDefinition<MessageSendInput, MessageSend
       return createNotFoundError('Facebook page', pageId)
     }
 
-    const page = pages.data[0] as { access_token?: string | null }
-    const pageAccessToken = page.access_token
+    const listedPage = pages.data[0] as { id: string }
+    const page = await instance.get('facebook_page', listedPage.id, {
+      includeEnv: true,
+    })
+
+    if (!page) {
+      return createNotFoundError('Facebook page', pageId)
+    }
+
+    const pageAccessToken = page.env?.ACCESS_TOKEN
     if (!pageAccessToken) {
-      return createValidationError(`Facebook page ${pageId} is missing access_token`)
+      return createValidationError(`Facebook page ${pageId} is missing ACCESS_TOKEN`)
     }
 
     const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
