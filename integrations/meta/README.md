@@ -1,190 +1,128 @@
 # Meta Integration
 
-Connect WhatsApp, Instagram, and Messenger to Skedyul via the Meta Graph API.
+Connect WhatsApp, Facebook Messenger, and Instagram Direct to Skedyul via the Meta Graph API.
 
 ## Features
 
 - **OAuth Authentication**: Secure connection to Meta Business accounts
-- **WhatsApp Messaging**: Send and receive WhatsApp messages
-- **Multi-Channel Support**: WhatsApp, Instagram DMs, and Messenger (coming soon)
-- **Phone Number Management**: Add and manage WhatsApp Business numbers
+- **WhatsApp Messaging**: Send and receive 1:1 and group messages
+- **Messenger**: Send and receive Facebook Page messages
+- **Instagram Direct**: Send and receive Instagram Business DMs
+- **Unified Webhook**: One webhook URL handles all three Meta products
 
 ## Architecture
 
 ```
 src/
 ├── lib/
-│   └── meta_client.ts           # Meta Graph API client
+│   ├── meta_client.ts              # Graph API client
+│   └── meta_webhook/               # Signature verify + channel resolution
 ├── tools/
-│   ├── send_whatsapp.ts         # Send WhatsApp messages
-│   ├── fetch_registered_wa_business_numbers.ts  # List WABA numbers
-│   └── add_whatsapp_number.ts   # Add number to installation
+│   ├── send_whatsapp.ts
+│   ├── send_messenger.ts
+│   ├── send_instagram.ts
+│   ├── add_whatsapp_number.ts
+│   ├── add_facebook_page.ts
+│   └── add_instagram_account.ts
 ├── webhooks/
-│   └── receive_whatsapp.ts      # Incoming message webhook
-├── server/
-│   ├── mcp_server.ts            # MCP server entry point
-│   └── hooks/
-│       ├── install.ts           # OAuth redirect
-│       └── oauth_callback.ts    # Token exchange
-└── registries.ts                # Tool + webhook exports
+│   ├── receive_meta.ts             # Unified webhook entry
+│   └── handlers/                   # whatsapp, messenger, instagram
+├── provision/
+│   ├── channels/                   # whatsapp, messenger, instagram
+│   └── pages/                      # Account, numbers, pages, IG accounts
+└── server/hooks/                   # OAuth install + callback
 ```
 
-## Authentication Flow
+## Channels
 
-This integration uses OAuth to connect to Meta:
+| Handle | Business identifier | Thread routing (1:1) | Group routing |
+|--------|---------------------|----------------------|---------------|
+| `whatsapp` | E.164 business phone | Sender phone (`routingAddress`) | `externalId` = WhatsApp `group_id` |
+| `messenger` | Facebook `page_id` | Sender PSID | N/A |
+| `instagram` | `instagram_account_id` | Sender IGSID | N/A |
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Skedyul   │────▶│    Meta     │────▶│   Skedyul   │
-│   Install   │     │   OAuth     │     │  Callback   │
-└─────────────┘     └─────────────┘     └─────────────┘
-      │                   │                   │
-      │ 1. Redirect       │ 2. User           │ 3. Exchange
-      │    to Meta        │    authorizes     │    code for
-      │                   │                   │    token
-```
-
-1. **Install Handler**: Redirects user to Meta OAuth with required scopes
-2. **User Authorization**: User grants permissions in Meta
-3. **OAuth Callback**: Exchanges code for long-lived access token, creates `meta_connection` instance
+Inbound webhooks resolve the installation via token exchange (lookup CRM record by Meta resource ID, then find the matching `communicationChannel`).
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `send_whatsapp` | Send a WhatsApp message to a subscriber |
-| `fetch_registered_wa_business_numbers` | List phone numbers from the connected WABA |
-| `add_whatsapp_number` | Add a WhatsApp number to the installation |
+| `send_whatsapp` | Send WhatsApp message (1:1 or group via `group.externalGroupId`) |
+| `send_messenger` | Send Messenger message to a PSID |
+| `send_instagram` | Send Instagram Direct message |
+| `add_whatsapp_number` | Provision WhatsApp channel from WABA number |
+| `add_facebook_page` | Provision Messenger channel from connected page |
+| `add_instagram_account` | Provision Instagram channel from connected account |
+| `fetch_registered_wa_business_numbers` | List WABA numbers from Meta |
 
 ## Webhooks
 
 | Webhook | Description |
 |---------|-------------|
-| `receive_whatsapp` | Receives incoming WhatsApp messages from Meta |
+| `receive_meta` | Unified webhook for WhatsApp, Messenger, and Instagram |
+| `receive_whatsapp` | Alias for `receive_meta` (backward compatible) |
 
-### Webhook Verification
+Meta sends different `object` values on the same callback URL:
 
-The `receive_whatsapp` webhook handles both:
-- **GET requests**: Meta webhook verification (hub.mode, hub.verify_token, hub.challenge)
-- **POST requests**: Incoming messages with signature verification
-
-## Models
-
-### meta_connection (INTERNAL)
-
-Top-level OAuth connection to Meta. One per installation.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `waba_id` | STRING | WhatsApp Business Account ID |
-| `business_name` | STRING | Business name from Meta |
-| `status` | STRING | Connection status (PENDING, CONNECTED, ERROR) |
-
-### whatsapp_phone_number (INTERNAL)
-
-WhatsApp phone numbers from the connected WABA.
-
-| Field | Type | Owner | Description |
-|-------|------|-------|-------------|
-| `phone` | STRING | APP | Phone number (E.164 format) |
-| `phone_number_id` | STRING | APP | Meta Graph API phone number ID |
-| `display_name` | STRING | APP | Display name from Meta |
-| `quality_rating` | STRING | APP | Meta quality rating |
-| `name` | STRING | WORKPLACE | User-provided friendly name |
-
-### facebook_page (INTERNAL)
-
-Connected Facebook Pages for Messenger.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `page_id` | STRING | Meta Graph API Page ID |
-| `name` | STRING | Page name |
-| `access_token` | STRING | Page-specific access token |
-| `category` | STRING | Page category |
-
-### instagram_account (INTERNAL)
-
-Connected Instagram Business accounts.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `instagram_account_id` | STRING | Meta Graph API Instagram Account ID |
-| `username` | STRING | Instagram username |
-| `name` | STRING | Display name |
-| `profile_picture_url` | STRING | Profile picture URL |
-
-## Channels
-
-### whatsapp
-
-Communication channel for WhatsApp messaging.
-
-| Capability | Tool |
-|------------|------|
-| Send | `send_whatsapp` |
-| Receive | `receive_whatsapp` |
-
-## Environment Variables
-
-### Provision-Level (Developer)
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `META_APP_ID` | Yes | Facebook App ID from Meta App Dashboard |
-| `META_APP_SECRET` | Yes | Facebook App Secret |
-| `META_WEBHOOK_VERIFY_TOKEN` | Yes | Secret token for webhook verification |
-| `GRAPH_API_VERSION` | Yes | Graph API version (e.g., `v21.0`) |
-
-### Install-Level (User)
-
-No user-provided credentials required. OAuth flow handles authentication.
-
-## Pages
-
-| Page | Path | Description |
-|------|------|-------------|
-| Account | `/account` | View Meta connection status |
-| WhatsApp Numbers | `/whatsapp-numbers` | List and add WhatsApp numbers |
-| Number Detail | `/whatsapp-numbers/[id]/overview` | View individual number details |
+- `whatsapp_business_account` → WhatsApp messages and status updates
+- `page` → Messenger messaging events
+- `instagram` → Instagram Direct messaging events
 
 ## Setup
 
 ### 1. Create a Meta App
 
 1. Go to [Meta for Developers](https://developers.facebook.com/)
-2. Create a new app with "Business" type
-3. Add WhatsApp product to your app
-4. Configure OAuth redirect URI: `{SKEDYUL_API_URL}/api/callbacks/oauth/meta/{version}`
+2. Create a Business app with WhatsApp, Messenger, and Instagram products
+3. Configure OAuth redirect: `{SKEDYUL_API_URL}/api/callbacks/oauth/meta/{version}`
 
-### 2. Configure Webhooks
+### 2. Configure Webhooks (single URL)
 
-1. In Meta App Dashboard, go to WhatsApp > Configuration
-2. Set webhook URL: `{SKEDYUL_API_URL}/api/webhooks/{registration_id}`
-3. Set verify token to match `META_WEBHOOK_VERIFY_TOKEN`
-4. Subscribe to: `messages`, `message_deliveries`, `message_reads`
+Set webhook URL: `{SKEDYUL_API_URL}/api/webhooks/{registration_id}`
 
-### 3. Required Permissions
+Subscribe in Meta App Dashboard:
 
-The OAuth flow requests these scopes:
-- `whatsapp_business_messaging`
-- `whatsapp_business_management`
+- **WhatsApp**: `messages`, `message_deliveries`, `message_reads`
+- **Page (Messenger)**: `messages`, `messaging_postbacks`, `message_reads`
+- **Instagram**: `messages`
+
+Verify token must match `META_WEBHOOK_VERIFY_TOKEN`.
+
+### 3. OAuth scopes
+
+- `whatsapp_business_messaging`, `whatsapp_business_management`
 - `business_management`
-- `pages_messaging` (for Messenger)
-- `instagram_basic` (for Instagram)
-- `instagram_manage_messages` (for Instagram DMs)
+- `pages_messaging`, `pages_manage_metadata`
+- `instagram_basic`, `instagram_manage_messages`
+
+### 4. Add channels
+
+After OAuth, add each channel from the app UI:
+
+- **WhatsApp Numbers** → select WABA number
+- **Facebook Pages** → select page for Messenger
+- **Instagram Accounts** → select IG Business account
+
+## Token refresh
+
+OAuth yields a long-lived user token (~60 days). Re-run the Meta OAuth connect flow before expiry. The integration surfaces `AppAuthInvalidError` when Meta rejects an expired token.
+
+## Environment Variables
+
+| Variable | Level | Description |
+|----------|-------|-------------|
+| `META_APP_ID` | Provision | Facebook App ID |
+| `META_APP_SECRET` | Provision | Facebook App Secret |
+| `META_WEBHOOK_VERIFY_TOKEN` | Provision | Webhook verification token |
+| `GRAPH_API_VERSION` | Provision | e.g. `v24.0` |
+| `META_ACCESS_TOKEN` | Install | Long-lived token (set by OAuth) |
 
 ## Development
 
 ```bash
-# Navigate to integration
 cd integrations/meta
-
-# Link to test workplace
 skedyul dev link --workplace my-test-clinic
-
-# Start development server
 skedyul dev serve --workplace my-test-clinic
 ```
 
-Note: OAuth flow requires a publicly accessible callback URL. Use `--tunnel-url` or let the CLI create an ngrok tunnel.
+OAuth requires a public callback URL (`--tunnel-url` or ngrok).

@@ -1,22 +1,22 @@
 /**
- * WhatsApp Channel
+ * Instagram Channel
  *
- * WhatsApp messaging via Meta Graph API.
+ * Instagram Direct messaging via Meta Graph API.
  */
 
 import { defineChannel } from 'skedyul'
 
 export default defineChannel({
-  handle: 'whatsapp',
-  label: 'WhatsApp',
-  icon: 'MessageSquare',
+  handle: 'instagram',
+  label: 'Instagram',
+  icon: 'Instagram',
 
   fields: [
     {
-      handle: 'phone',
-      label: 'Phone',
+      handle: 'instagram_account_id',
+      label: 'Instagram Account ID',
       identifier: true,
-      definition: 'phone',
+      definition: 'string',
       visibility: {
         data: true,
         list: true,
@@ -44,10 +44,10 @@ export default defineChannel({
 
   capabilities: {
     messaging: {
-      label: 'WhatsApp',
-      icon: 'MessageSquare',
+      label: 'Instagram',
+      icon: 'Instagram',
       receive: 'receive_meta',
-      send: 'send_whatsapp',
+      send: 'send_instagram',
     },
   },
 })

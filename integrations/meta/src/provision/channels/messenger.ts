@@ -1,22 +1,22 @@
 /**
- * WhatsApp Channel
+ * Messenger Channel
  *
- * WhatsApp messaging via Meta Graph API.
+ * Facebook Messenger messaging via Meta Graph API.
  */
 
 import { defineChannel } from 'skedyul'
 
 export default defineChannel({
-  handle: 'whatsapp',
-  label: 'WhatsApp',
-  icon: 'MessageSquare',
+  handle: 'messenger',
+  label: 'Messenger',
+  icon: 'MessageCircle',
 
   fields: [
     {
-      handle: 'phone',
-      label: 'Phone',
+      handle: 'page_id',
+      label: 'Page ID',
       identifier: true,
-      definition: 'phone',
+      definition: 'string',
       visibility: {
         data: true,
         list: true,
@@ -44,10 +44,10 @@ export default defineChannel({
 
   capabilities: {
     messaging: {
-      label: 'WhatsApp',
-      icon: 'MessageSquare',
+      label: 'Messenger',
+      icon: 'MessageCircle',
       receive: 'receive_meta',
-      send: 'send_whatsapp',
+      send: 'send_messenger',
     },
   },
 })

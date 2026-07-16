@@ -16,12 +16,12 @@ import {
 } from '../lib/response'
 
 /**
- * Send a WhatsApp message via Meta Graph API (1:1 or group).
+ * Send an Instagram Direct message via Meta Graph API.
  */
-export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
-  name: 'send_whatsapp',
-  label: 'Send WhatsApp',
-  description: 'Send a WhatsApp message via Meta Graph API',
+export const sendInstagramRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
+  name: 'send_instagram',
+  label: 'Send Instagram',
+  description: 'Send an Instagram Direct message via Meta Graph API',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,
   handler: async (input, context) => {
@@ -35,55 +35,43 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
     }
 
     if (!META_APP_ID || !META_APP_SECRET) {
-      return createAuthError(
-        'META_APP_ID and META_APP_SECRET must be configured.',
-      )
+      return createAuthError('META_APP_ID and META_APP_SECRET must be configured.')
     }
 
     if (!GRAPH_API_VERSION) {
       return createAuthError('GRAPH_API_VERSION must be configured.')
     }
 
-    const channelIdentifier = input.channel.identifierValue
-    const groupId = input.group?.externalGroupId ?? input.group?.id
+    const instagramAccountId = input.channel.identifierValue
+    const recipientIgsid = input.subscription?.identifierValue
 
-    const phoneNumbers = await instance.list('whatsapp_phone_number', {
-      filter: { phone: channelIdentifier },
+    if (!recipientIgsid) {
+      return createValidationError('Missing recipient IGSID for Instagram send')
+    }
+
+    const accounts = await instance.list('instagram_account', {
+      filter: { instagram_account_id: instagramAccountId },
       limit: 1,
     })
 
-    if (phoneNumbers.data.length === 0) {
-      return createNotFoundError('WhatsApp phone number', channelIdentifier)
-    }
-
-    const phoneNumber = phoneNumbers.data[0]
-    const phoneNumberId = (phoneNumber as { phone_number_id?: string }).phone_number_id
-    if (!phoneNumberId) {
-      return createValidationError(
-        `WhatsApp phone number instance missing phone_number_id: ${channelIdentifier}`,
-      )
-    }
-
-    const recipient = groupId ?? input.subscription?.identifierValue
-    if (!recipient) {
-      return createValidationError('Missing recipient or group ID for WhatsApp send')
+    if (accounts.data.length === 0) {
+      return createNotFoundError('Instagram account', instagramAccountId)
     }
 
     const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
     try {
-      const result = await client.sendWhatsAppMessage(
-        phoneNumberId,
-        recipient,
-        input.message.content,
+      const result = await client.sendInstagramMessage(
+        instagramAccountId,
         META_ACCESS_TOKEN,
-        groupId ? { recipientType: 'group' } : { recipientType: 'individual' },
+        recipientIgsid,
+        input.message.content,
       )
 
       return createSuccessResponse(
         {
           status: 'sent',
-          remoteId: result.messages[0]?.id || '',
+          remoteId: result.message_id ?? '',
         },
         { billing: { credits: 1 } },
       )
