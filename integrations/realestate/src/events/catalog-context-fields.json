@@ -1,0 +1,10 @@
+{
+  "enquiry.created": [
+    { "name": "webhook.event_id", "label": "Event ID" },
+    { "name": "webhook.owner_id", "label": "Agency ID" },
+    { "name": "enquiry.rea_enquiry_id", "label": "Enquiry ID" },
+    { "name": "enquiry.email", "label": "Email" },
+    { "name": "enquiry.phone", "label": "Phone" },
+    { "name": "enquiry.listing_address", "label": "Listing Address" }
+  ]
+}
