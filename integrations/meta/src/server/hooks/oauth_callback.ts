@@ -153,7 +153,7 @@ export default async function oauthCallback(
           await instance.update('meta_connection', metaConnectionId, {
             business_name: waba.name,
             waba_id: waba.id,
-            status: 'CONNECTED',
+            status: 'connected',
           })
           console.log(`[Meta OAuth] Updated existing meta_connection: ${metaConnectionId}`)
         } else {
@@ -161,7 +161,7 @@ export default async function oauthCallback(
           const created = await instance.create('meta_connection', {
             business_name: waba.name,
             waba_id: waba.id,
-            status: 'CONNECTED',
+            status: 'connected',
           })
           metaConnectionId = created.id
           console.log(`[Meta OAuth] Created new meta_connection: ${metaConnectionId}`)

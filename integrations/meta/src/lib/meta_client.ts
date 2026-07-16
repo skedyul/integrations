@@ -360,16 +360,19 @@ export class MetaClient {
   }
 
   /**
-   * Send a WhatsApp message
+   * Send a WhatsApp message (1:1 or group).
    */
-  async sendMessage(
+  async sendWhatsAppMessage(
     phoneNumberId: string,
     to: string,
     message: string,
     accessToken: string,
+    options?: { recipientType?: 'individual' | 'group' },
   ): Promise<SendMessageResponse> {
     const url = new URL(`${this.baseUrl}/${phoneNumberId}/messages`)
     url.searchParams.set('access_token', accessToken)
+
+    const recipientType = options?.recipientType ?? 'individual'
 
     const response = await fetch(url.toString(), {
       method: 'POST',
@@ -378,6 +381,7 @@ export class MetaClient {
       },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
+        recipient_type: recipientType,
         to,
         type: 'text',
         text: {
@@ -397,5 +401,133 @@ export class MetaClient {
     }
 
     return (await response.json()) as SendMessageResponse
+  }
+
+  /** @deprecated Use sendWhatsAppMessage */
+  async sendMessage(
+    phoneNumberId: string,
+    to: string,
+    message: string,
+    accessToken: string,
+  ): Promise<SendMessageResponse> {
+    return this.sendWhatsAppMessage(phoneNumberId, to, message, accessToken)
+  }
+
+  /**
+   * Send a Messenger message to a page-scoped user (PSID).
+   */
+  async sendMessengerMessage(
+    pageId: string,
+    pageAccessToken: string,
+    recipientPsid: string,
+    message: string,
+  ): Promise<{ message_id?: string }> {
+    const url = new URL(`${this.baseUrl}/${pageId}/messages`)
+    url.searchParams.set('access_token', pageAccessToken)
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { id: recipientPsid },
+        messaging_type: 'RESPONSE',
+        message: { text: message },
+      }),
+    })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta page access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to send Messenger message: ${JSON.stringify(errorResponse)}`)
+    }
+
+    return (await response.json()) as { message_id?: string }
+  }
+
+  /**
+   * Send an Instagram Direct message.
+   */
+  async sendInstagramMessage(
+    instagramAccountId: string,
+    pageAccessToken: string,
+    recipientIgsid: string,
+    message: string,
+  ): Promise<{ message_id?: string }> {
+    const url = new URL(`${this.baseUrl}/${instagramAccountId}/messages`)
+    url.searchParams.set('access_token', pageAccessToken)
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { id: recipientIgsid },
+        message: { text: message },
+      }),
+    })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to send Instagram message: ${JSON.stringify(errorResponse)}`)
+    }
+
+    return (await response.json()) as { message_id?: string }
+  }
+
+  /**
+   * Download media metadata from a WhatsApp media ID.
+   */
+  async getMediaUrl(mediaId: string, accessToken: string): Promise<string | null> {
+    const url = new URL(`${this.baseUrl}/${mediaId}`)
+    url.searchParams.set('access_token', accessToken)
+
+    const response = await fetch(url.toString(), { method: 'GET' })
+    if (!response.ok) {
+      return null
+    }
+
+    const data = (await response.json()) as { url?: string }
+    return data.url ?? null
+  }
+
+  /**
+   * Refresh a long-lived user access token before expiry.
+   */
+  async refreshLongLivedToken(longLivedToken: string): Promise<string> {
+    return this.exchangeForLongLivedToken(longLivedToken)
+  }
+
+  /**
+   * Subscribe a page to webhook fields for messaging.
+   */
+  async subscribePageToWebhooks(
+    pageId: string,
+    pageAccessToken: string,
+  ): Promise<void> {
+    const url = new URL(`${this.baseUrl}/${pageId}/subscribed_apps`)
+    url.searchParams.set('access_token', pageAccessToken)
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscribed_fields: ['messages', 'messaging_postbacks', 'message_reads'],
+      }),
+    })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      throw new Error(
+        `Failed to subscribe page to webhooks: ${JSON.stringify(errorResponse)}`,
+      )
+    }
   }
 }
