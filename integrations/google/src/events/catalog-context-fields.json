@@ -1,0 +1,28 @@
+{
+  "calendar.event.created": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "event.google_event_id", "label": "Google Event ID", "type": "string" },
+    { "path": "event.summary", "label": "Event Title", "type": "string" },
+    { "path": "event.start", "label": "Start Time", "type": "string" },
+    { "path": "event.end", "label": "End Time", "type": "string" }
+  ],
+  "calendar.event.updated": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "event.google_event_id", "label": "Google Event ID", "type": "string" },
+    { "path": "event.summary", "label": "Event Title", "type": "string" }
+  ],
+  "calendar.event.deleted": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "event.google_event_id", "label": "Google Event ID", "type": "string" }
+  ],
+  "calendar.sync.completed": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "sync.events_created", "label": "Events Created", "type": "number" },
+    { "path": "sync.events_updated", "label": "Events Updated", "type": "number" },
+    { "path": "sync.events_deleted", "label": "Events Deleted", "type": "number" }
+  ],
+  "calendar.sync.failed": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "sync.error", "label": "Error Message", "type": "string" }
+  ]
+}

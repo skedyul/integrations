@@ -10,6 +10,7 @@ This package contains official Skedyul integration apps that connect external se
 | [Meta](./integrations/meta/) | WhatsApp, Instagram, Messenger | OAuth authentication, message sending/receiving |
 | [Phone](./integrations/phone/) | SMS and voice via Twilio | Compliance workflow, call forwarding, webhooks |
 | [realestate.com.au](./integrations/realestate/) | REA Partner Platform leads | Lead webhooks, enquiry sync, agency linking |
+| [Google](./integrations/google/) | Google Calendar sync | OAuth, calendar sync, events, CRUD tools |
 | [Petbooqz](./integrations/petbooqz/) | Veterinary practice management | Appointments, clients, patients, AI agents |
 
 ## Architecture
