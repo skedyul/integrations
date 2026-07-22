@@ -12,10 +12,6 @@ export default definePage({
     google_connection: {
       tool: 'fetch_google_connection',
     },
-    google_app_webhook: {
-      model: 'google_app_webhook',
-      mode: 'first',
-    },
   },
 
   blocks: [
@@ -57,59 +53,6 @@ export default definePage({
           rows: [
             { columns: [{ field: 'email', colSpan: 12 }] },
             { columns: [{ field: 'status', colSpan: 12 }] },
-          ],
-        },
-      },
-    },
-    {
-      type: 'card',
-      restructurable: false,
-      header: {
-        title: 'Calendar Push Webhook',
-        description: 'Shared callback URL for Google Calendar push notifications.',
-      },
-      form: {
-        id: 'google-webhook-config-form',
-        fields: [
-          {
-            component: 'input',
-            id: 'callback_url',
-            row: 0,
-            col: 0,
-            label: 'Callback URL',
-            leftIcon: 'Link',
-            value: '{{ google_app_webhook.callback_url }}',
-            disabled: true,
-            helpText: 'Google Calendar watch channels use this Skedyul webhook URL',
-          },
-          {
-            component: 'input',
-            id: 'setup_status',
-            row: 1,
-            col: 0,
-            label: 'Setup Status',
-            leftIcon: 'Webhook',
-            value: '{{ google_app_webhook.setup_status }}',
-            disabled: true,
-            helpText: 'Whether the calendar push webhook was registered during provision',
-          },
-          {
-            component: 'textarea',
-            id: 'notes',
-            row: 2,
-            col: 0,
-            label: 'Setup Notes',
-            value: '{{ google_app_webhook.notes }}',
-            disabled: true,
-            helpText: 'Latest provision notes for webhook configuration',
-          },
-        ],
-        layout: {
-          type: 'form',
-          rows: [
-            { columns: [{ field: 'callback_url', colSpan: 12 }] },
-            { columns: [{ field: 'setup_status', colSpan: 12 }] },
-            { columns: [{ field: 'notes', colSpan: 12 }] },
           ],
         },
       },
