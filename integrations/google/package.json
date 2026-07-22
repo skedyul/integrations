@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "googleapis": "173.0.0",
-    "skedyul": "1.5.14"
+    "skedyul": "1.5.13"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
