@@ -50,7 +50,6 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
   outputSchema: CalendarSlotsBookNextAvailableOutputSchema,
   timeout: 600000,
   queueTouchPoints: petbooqzBookingTouchPoints(4),
-  rateLimitHandoff: { role: 'mutex_book' },
   handler: async (input, context) => {
     const appointmentType = input.appointment_type ?? input.reason
 

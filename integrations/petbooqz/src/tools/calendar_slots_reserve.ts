@@ -76,7 +76,6 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
   outputSchema: CalendarSlotsReserveOutputSchema,
   timeout: 600000,
   queueTouchPoints: petbooqzBookingTouchPoints(2),
-  rateLimitHandoff: { role: 'mutex_reserve' },
   handler: async (input, context) => {
     const datetimesToTry: string[] = []
     if (input.datetimes && input.datetimes.length > 0) {
