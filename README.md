@@ -180,7 +180,7 @@ mkdir -p integrations/my-service/{config,src/{tools,webhooks,server/hooks,lib}}
     "dev": "skedyul dev serve"
   },
   "dependencies": {
-    "skedyul": "workspace:*"
+    "skedyul": "1.7.0"
   }
 }
 ```
