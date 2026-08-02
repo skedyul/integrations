@@ -11,8 +11,7 @@ export default defineNavigation({
     sections: [
       {
         items: [
-          { label: 'Clients', href: '/clients', icon: 'Users' },
-          { label: 'Patients', href: '/patients', icon: 'PawPrint' },
+          { label: 'Overview', href: '/overview', icon: 'LayoutDashboard' },
         ],
       },
     ],

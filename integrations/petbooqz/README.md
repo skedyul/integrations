@@ -131,7 +131,7 @@ Agent: 1. Get appointment details
 
 ### client (SHARED)
 
-Client/Owner records mapped to user's existing model.
+Client/owner records used by Petbooqz tools and workflow sync.
 
 | Field | Type | Owner | Description |
 |-------|------|-------|-------------|
@@ -139,7 +139,7 @@ Client/Owner records mapped to user's existing model.
 
 ### patient (SHARED)
 
-Patient/Pet records mapped to user's existing model.
+Patient/pet records used by Petbooqz tools and workflow sync.
 
 | Field | Type | Owner | Description |
 |-------|------|-------|-------------|
@@ -149,7 +149,7 @@ Patient/Pet records mapped to user's existing model.
 
 ### appointment (SHARED)
 
-Appointment records mapped to user's existing model.
+Appointment records used by Petbooqz tools and workflow sync.
 
 | Field | Type | Owner | Description |
 |-------|------|-------|-------------|
@@ -177,16 +177,14 @@ No provision-level environment variables required.
 
 | Page | Path | Description |
 |------|------|-------------|
-| Clients | `/clients` | Configure client model mapping (default) |
-| Patients | `/patients` | Configure patient model mapping |
-| Appointments | `/appointments` | Configure appointment model mapping |
+| Overview | `/overview` | Explains workflow-driven Petbooqz sync |
 
 ## Install Flow
 
 1. User provides Petbooqz server URL and credentials
 2. Install handler validates credentials via `verify_credentials`
 3. URL is normalized (adds `http://` if missing)
-4. Models are mapped to user's existing data
+4. Tools and workflows read from Petbooqz and sync downstream systems as needed
 
 ```ts
 // src/server/hooks/install.ts
