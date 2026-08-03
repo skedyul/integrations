@@ -1,8 +1,5 @@
 import type { ProvisionHandlerContext, ProvisionHandlerResult } from 'skedyul'
-import {
-  prefetchReaSigningKeys,
-  removeAllAgenciesReaLeadSubscription,
-} from '../../lib/ensure-rea-webhooks'
+import { prefetchReaSigningKeys } from '../../lib/ensure-rea-webhooks'
 import type { ReaClientEnv } from '../../lib/rea-types'
 
 export default async function provision(
@@ -18,15 +15,6 @@ export default async function provision(
   }
 
   try {
-    const cleanup = await removeAllAgenciesReaLeadSubscription(env)
-    if (cleanup.deleted) {
-      ctx.log.info(
-        `[REA Provision] Removed legacy all-agencies REA subscription: ${cleanup.subscriptionId}`,
-      )
-    } else {
-      ctx.log.info('[REA Provision] No legacy all-agencies REA subscription found')
-    }
-
     const keyCount = await prefetchReaSigningKeys(env)
     ctx.log.info(`[REA Provision] Prefetched ${keyCount} REA signing key(s)`)
   } catch (error) {

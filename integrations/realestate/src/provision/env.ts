@@ -25,13 +25,4 @@ export default defineEnv({
     placeholder: 'https://api.realestate.com.au',
     default: 'https://api.realestate.com.au',
   },
-  REA_AGENCY_ID: {
-    label: 'REA Agency ID',
-    scope: 'install',
-    required: false,
-    visibility: 'visible',
-    description:
-      'Optional. Your 6-letter realestate.com.au agency code (e.g. ABCDEF). Leave blank if your partner account has only one authorized agency — it will be detected automatically. Otherwise authorize your agency in Ignite first, then enter the code here.',
-    placeholder: 'ABCDEF',
-  },
 })
