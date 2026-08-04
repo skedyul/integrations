@@ -3,6 +3,7 @@ import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import provisionHandler from './hooks/provision'
 import uninstallHandler from './hooks/uninstall'
+import setupRevalidateHandler from './hooks/setup-revalidate'
 import pkg from '../../package.json'
 
 function getComputeLayer(): 'serverless' | 'dedicated' {
@@ -39,6 +40,9 @@ const skedyulServer = server.create({
     uninstall: {
       handler: uninstallHandler,
       timeout: 60000,
+    },
+    setup: {
+      revalidate: setupRevalidateHandler,
     },
   },
 })
