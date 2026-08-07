@@ -2,6 +2,7 @@ import {
   normalizeReaApiBaseUrl,
   type ReaClientEnv,
   type ReaSigningKeysResponse,
+  type ReaSubscriptionSpec,
   type ReaTokenResponse,
   type ReaWebhookSubscription,
   REA_REQUIRED_LEAD_SCOPE,
@@ -119,14 +120,14 @@ export class ReaClient {
     let nextPage: string | null = null
 
     do {
-      const path = nextPage
+      const path: string = nextPage
         ? `/me/v1/integrations?nextPage=${encodeURIComponent(nextPage)}`
         : '/me/v1/integrations'
 
-      const data = await this.getJson<{
+      const data: {
         _embedded?: { integrations?: ReaIntegrationRecord[] }
         _links?: { next?: { cursor?: string | null } | null }
-      }>(`${this.baseUrl}${path}`)
+      } = await this.getJson(`${this.baseUrl}${path}`)
 
       integrations.push(...(data._embedded?.integrations ?? []))
       nextPage = data._links?.next?.cursor ?? null
@@ -149,29 +150,58 @@ export class ReaClient {
     )
   }
 
-  async listWebhookSubscriptions(): Promise<ReaWebhookSubscription[]> {
-    const data = await this.getJson<{ subscriptions?: ReaWebhookSubscription[] }>(
-      `${this.baseUrl}/webhooks/v1/subscriptions`,
-    )
-    return data.subscriptions ?? []
+  async fetchIntegration(resourceUrl: string): Promise<ReaIntegrationRecord> {
+    return this.getJson<ReaIntegrationRecord>(resourceUrl)
   }
 
+  async listWebhookSubscriptions(): Promise<ReaWebhookSubscription[]> {
+    const subscriptions: ReaWebhookSubscription[] = []
+    let nextHref: string | null = `${this.baseUrl}/webhooks/v1/subscriptions`
+
+    while (nextHref) {
+      const data: {
+        subscriptions?: ReaWebhookSubscription[]
+        _links?: { next?: { href?: string | null } | null }
+      } = await this.getJson(nextHref)
+
+      subscriptions.push(...(data.subscriptions ?? []))
+      nextHref = data._links?.next?.href ?? null
+    }
+
+    return subscriptions
+  }
+
+  async createWebhookSubscription(
+    spec: ReaSubscriptionSpec & {
+      webhookUrl: string
+      owner?: { ownerId: string; ownerType: 'agency' }
+    },
+  ): Promise<ReaWebhookSubscription> {
+    const body: Record<string, unknown> = {
+      eventType: spec.eventType,
+      eventCategory: spec.eventCategory,
+      webhookUrl: spec.webhookUrl,
+    }
+
+    if (spec.owner) {
+      body.ownerId = spec.owner.ownerId
+      body.ownerType = spec.owner.ownerType
+    }
+
+    return this.postJson<ReaWebhookSubscription>('/webhooks/v1/subscriptions', body)
+  }
+
+  /** @deprecated Prefer createWebhookSubscription — kept for tests/migration helpers */
   async createLeadWebhookSubscription(
     webhookUrl: string,
     owner?: { ownerId: string; ownerType: 'agency' },
   ): Promise<ReaWebhookSubscription> {
-    const body: Record<string, unknown> = {
+    return this.createWebhookSubscription({
       eventType: 'EnquiryCreated',
       eventCategory: 'lead',
       webhookUrl,
-    }
-
-    if (owner) {
-      body.ownerId = owner.ownerId
-      body.ownerType = owner.ownerType
-    }
-
-    return this.postJson<ReaWebhookSubscription>('/webhooks/v1/subscriptions', body)
+      owner,
+    })
   }
 
   async deleteWebhookSubscription(subscriptionId: string): Promise<void> {
@@ -194,17 +224,19 @@ export class ReaClient {
     }
   }
 
-  findLeadSubscription(
+  findSubscription(
     subscriptions: ReaWebhookSubscription[],
     options: {
+      eventType: string
+      eventCategory: string
       webhookUrl?: string
       ownerId?: string
       allOwners?: boolean
     },
   ): ReaWebhookSubscription | undefined {
     return subscriptions.find((subscription) => {
-      if (subscription.eventType !== 'EnquiryCreated') return false
-      if (subscription.eventCategory !== 'lead') return false
+      if (subscription.eventType !== options.eventType) return false
+      if (subscription.eventCategory !== options.eventCategory) return false
 
       if (options.allOwners) {
         return !subscription.ownerId
@@ -219,6 +251,21 @@ export class ReaClient {
       }
 
       return true
+    })
+  }
+
+  findLeadSubscription(
+    subscriptions: ReaWebhookSubscription[],
+    options: {
+      webhookUrl?: string
+      ownerId?: string
+      allOwners?: boolean
+    },
+  ): ReaWebhookSubscription | undefined {
+    return this.findSubscription(subscriptions, {
+      eventType: 'EnquiryCreated',
+      eventCategory: 'lead',
+      ...options,
     })
   }
 

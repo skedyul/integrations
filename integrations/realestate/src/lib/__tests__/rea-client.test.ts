@@ -88,13 +88,13 @@ describe('ReaClient.deleteWebhookSubscription', () => {
   })
 })
 
-describe('ReaClient.createLeadWebhookSubscription', () => {
+describe('ReaClient.createWebhookSubscription', () => {
   beforeEach(() => {
     resetReaClientTokenCache()
     jest.restoreAllMocks()
   })
 
-  it('includes ownerId and ownerType for agency subscriptions', async () => {
+  it('creates all-owners EnquiryCreated subscription without owner fields', async () => {
     const fetchMock = jest.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)
       if (url.includes('/oauth/token')) {
@@ -109,17 +109,13 @@ describe('ReaClient.createLeadWebhookSubscription', () => {
           eventType: 'EnquiryCreated',
           eventCategory: 'lead',
           webhookUrl: 'https://example.com/hook',
-          ownerId: 'ABCDEF',
-          ownerType: 'agency',
         })
         return new Response(
           JSON.stringify({
-            subscriptionId: 'sub-new',
+            subscriptionId: 'sub-all',
             eventType: 'EnquiryCreated',
             eventCategory: 'lead',
             webhookUrl: 'https://example.com/hook',
-            ownerId: 'ABCDEF',
-            ownerType: 'agency',
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         )
@@ -132,12 +128,81 @@ describe('ReaClient.createLeadWebhookSubscription', () => {
       REA_CLIENT_SECRET: 'client-secret',
     })
 
-    const result = await client.createLeadWebhookSubscription('https://example.com/hook', {
-      ownerId: 'ABCDEF',
-      ownerType: 'agency',
+    const result = await client.createWebhookSubscription({
+      eventType: 'EnquiryCreated',
+      eventCategory: 'lead',
+      webhookUrl: 'https://example.com/hook',
     })
 
-    expect(result.subscriptionId).toBe('sub-new')
+    expect(result.subscriptionId).toBe('sub-all')
     expect(fetchMock).toHaveBeenCalled()
+  })
+
+  it('creates IntegrationCreated all-owners subscription', async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.includes('/oauth/token')) {
+        return new Response(JSON.stringify({ access_token: 'token', expires_in: 3600 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url.includes('/webhooks/v1/subscriptions') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body))
+        expect(body).toEqual({
+          eventType: 'IntegrationCreated',
+          eventCategory: 'integration',
+          webhookUrl: 'https://example.com/integrations',
+        })
+        return new Response(
+          JSON.stringify({
+            subscriptionId: 'sub-int',
+            ...body,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      return new Response('not found', { status: 404 })
+    })
+
+    const client = new ReaClient({
+      REA_CLIENT_ID: 'client-id',
+      REA_CLIENT_SECRET: 'client-secret',
+    })
+
+    const result = await client.createWebhookSubscription({
+      eventType: 'IntegrationCreated',
+      eventCategory: 'integration',
+      webhookUrl: 'https://example.com/integrations',
+    })
+
+    expect(result.subscriptionId).toBe('sub-int')
+  })
+})
+
+describe('ReaClient.findSubscription', () => {
+  it('finds IntegrationCreated all-owners subscription', () => {
+    const client = new ReaClient({
+      REA_CLIENT_ID: 'client-id',
+      REA_CLIENT_SECRET: 'client-secret',
+    })
+
+    const found = client.findSubscription(
+      [
+        {
+          subscriptionId: 'sub-int',
+          eventType: 'IntegrationCreated',
+          eventCategory: 'integration',
+          webhookUrl: 'https://example.com/integrations',
+        },
+      ],
+      {
+        eventType: 'IntegrationCreated',
+        eventCategory: 'integration',
+        allOwners: true,
+      },
+    )
+
+    expect(found?.subscriptionId).toBe('sub-int')
   })
 })

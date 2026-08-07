@@ -1,0 +1,141 @@
+name: Default REA Enquiry Created
+handle: sync-rea-enquiry-from-webhook
+description: "Upsert CRM lead + conversation contact when app.realestate.enquiry.created arrives via REA webhook (uses install CRM maps)"
+
+variables:
+  label-enquiry-created: "New REA enquiry"
+
+inputs:
+  data:
+    type: "@app/realestate/enquiry/created"
+    label: Enquiry event data
+    description: Nested REA enquiry payload ({ webhook, agency, enquiry })
+    required: true
+
+outputs:
+  lead-id:
+    type: string
+    description: "Upserted lead instance ID"
+    value: "{{ steps.sync-lead.outputs.data.lead-id }}"
+  contact-id:
+    type: string
+    description: "Conversation contact linked to the lead"
+    value: "{% if steps.resolve-contact.outputs.response.contact-id != blank %}{{ steps.resolve-contact.outputs.response.contact-id }}{% else %}{{ steps.ensure-contact.outputs.response.data.id }}{% endif %}"
+  signal-block-id:
+    type: string
+    description: "SIGNAL contact block created for the enquiry"
+    value: "{{ steps.send-enquiry-signal.outputs.response.block-id }}"
+
+steps:
+  sync-lead:
+    type: workflow
+    name: Sync REA lead
+    description: Upsert CRM record via lead CRM map
+    run: sync-rea-lead
+    if: "{{ 'model_handle' | realestate: 'config', 'lead' != blank }}"
+    inputs:
+      data: "{{ inputs.data.enquiry }}"
+
+  resolve-contact:
+    needs: [sync-lead]
+    type: task
+    name: Resolve conversation contact
+    description: Find existing conversation contact linked to the lead instance
+    timeout: 1 minute
+    if: "{{ steps.sync-lead.outputs.data.lead-id != blank }}"
+    service:
+      name: skedyul/conversations
+      cmd: contact.resolve
+    inputs:
+      instance-id: "{{ steps.sync-lead.outputs.data.lead-id }}"
+
+  ensure-contact:
+    needs: [sync-lead, resolve-contact]
+    type: task
+    name: Ensure conversation contact
+    description: Create conversation contact linked to the lead when none exists yet
+    timeout: 2 minutes
+    if: "{{ steps.sync-lead.outputs.data.lead-id != blank and steps.resolve-contact.outputs.response.contact-id == blank }}"
+    service:
+      name: skedyul/conversations
+      cmd: contact.create
+    inputs:
+      name: "{{ inputs.data.enquiry.first_name }} {{ inputs.data.enquiry.last_name }}"
+      associations:
+        - instance-id: "{{ steps.sync-lead.outputs.data.lead-id }}"
+
+  build-enquiry-data-blocks:
+    type: task
+    name: Build enquiry signal data blocks
+    description: Shape enquiry into profile DataBlocks for the UI
+    timeout: 30 seconds
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [
+          {
+            "type": "profile",
+            "title": {{ inputs.data.enquiry.first_name | append: ' ' | append: inputs.data.enquiry.last_name | strip | default: "REA enquiry" | json }},
+            "fields": [
+              {%- assign field_first = true -%}
+              {%- if inputs.data.enquiry.email != blank -%}
+              {%- unless field_first -%},{%- endunless -%}{ "label": "Email", "value": {{ inputs.data.enquiry.email | json }} }
+              {%- assign field_first = false -%}
+              {%- endif -%}
+              {%- if inputs.data.enquiry.phone != blank -%}
+              {%- unless field_first -%},{%- endunless -%}{ "label": "Phone", "value": {{ inputs.data.enquiry.phone | json }} }
+              {%- assign field_first = false -%}
+              {%- endif -%}
+              {%- if inputs.data.agency.agency_id != blank -%}
+              {%- unless field_first -%},{%- endunless -%}{ "label": "Agency", "value": {{ inputs.data.agency.agency_id | json }} }
+              {%- assign field_first = false -%}
+              {%- endif -%}
+              {%- if inputs.data.enquiry.listing_address != blank -%}
+              {%- unless field_first -%},{%- endunless -%}{ "label": "Listing", "value": {{ inputs.data.enquiry.listing_address | json }} }
+              {%- assign field_first = false -%}
+              {%- endif -%}
+              {%- if inputs.data.enquiry.comments != blank -%}
+              {%- unless field_first -%},{%- endunless -%}{ "label": "Comments", "value": {{ inputs.data.enquiry.comments | json }} }
+              {%- assign field_first = false -%}
+              {%- endif -%}
+            ]
+          }
+        ]
+
+  build-enquiry-signal-description:
+    type: task
+    name: Build enquiry signal description
+    description: Render the thread signal label
+    timeout: 30 seconds
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      template: |
+        {{ variables.label-enquiry-created }}{% if enquiry_name != blank %} — {{ enquiry_name }}{% endif %}{% if listing != blank %} · {{ listing }}{% endif %}
+      data:
+        enquiry_name: "{{ inputs.data.enquiry.first_name }} {{ inputs.data.enquiry.last_name }}"
+        listing: "{{ inputs.data.enquiry.listing_address }}"
+
+  send-enquiry-signal:
+    needs: [resolve-contact, ensure-contact, build-enquiry-data-blocks, build-enquiry-signal-description]
+    type: task
+    name: Signal enquiry on contact
+    description: Post a contact signal for the REA enquiry
+    timeout: 1 minute
+    if: "{% if steps.resolve-contact.outputs.response.contact-id != blank %}true{% elsif steps.ensure-contact.outputs.response.data.id != blank %}true{% else %}false{% endif %}"
+    service:
+      name: skedyul/conversations
+      cmd: contact.signal.create
+    inputs:
+      contact-id: "{% if steps.resolve-contact.outputs.response.contact-id != blank %}{{ steps.resolve-contact.outputs.response.contact-id }}{% else %}{{ steps.ensure-contact.outputs.response.data.id }}{% endif %}"
+      description: "{{ steps.build-enquiry-signal-description.outputs.response }}"
+      app-handle: realestate
+      handle: enquiry-created
+      metadata:
+        event-type: "{{ context.event.type }}"
+        event-id: "{{ context.event.id }}"
+        dataBlocks: "{{ steps.build-enquiry-data-blocks.outputs.response.data }}"

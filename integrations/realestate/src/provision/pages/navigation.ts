@@ -6,9 +6,21 @@ export default defineNavigation({
       {
         items: [
           {
+            label: 'Setup',
+            href: '/setup',
+            icon: 'ListChecks',
+          },
+          {
+            label: 'Agencies',
+            href: '/agencies',
+            icon: 'Building2',
+            hidden: "{{ capabilities['agency.connected'] != true }}",
+          },
+          {
             label: 'Leads',
             href: '/leads',
             icon: 'Users',
+            hidden: "{{ capabilities['agency.connected'] != true }}",
           },
         ],
       },

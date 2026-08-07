@@ -6,31 +6,20 @@ import {
   normalizeReaWebhookEvents,
 } from '../lib/rea-enquiry'
 import { createReaEvent } from '../lib/create-rea-event'
-import {
-  cacheSigningKeys,
-  getCachedSigningKeys,
-  isSigningKeyCacheStale,
-  verifyReaWebhookSignature,
-} from '../lib/rea-webhook-signature'
+import { findActiveAgencyByOwnerId } from '../lib/reconcile-agencies'
 import {
   REA_LEAD_EVENT_CATEGORY,
   REA_LEAD_EVENT_TYPE,
   type ReaClientEnv,
 } from '../lib/rea-types'
 import { parseReaEventPayload } from '../events/schemas'
-import { getHeaderValue, getRawBodyString, parseJsonBody } from './lib/helpers'
+import { parseJsonBody } from './lib/helpers'
+import { verifyReaWebhookRequest } from './lib/verify-request'
 
-async function loadSigningKeys(env: ReaClientEnv) {
-  if (!isSigningKeyCacheStale()) {
-    return
-  }
-
-  const client = ReaClient.fromEnv(env)
-  const response = await client.getSigningKeys()
-  cacheSigningKeys(response.keys ?? [])
-}
-
-const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<WebhookResponse> => {
+const enquiryCreatedHandler: WebhookHandler = async (
+  request,
+  context,
+): Promise<WebhookResponse> => {
   if (!isRuntimeWebhookContext(context)) {
     console.error('[REA] enquiry_created webhook requires install-scoped registration')
     return {
@@ -39,66 +28,10 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
     }
   }
 
-  const env = context.env as ReaClientEnv & {
-    REA_AGENCY_ID?: string
-    REA_INTEGRATION_ID?: string
-  }
-  const rawBody = getRawBodyString(request)
-  const signatureHeader = getHeaderValue(request.headers, 'x-rea-signature')
-
-  // REA validation handshake may omit signature/body — accept quickly.
-  if (!signatureHeader?.trim()) {
-    return { status: 200, body: { status: 'validated' } }
-  }
-
-  if (!env.REA_CLIENT_ID || !env.REA_CLIENT_SECRET) {
-    console.error('[REA] enquiry_created webhook missing REA client credentials')
-    return {
-      status: 500,
-      body: { error: 'REA client credentials not configured' },
-    }
-  }
-
-  try {
-    await loadSigningKeys(env)
-  } catch (error) {
-    console.error('[REA] Failed to load signing keys:', error)
-    return {
-      status: 500,
-      body: { error: 'Failed to load REA signing keys' },
-    }
-  }
-
-  let signingKeys = getCachedSigningKeys()
-  let isValid = await verifyReaWebhookSignature({
-    rawBody,
-    signatureHeader,
-    signingKeys,
-  })
-
-  if (!isValid) {
-    try {
-      const client = ReaClient.fromEnv(env)
-      const response = await client.getSigningKeys()
-      cacheSigningKeys(response.keys ?? [])
-      signingKeys = response.keys ?? []
-
-      isValid = await verifyReaWebhookSignature({
-        rawBody,
-        signatureHeader,
-        signingKeys,
-      })
-    } catch (error) {
-      console.error('[REA] Signature verification failed:', error)
-    }
-  }
-
-  if (!isValid) {
-    console.warn('[REA] Invalid enquiry_created webhook signature')
-    return {
-      status: 401,
-      body: { error: 'Invalid webhook signature' },
-    }
+  const env = context.env as ReaClientEnv
+  const verified = await verifyReaWebhookRequest(request, env, 'REA enquiry_created')
+  if (!verified.ok) {
+    return { status: verified.status, body: verified.body }
   }
 
   const body = parseJsonBody(request)
@@ -109,17 +42,6 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
   const events = normalizeReaWebhookEvents(body)
   if (events.length === 0) {
     return { status: 200, body: { status: 'validated' } }
-  }
-
-  const expectedAgencyId = env.REA_AGENCY_ID?.trim().toUpperCase()
-  const integrationId = env.REA_INTEGRATION_ID?.trim()
-
-  if (!expectedAgencyId || !integrationId) {
-    console.error('[REA] Install env missing REA_AGENCY_ID or REA_INTEGRATION_ID')
-    return {
-      status: 500,
-      body: { error: 'Install configuration incomplete' },
-    }
   }
 
   const client = ReaClient.fromEnv(env)
@@ -139,13 +61,14 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
       continue
     }
 
-    if (webhookEvent.ownerId !== expectedAgencyId) {
+    const agency = await findActiveAgencyByOwnerId(webhookEvent.ownerId)
+    if (!agency) {
       console.log(
-        `[REA] Ignoring enquiry for owner ${webhookEvent.ownerId} (expected ${expectedAgencyId})`,
+        `[REA] Ignoring enquiry for owner ${webhookEvent.ownerId} (no ACTIVE lead-capable agency)`,
       )
       results.push({
         status: 'ignored',
-        reason: 'owner_mismatch',
+        reason: 'agency_not_connected',
         event_type: webhookEvent.eventType,
         event_id: webhookEvent.eventId,
         owner_id: webhookEvent.ownerId,
@@ -174,8 +97,8 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
     const payload = buildEnquiryCreatedPayload({
       webhookEvent,
       agency: {
-        agency_id: expectedAgencyId,
-        integration_id: integrationId,
+        agency_id: agency.agency_id,
+        integration_id: agency.integration_id,
       },
       enquiry,
     })
@@ -213,7 +136,7 @@ const enquiryCreatedHandler: WebhookHandler = async (request, context): Promise<
         emitted: result.emitted,
         event_id: webhookEvent.eventId,
         owner_id: webhookEvent.ownerId,
-        agency_id: expectedAgencyId,
+        agency_id: agency.agency_id,
       })
     } catch (error) {
       console.error(

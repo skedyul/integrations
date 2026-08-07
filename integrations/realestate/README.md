@@ -1,18 +1,17 @@
 # realestate.com.au Integration
 
-Skedyul integration for the [REA Partner Platform](https://partner.realestate.com.au/getting-started/overview/). Ingests lead enquiries in real time via webhooks and emits typed app events for workflow-driven CRM sync.
+Skedyul integration for the [REA Partner Platform](https://partner.realestate.com.au/getting-started/overview/). Ingests lead enquiries in real time via webhooks, tracks Ignite-authorized agencies on a **single workplace install**, and ships a bundled CRM sync workflow.
 
-## Features (v1)
+## Features
 
-- **Lead webhook** — receives `EnquiryCreated` events from REA, verifies Ed25519 signatures, fetches full enquiry details via the Leads API, and emits `enquiry.created` app events
-- **Per-agency install** — each workplace install connects to a REA agency ID (6-letter code) validated against the Integrations API
-- **OAuth** — partner-level client credentials (`REA_CLIENT_ID` / `REA_CLIENT_SECRET`)
+- **Multi-agency, one install** — many REA agencies as internal `agency` records; second workplace installs are not supported
+- **Ignite enablement** — `IntegrationCreated` / `Updated` / `Deleted` webhooks plus `check_ignite_integration` tool
+- **Lead webhook** — `EnquiryCreated` events, Ed25519 verify, Leads API fetch, `enquiry.created` app events
+- **CRM maps + workflow** — `lead` entity + `sync-rea-enquiry-from-webhook` for zero-config sync after field mapping
 
 ## Setup
 
 ### Provision (app owner)
-
-Set provision env vars on the app version:
 
 | Variable | Description |
 | -------- | ----------- |
@@ -20,33 +19,45 @@ Set provision env vars on the app version:
 | `REA_CLIENT_SECRET` | Partner Platform client secret |
 | `REA_API_BASE_URL` | Optional, defaults to `https://api.realestate.com.au` |
 
-On provision, the app prefetches REA signing keys and removes any legacy partner-wide (`all agencies`) REA subscription from v0.1.0–0.1.3 deployments.
+On provision, the app prefetches REA signing keys.
 
 ### Install (workplace)
 
-Each agency customer authorizes your partner account in **Ignite** ([manage integrations](https://ignite.realestate.com.au/manage/data-and-integrations)). The install handler then:
+Install registers **one** install-scoped Skedyul webhook pair and **all-owners** REA subscriptions (no `ownerId`):
 
-1. Resolves the agency — automatically when only one agency has authorized your account, or from the optional **REA Agency ID** field when multiple agencies exist
-2. Registers an install-scoped Skedyul webhook URL
-3. Creates a per-agency REA subscription pointing at that URL
+| REA event | Skedyul webhook |
+| --------- | --------------- |
+| `EnquiryCreated` | `enquiry_created` |
+| `IntegrationCreated` / `Updated` / `Deleted` | `rea_integration` |
 
-`REA Integration ID` and `REA Subscription ID` are set by the install handler — users never enter them.
+Subscription IDs are stored on the install env by the install hook (not user-entered).
 
-Agencies must authorize your partner account via REA before install will succeed.
+### Connect agencies (setup)
 
-### Uninstall
+1. Ask each agency to authorize this partner in Ignite:  
+   https://ignite.realestate.com.au/manage/data-and-integrations  
+   (requires `lead:enquiries:read`)
+2. On **Setup**, click **Check Ignite status** — invokes `check_ignite_integration` directly (no dialog).  
+   The tool calls the Integrations API, upserts internal agencies, and completes the `connect_agencies` step when ≥1 lead-capable agency exists.
+3. Background `Integration*` webhooks keep the agency list in sync as authorizations change.
 
-The uninstall hook deletes the REA webhook subscription for that agency. Skedyul removes the install-scoped webhook registration automatically.
+### Set up Leads (CRM)
 
-## Migration from v0.1.0–0.1.3
+Map the `lead` entity to workplace CRM fields and enable the bundled workflow. After mapping, enquiries upsert with no further config.
 
-v0.1.4 switches from a single provision-level webhook + internal agency routing to install-scoped webhooks with per-agency REA subscriptions.
+## Uninstall
 
-If you tested v0.1.0–0.1.3:
+Deletes the stored all-owners REA subscriptions. Skedyul removes install-scoped webhook registrations automatically.
 
-1. Deploy v0.1.4 (provision hook removes the legacy all-agencies REA subscription)
-2. **Reinstall** each workplace so the install hook registers the per-agency webhook and REA subscription
-3. Orphaned internal `agency` CRM records from older versions can be ignored
+## Migration from v1.0 (per-agency install env)
+
+v1.x used optional `REA_AGENCY_ID` + per-agency EnquiryCreated subscriptions. This release:
+
+1. Removes install-scoped Agency ID env
+2. Creates all-owners subscriptions (and removes conflicting per-agency lead subs)
+3. Discovers agencies via Integrations API / Integration webhooks
+
+**Reinstall** (or re-run install) so subscriptions and env IDs are refreshed, then use **Check Ignite status**.
 
 ## Development
 
@@ -61,6 +72,13 @@ pnpm build
 
 | Event | Description |
 | ----- | ----------- |
-| `enquiry.created` | A new REA enquiry was received for this installation's agency |
+| `enquiry.created` | A new REA enquiry was received for a connected agency |
 
-Subscribe workflows to `app.realestate.enquiry.created` to upsert CRM lead/prospect records from the enquiry payload.
+Workflow input type: `@app/realestate/enquiry/created`. Bundled handle: `sync-rea-enquiry-from-webhook`.
+
+## Tools
+
+| Tool | Description |
+| ---- | ----------- |
+| `check_ignite_integration` | Reconcile agencies from Integrations API; complete/invalidate setup |
+| `ping` | Health check |
