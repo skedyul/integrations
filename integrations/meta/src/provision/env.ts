@@ -42,6 +42,7 @@ export default defineEnv({
   META_ACCESS_TOKEN: {
     label: 'Meta Access Token',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'encrypted',
     description: 'Long-lived Meta user access token. Set automatically after OAuth — one connection per installation.',
@@ -49,6 +50,7 @@ export default defineEnv({
   META_WABA_ID: {
     label: 'WhatsApp Business Account ID',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'Connected WABA ID. Set automatically after OAuth.',
@@ -56,6 +58,7 @@ export default defineEnv({
   META_BUSINESS_NAME: {
     label: 'Meta Business Name',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'Connected Meta business name. Set automatically after OAuth.',
@@ -63,6 +66,7 @@ export default defineEnv({
   META_CONNECTION_STATUS: {
     label: 'Meta Connection Status',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'Connection status for the single Meta account on this installation.',

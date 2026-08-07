@@ -28,6 +28,7 @@ export default defineEnv({
   GOOGLE_REFRESH_TOKEN: {
     label: 'Google Refresh Token',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'encrypted',
     description: 'Long-lived refresh token set automatically after OAuth',
@@ -35,6 +36,7 @@ export default defineEnv({
   GOOGLE_ACCESS_TOKEN: {
     label: 'Google Access Token',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'encrypted',
     description: 'Current access token refreshed automatically by the app',
@@ -42,6 +44,7 @@ export default defineEnv({
   GOOGLE_TOKEN_EXPIRY: {
     label: 'Google Token Expiry',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'ISO timestamp when the current access token expires',
@@ -49,6 +52,7 @@ export default defineEnv({
   GOOGLE_ACCOUNT_EMAIL: {
     label: 'Google Account Email',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'Connected Google account email address',
@@ -56,6 +60,7 @@ export default defineEnv({
   GOOGLE_CONNECTION_STATUS: {
     label: 'Google Connection Status',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'Connection status for the Google account on this installation',
@@ -64,6 +69,7 @@ export default defineEnv({
   GOOGLE_ENABLED_SERVICES: {
     label: 'Enabled Google Services',
     scope: 'install',
+    installPhase: 'post_install',
     required: false,
     visibility: 'visible',
     description: 'JSON array of enabled services. v1 default: ["calendar"]',
