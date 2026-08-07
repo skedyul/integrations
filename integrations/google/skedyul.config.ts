@@ -1,0 +1,35 @@
+import { defineConfig } from 'skedyul'
+import pkg from './package.json' with { type: 'json' }
+import catalogMeta from './src/events/catalog.json' with { type: 'json' }
+import catalogExamples from './src/events/catalog-examples.json' with { type: 'json' }
+import catalogContextFields from './src/events/catalog-context-fields.json' with { type: 'json' }
+
+const events = catalogMeta.map((entry) => {
+  const examplePayload = catalogExamples[entry.name as keyof typeof catalogExamples]
+  const contextFields =
+    catalogContextFields[entry.name as keyof typeof catalogContextFields]
+
+  return {
+    ...entry,
+    workflowInputType: `@app/google/${entry.name.replace(/\./g, '/')}`,
+    ...(examplePayload ? { examplePayload } : {}),
+    ...(contextFields ? { contextFields } : {}),
+  }
+})
+
+export default defineConfig({
+  handle: 'google',
+  name: 'Google',
+  version: pkg.version,
+  description: 'Google Calendar integration with OAuth, sync, events, and calendar tools',
+  computeLayer: 'serverless',
+  build: {
+    external: ['googleapis'],
+  },
+
+  tools: import('./src/registries'),
+  webhooks: import('./src/registries'),
+
+  provision: import('./src/provision'),
+  events,
+})

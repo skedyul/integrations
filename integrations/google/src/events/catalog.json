@@ -1,0 +1,37 @@
+[
+  {
+    "name": "calendar.event.created",
+    "label": "Calendar event created",
+    "description": "A new Google Calendar event was detected or created",
+    "group": "Calendar",
+    "icon": "CalendarPlus"
+  },
+  {
+    "name": "calendar.event.updated",
+    "label": "Calendar event updated",
+    "description": "A Google Calendar event was changed",
+    "group": "Calendar",
+    "icon": "CalendarClock"
+  },
+  {
+    "name": "calendar.event.deleted",
+    "label": "Calendar event deleted",
+    "description": "A Google Calendar event was deleted or cancelled",
+    "group": "Calendar",
+    "icon": "CalendarX"
+  },
+  {
+    "name": "calendar.sync.completed",
+    "label": "Calendar sync completed",
+    "description": "A calendar sync run finished successfully",
+    "group": "Calendar",
+    "icon": "CalendarSync"
+  },
+  {
+    "name": "calendar.sync.failed",
+    "label": "Calendar sync failed",
+    "description": "A calendar sync run failed",
+    "group": "Calendar",
+    "icon": "AlertCircle"
+  }
+]
