@@ -16,6 +16,79 @@ import type {
 import { URLSearchParams } from 'url'
 import twilio from 'twilio'
 import { getHeaderValue, serializeBody } from './lib/helpers'
+import {
+  parseTwilioMedia,
+  processMmsAttachments,
+} from '../lib/mms_attachments'
+
+const EMPTY_TWIML =
+  '<?xml version="1.0" encoding="UTF-8"?><Response></Response>'
+
+/**
+ * receiveMessage → download MMS → file.upload → attachFilesToMessage
+ * Requires a workplace-scoped token (file.upload / attach).
+ */
+async function captureInboundSmsWithMedia(params: {
+  channelId: string
+  from: string
+  to: string
+  body: string
+  messageSid: string
+  formParams: URLSearchParams
+  accountSid: string
+  authToken: string
+}): Promise<{ messageId: string }> {
+  const media = parseTwilioMedia(params.formParams)
+
+  // Media-only MMS may have an empty body; still capture a message for attachments.
+  const messageResult = await communicationChannel.receiveMessage({
+    communicationChannelId: params.channelId,
+    from: params.from,
+    contact: {
+      identifierValue: params.from,
+    },
+    message: {
+      message: params.body,
+      remoteId: params.messageSid || undefined,
+    },
+    remoteId: params.messageSid || undefined,
+  })
+
+  if (media.length > 0) {
+    console.log(
+      `[Phone SMS] Processing ${media.length} MMS media item(s) for ${params.messageSid || messageResult.messageId}`,
+    )
+    const attachments = await processMmsAttachments({
+      media,
+      messageId: messageResult.messageId,
+      accountSid: params.accountSid,
+      authToken: params.authToken,
+    })
+
+    if (attachments.length > 0) {
+      const attachResult = await communicationChannel.attachFilesToMessage({
+        messageId: messageResult.messageId,
+        attachments: attachments.map((a) => ({
+          fileId: a.fileId,
+          name: a.name,
+          mimeType: a.mimeType,
+          size: a.size,
+        })),
+      })
+      console.log('[Phone SMS] Linked MMS attachments:', attachResult.attachmentCount)
+    }
+  }
+
+  console.log('Twilio webhook processed', {
+    channelId: params.channelId,
+    from: params.from,
+    to: params.to,
+    messageId: messageResult.messageId,
+    mediaCount: media.length,
+  })
+
+  return messageResult
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Webhook Lifecycle Hooks
@@ -206,6 +279,13 @@ async function handleReceiveSms(
   const to = params.get('To') ?? ''
   const body = params.get('Body') ?? ''
   const messageSid = params.get('MessageSid') ?? ''
+  const accountSid = context.env.TWILIO_ACCOUNT_SID
+  if (!accountSid) {
+    return {
+      status: 500,
+      body: { error: 'TWILIO_ACCOUNT_SID is not configured' },
+    }
+  }
 
   const channels = await communicationChannel.list({
     filter: { identifierValue: to },
@@ -221,26 +301,24 @@ async function handleReceiveSms(
 
   const channel = channels[0]
 
-  // Process the inbound message via the Core API
+  // Exchange for workplace-scoped token (required for file.upload / attach)
   try {
-    const result = await communicationChannel.receiveMessage({
-      communicationChannelId: channel.id,
-      from,
-      contact: {
-        identifierValue: from,
-      },
-      message: {
-        message: body,
-        remoteId: messageSid || undefined,
-      },
-      remoteId: messageSid || undefined,
-    })
+    const { token: scopedToken } = await tokenClient.exchange(
+      channel.appInstallationId,
+    )
+    const config = getConfig()
 
-    console.log('Twilio webhook processed', {
-      channelId: channel.id,
-      from,
-      to,
-      messageId: result.messageId,
+    await runWithConfig({ ...config, apiToken: scopedToken }, async () => {
+      await captureInboundSmsWithMedia({
+        channelId: channel.id,
+        from,
+        to,
+        body,
+        messageSid,
+        formParams: params,
+        accountSid,
+        authToken: twilioAuthToken,
+      })
     })
   } catch (err) {
     console.error('Failed to process inbound message:', err)
@@ -255,7 +333,7 @@ async function handleReceiveSms(
     headers: {
       'Content-Type': 'application/xml',
     },
-    body: '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+    body: EMPTY_TWIML,
   }
 }
 
@@ -378,24 +456,24 @@ async function handleReceiveSmsWithTokenExchange(
       }
 
       const channel = channels[0]
+      const accountSid = context.env.TWILIO_ACCOUNT_SID
+      if (!accountSid) {
+        return {
+          status: 500,
+          body: { error: 'TWILIO_ACCOUNT_SID is not configured' },
+        }
+      }
 
       try {
-        const result = await communicationChannel.receiveMessage({
-          communicationChannelId: channel.id,
-          from,
-          contact: { identifierValue: from },
-          message: {
-            message: body,
-            remoteId: messageSid || undefined,
-          },
-          remoteId: messageSid || undefined,
-        })
-
-        console.log('[Webhook] Message processed', {
+        await captureInboundSmsWithMedia({
           channelId: channel.id,
           from,
           to,
-          messageId: result.messageId,
+          body,
+          messageSid,
+          formParams: params,
+          accountSid,
+          authToken: twilioAuthToken,
         })
       } catch (err) {
         console.error('[Webhook] Failed to process message:', err)
@@ -405,7 +483,7 @@ async function handleReceiveSmsWithTokenExchange(
       return {
         status: 200,
         headers: { 'Content-Type': 'application/xml' },
-        body: '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        body: EMPTY_TWIML,
       }
     },
   )
