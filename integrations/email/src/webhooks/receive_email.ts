@@ -58,8 +58,9 @@ async function handleCommunicationChannelDeleted(
  * 1. Verify webhook signature
  * 2. Parse inbound email data
  * 3. Find communication channel by recipient address
- * 4. Process attachments (download, upload to S3, create file records)
- * 5. Create chat message via communicationChannel.receiveMessage
+ * 4. receiveMessage (pre-generates messageId)
+ * 5. processAttachments → file.upload
+ * 6. attachFilesToMessage (race-free; emits thread.attachment.received)
  */
 async function handleReceiveEmail(
   request: WebhookRequest,
@@ -121,25 +122,11 @@ async function handleReceiveEmail(
   const { token: scopedToken } = await token.exchange(channel.appInstallationId)
   const currentConfig = getConfig()
 
-  // Generate a message ID for attachment processing
-  const messageId = `email-${Date.now()}-${Math.random().toString(36).slice(2)}`
-
-  // Process attachments and create message using the scoped token
-  // This ensures file.upload has the proper workplace context
   try {
     const result = await runWithConfig(
       { ...currentConfig, apiToken: scopedToken },
       async () => {
-        // Process attachments with workplace-scoped token
-        const attachments = await processAttachments({
-          attachments: inboundEmail.attachments,
-          messageId,
-          provider,
-        })
-
-        console.log('[Email Webhook] Processed attachments:', attachments.length)
-
-        // Create the inbound message
+        // Capture message first so we have a stable platform messageId
         const messageResult = await communicationChannel.receiveMessage({
           communicationChannelId: channel.id,
           from: inboundEmail.from,
@@ -153,17 +140,34 @@ async function handleReceiveEmail(
             remoteId: inboundEmail.messageId || undefined,
             // Create new chat for each email thread (emails are standalone)
             newChat: true,
-            ...(attachments.length > 0 && {
+          },
+          remoteId: inboundEmail.messageId || undefined,
+        })
+
+        const messageId = messageResult.messageId
+
+        if (inboundEmail.attachments.length > 0) {
+          const attachments = await processAttachments({
+            attachments: inboundEmail.attachments,
+            messageId,
+            provider,
+          })
+
+          console.log('[Email Webhook] Processed attachments:', attachments.length)
+
+          if (attachments.length > 0) {
+            const attachResult = await communicationChannel.attachFilesToMessage({
+              messageId,
               attachments: attachments.map((a) => ({
                 fileId: a.fileId,
                 name: a.name,
                 mimeType: a.mimeType,
                 size: a.size,
               })),
-            }),
-          },
-          remoteId: inboundEmail.messageId || undefined,
-        })
+            })
+            console.log('[Email Webhook] Linked attachments:', attachResult.attachmentCount)
+          }
+        }
 
         return messageResult
       },

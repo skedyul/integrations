@@ -47,7 +47,7 @@ src/
 ### Webhook Features
 
 - **Signature Verification**: Validates Mailgun webhook signatures
-- **Attachment Processing**: Downloads and uploads attachments to Skedyul
+- **Attachment Processing**: `receiveMessage` → download/upload via `file.upload` → `attachFilesToMessage` (emits `thread.attachment.received`)
 - **Contact Association**: Links emails to contacts via email address
 
 ## Models
