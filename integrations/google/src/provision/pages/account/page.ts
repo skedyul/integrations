@@ -5,7 +5,6 @@ export default definePage({
   label: 'Account',
   type: 'instance',
   path: '/account',
-  default: true,
   navigation: true,
 
   context: {

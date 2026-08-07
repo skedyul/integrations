@@ -1,4 +1,4 @@
-import { instance, token, runWithConfig, getConfig } from 'skedyul'
+import { instance, token, runWithConfig, getConfig, setup } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import {
   createOAuth2Client,
@@ -9,7 +9,9 @@ import {
 } from '../../lib/google_client'
 import { buildOAuthRedirectUri } from '../../lib/google_install_env'
 import { listGoogleCalendars } from '../../services/calendar/client'
-import { ensureInstallCalendarPushWebhook } from '../../lib/calendar_link'
+import { ensureCalendarWatch, ensureInstallCalendarPushWebhook } from '../../lib/calendar_link'
+import { loadGoogleCalendarRecord, syncGoogleCalendar } from '../../services/calendar/sync'
+import type { GoogleCalendarRecord } from '../../events/types'
 
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
@@ -91,6 +93,8 @@ export default async function oauthCallback(
       expiry_date: tokens.expiryDate ?? undefined,
     })
 
+    let primaryCalendarId: string | null = null
+
     await runWithConfig({ ...currentConfig, apiToken: scopedToken }, async () => {
       await ensureInstallCalendarPushWebhook()
 
@@ -111,6 +115,10 @@ export default async function oauthCallback(
           external_read_only: false,
         }
 
+        if (calendar.primary) {
+          primaryCalendarId = calendar.calendar_id
+        }
+
         if (existing.data.length > 0) {
           const record = existing.data[0] as { id: string }
           await instance.update('google_calendar', record.id, payload)
@@ -120,6 +128,26 @@ export default async function oauthCallback(
       }
 
       ctx.log.info(`[Google OAuth] Seeded ${calendars.length} calendar records`)
+
+      await setup.complete('connect_google')
+      if (typeof setup.reconcile === 'function') {
+        await setup.reconcile()
+      }
+
+      if (primaryCalendarId) {
+        const record = await loadGoogleCalendarRecord(primaryCalendarId)
+        if (record?.sync_enabled) {
+          const watched = await ensureCalendarWatch(authClient, record as GoogleCalendarRecord)
+          await syncGoogleCalendar({
+            auth: authClient,
+            appInstallationId,
+            calendarRecord: watched,
+            trigger: 'install',
+            correlationId: `install-${primaryCalendarId}-${Date.now()}`,
+          })
+          ctx.log.info(`[Google OAuth] Ran install backfill sync for ${primaryCalendarId}`)
+        }
+      }
     })
 
     return {

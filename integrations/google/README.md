@@ -1,6 +1,6 @@
 # Google Integration
 
-Google Calendar integration for Skedyul with OAuth, incremental sync, push notifications, typed app events, and calendar CRUD tools.
+Google Calendar integration for Skedyul with OAuth, incremental sync, push notifications, typed app events, CRM map contracts, and calendar CRUD tools.
 
 Future Google services (Gmail, Drive) are stubbed under `src/services/` but not implemented in v1.
 
@@ -11,7 +11,9 @@ Future Google services (Gmail, Drive) are stubbed under `src/services/` but not 
 - Incremental sync with Google sync tokens
 - Push notifications via Google Calendar watch channels
 - Typed app events for workflow subscriptions (`app.google.calendar.*`)
-- Admin pages for account connection and linked calendars
+- Install-time CRM map for calendar events (`calendar_event` entity)
+- Bundled live sync workflow with event wiring UI
+- Admin pages for setup, account, linked calendars, and event CRM mapping
 
 ## Setup
 
@@ -39,6 +41,20 @@ Configure these provision-level variables on the app version:
 
 Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) are set automatically by the OAuth callback.
 
+### 3. Install the app (workplace)
+
+1. Install the Google app on a workplace
+2. Open **Setup** and complete **Connect Google account** (OAuth)
+3. Open **Calendars** and enable sync on the calendars you want (primary is enabled by default on connect)
+4. Open **Events** and configure the **Calendar event CRM map**:
+   - Map the `calendar_event` entity to your workplace model (e.g. `event` or `appointment`)
+   - Set composite match fields: `google_event_id` + `calendar_id`
+5. Wire live events on the **Events** page:
+   - Subscribe `app.google.calendar.event.created`, `.updated`, and `.deleted` to the bundled workflow `sync-google-calendar-event-from-webhook`
+6. Verify: create, edit, or delete an event in Google Calendar and confirm the CRM record upserts
+
+On OAuth connect, the app runs an install backfill sync for the primary calendar so existing events emit without waiting for the first push notification.
+
 ## App events
 
 | Event | Workflow type |
@@ -49,7 +65,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
 | `calendar.sync.completed` | `app.google.calendar.sync.completed` |
 | `calendar.sync.failed` | `app.google.calendar.sync.failed` |
 
-Subscribe workflows to these events to sync Google Calendar data into CRM models.
+The bundled `sync-google-calendar-event-from-webhook` workflow handles the three `calendar.event.*` types and upserts CRM records via the install CRM map (`| google: "format", "calendar_event"`).
 
 ## Tools
 
@@ -96,5 +112,7 @@ pnpm --filter=@skedyul-integrations/google build
 
 - One Google account per installation (Meta-style)
 - Install-scoped `calendar_push` webhooks are created during OAuth
-- CRM writes from sync should be handled by workflows subscribing to app events (see `docs/integrations/INTEGRATION_SYNC_PATTERNS.md`)
+- Internal `google_calendar` model stores sync/watch state per linked calendar (not a workplace CRM map target)
+- Workplace CRM events use a single model via the `calendar_event` entity map, tagged by `calendar_id`
+- `calendar.sync.*` events are for monitoring; CRM upserts use `calendar.event.*` via the bundled workflow
 - Gmail and Drive modules exist as stubs only (`src/services/gmail`, `src/services/drive`)

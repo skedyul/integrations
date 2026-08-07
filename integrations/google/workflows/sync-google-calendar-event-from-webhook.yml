@@ -1,0 +1,83 @@
+name: Sync Google Calendar Event
+handle: sync-google-calendar-event-from-webhook
+description: "Upsert CRM calendar events via install CRM map when app.google.calendar.event.* events arrive"
+
+variables: {}
+
+inputs:
+  data:
+    type: "@app/google/calendar/event/*"
+    label: Calendar event data
+    description: Google Calendar event payload ({ calendar, event, sync })
+    required: true
+
+outputs:
+  event-id:
+    type: string
+    description: Upserted calendar event instance ID
+    value: "{{ steps.upsert-event.outputs.response.results[0].instanceId }}"
+
+steps:
+  build-payload:
+    type: task
+    name: Build calendar event CRM payload
+    description: Flatten calendar + event envelope for CRM map format
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | google: 'config', 'calendar_event' != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "calendar_event": {
+            "google_event_id": {{ inputs.data.event.google_event_id | json }},
+            "calendar_id": {{ inputs.data.calendar.calendar_id | json }},
+            "summary": {{ inputs.data.event.summary | json }},
+            "description": {{ inputs.data.event.description | json }},
+            "start": {{ inputs.data.event.start | json }},
+            "end": {{ inputs.data.event.end | json }},
+            "timezone": {{ inputs.data.event.timezone | json }},
+            "all_day": {{ inputs.data.event.all_day | json }},
+            "status": {{ inputs.data.event.status | json }},
+            "location": {{ inputs.data.event.location | json }},
+            "html_link": {{ inputs.data.event.html_link | json }},
+            "updated_at": {{ inputs.data.event.updated_at | json }},
+            "recurrence": {{ inputs.data.event.recurrence | json }},
+            "attendees": {{ inputs.data.event.attendees | json }},
+            "etag": {{ inputs.data.event.etag | json }}
+          },
+          "calendar_summary": {{ inputs.data.calendar.summary | json }},
+          "sync_trigger": {{ inputs.data.sync.trigger | json }}
+        }
+
+  format-event:
+    needs: [build-payload]
+    type: task
+    name: Format calendar event for CRM
+    timeout: 30 seconds
+    if: "{{ steps.build-payload.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [{{ steps.build-payload.outputs.response.data | google: "format", "calendar_event" | json }}]
+
+  upsert-event:
+    needs: [format-event]
+    type: task
+    name: Upsert calendar event via CRM map
+    timeout: 5 minutes
+    if: "{{ 'model_handle' | google: 'config', 'calendar_event' != blank and 'match_id' | google: 'config', 'calendar_event' != blank and steps.format-event.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.upsertMany
+    inputs:
+      model-handle: "{{ 'model_handle' | google: 'config', 'calendar_event' }}"
+      matchField: "{{ 'match_id' | google: 'config', 'calendar_event' }}"
+      matchFields: "{{ 'match_fields' | google: 'config', 'calendar_event' | json }}"
+      errorMode: partial
+      data: "{{ steps.format-event.outputs.response.data }}"

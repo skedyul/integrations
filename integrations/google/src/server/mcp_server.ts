@@ -3,6 +3,7 @@ import { toolRegistry, webhookRegistry } from '../registries'
 import installHandler from './hooks/install'
 import oauthCallbackHandler from './hooks/oauth_callback'
 import provisionHandler from './hooks/provision'
+import setupRevalidateHandler from './hooks/setup-revalidate'
 import uninstallHandler from './hooks/uninstall'
 import pkg from '../../package.json'
 
@@ -44,6 +45,9 @@ const skedyulServer = server.create({
     uninstall: {
       handler: uninstallHandler,
       timeout: 120000,
+    },
+    setup: {
+      revalidate: setupRevalidateHandler,
     },
   },
 })
