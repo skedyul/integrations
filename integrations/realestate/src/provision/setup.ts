@@ -7,6 +7,8 @@ export const connectAgenciesStep = defineSetupStep({
     'Authorize this partner in Ignite, then check status here. The check calls REA directly — no form required.',
   kind: 'app',
   capabilities: ['agency.connected'],
+  actionTool: 'check_ignite_integration',
+  actionLabel: 'Check Ignite status',
 })
 
 export const setupLeadsStep = defineSetupStep({
@@ -20,6 +22,7 @@ export const setupLeadsStep = defineSetupStep({
   workflowHandles: ['sync-rea-enquiry-from-webhook'],
   listenToCrm: true,
   capabilities: ['crm.lead', 'realtime.lead'],
+  href: '/leads',
 })
 
 export default [connectAgenciesStep, setupLeadsStep]

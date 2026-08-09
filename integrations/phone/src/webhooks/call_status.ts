@@ -9,15 +9,10 @@ import { URLSearchParams } from 'url'
 import twilio from 'twilio'
 import { getHeaderValue, serializeBody } from './lib/helpers'
 import { TWILIO_CALLBACK_OK } from './lib/twiml'
-
-const TERMINAL_STATUSES = new Set([
-  'completed',
-  'busy',
-  'no-answer',
-  'failed',
-  'canceled',
-  'cancelled',
-])
+import {
+  isTerminalTwilioStatus,
+  mapTwilioCallStatus,
+} from '../lib/mapTwilioCallStatus'
 
 function validate(
   request: WebhookRequest,
@@ -61,8 +56,7 @@ function getCallSessionId(context: WebhookContext): string | undefined {
 
 /**
  * Receive Twilio call/dial status callbacks. On a terminal status we close out
- * the CallSession with the final status and duration. The Core API maps the raw
- * Twilio status into the normalized CallStatus.
+ * the CallSession with an explicit platform status (mapped here) plus duration.
  */
 async function handleCallStatus(
   request: WebhookRequest,
@@ -82,9 +76,10 @@ async function handleCallStatus(
   const duration = durationStr ? Number(durationStr) : undefined
 
   try {
-    if (TERMINAL_STATUSES.has(rawStatus)) {
+    if (isTerminalTwilioStatus(rawStatus)) {
       await call.end({
         callSessionId,
+        status: mapTwilioCallStatus(rawStatus),
         externalStatus: rawStatus,
         duration: Number.isFinite(duration) ? duration : undefined,
         recordingUrl: params.RecordingUrl ?? undefined,
