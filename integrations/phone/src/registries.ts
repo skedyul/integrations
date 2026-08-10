@@ -39,6 +39,7 @@ import { updatePhoneDetailsRegistry } from './tools/update_phone_details'
 import { updateForwardingNumberRegistry } from './tools/update_forwarding_number'
 import { updateOutboundVoiceRegistry } from './tools/update_outbound_voice'
 import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
+import { backfillInboundSmsRegistry } from './tools/backfill_inbound_sms'
 
 /**
  * Tool Registry
@@ -78,13 +79,16 @@ export const toolRegistry: ToolRegistry = {
 
   /** Sync the SMS webhook URL to Twilio for a given phone number. */
   sync_twilio_webhook: syncTwilioWebhookRegistry,
+
+  /** Re-ingest inbound SMS from Twilio over a time window to recover dropped messages. */
+  backfill_inbound_sms: backfillInboundSmsRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Webhook Definitions
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { receiveSmsRegistry, receiveSmsV2Registry } from './webhooks/receive_sms'
+import { receiveSmsRegistry } from './webhooks/receive_sms'
 import { complianceStatusRegistry } from './webhooks/compliance_status'
 import { receiveCallRegistry } from './webhooks/receive_call'
 import { callTranscriptionRegistry } from './webhooks/call_transcription'
