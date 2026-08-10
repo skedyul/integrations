@@ -1,7 +1,7 @@
-import { token, getConfig, runWithConfig } from 'skedyul'
 import type { GoogleEventName, GoogleEventEmitPayload } from '../events/types'
 import { isGoogleEventName } from '../events/schemas'
 import { createGoogleEvent } from './create-google-event'
+import { withInstallationScope } from './installation_scope'
 
 export async function emitGoogleEvent<T extends GoogleEventName>(
   appInstallationId: string,
@@ -14,10 +14,7 @@ export async function emitGoogleEvent<T extends GoogleEventName>(
     throw new Error(`Unknown Google event: ${eventName}`)
   }
 
-  const { token: scopedToken } = await token.exchangeRaw(appInstallationId)
-  const { baseUrl } = getConfig()
-
-  return runWithConfig({ baseUrl, apiToken: scopedToken }, async () => {
+  return withInstallationScope(appInstallationId, async () => {
     const result = await createGoogleEvent(eventName, payload, {
       correlationId,
       trigger,

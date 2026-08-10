@@ -1,4 +1,4 @@
-import { instance, token, runWithConfig, getConfig, setup } from 'skedyul'
+import { instance, setup } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import {
   createOAuth2Client,
@@ -8,6 +8,7 @@ import {
   tokenSetToInstallEnv,
 } from '../../lib/google_client'
 import { buildOAuthRedirectUri } from '../../lib/google_install_env'
+import { withInstallationScope } from '../../lib/installation_scope'
 import { listGoogleCalendars } from '../../services/calendar/client'
 import { ensureCalendarWatch, ensureInstallCalendarPushWebhook } from '../../lib/calendar_link'
 import { loadGoogleCalendarRecord, syncGoogleCalendar } from '../../services/calendar/sync'
@@ -70,9 +71,6 @@ export default async function oauthCallback(
 
   ctx.log.info(`[Google OAuth] Processing callback for installation ${appInstallationId}`)
 
-  const { token: scopedToken } = await token.exchangeRaw(appInstallationId)
-  const currentConfig = getConfig()
-
   try {
     const tokens = await exchangeCodeForTokens(
       {
@@ -95,7 +93,7 @@ export default async function oauthCallback(
 
     let primaryCalendarId: string | null = null
 
-    await runWithConfig({ ...currentConfig, apiToken: scopedToken }, async () => {
+    await withInstallationScope(appInstallationId, async () => {
       await ensureInstallCalendarPushWebhook()
 
       const calendars = await listGoogleCalendars(authClient)
