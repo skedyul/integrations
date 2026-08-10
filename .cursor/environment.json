@@ -1,0 +1,4 @@
+{
+  "name": "Skedyul Integrations",
+  "install": "bash ./.cursor/install.sh"
+}
