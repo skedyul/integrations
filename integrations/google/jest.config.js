@@ -12,6 +12,9 @@ export default {
       'ts-jest',
       {
         useESM: true,
+        // Types are checked by `tsc`, not the test runner. Leaving diagnostics on
+        // makes any type error in an imported module fail unrelated runtime tests.
+        diagnostics: false,
       },
     ],
   },

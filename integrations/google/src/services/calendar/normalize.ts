@@ -35,10 +35,18 @@ export function normalizeGoogleCalendarEvent(
     timezone: start.timezone ?? end.timezone,
     all_day: start.allDay || end.allDay,
     recurrence: event.recurrence ?? null,
-    attendees: (event.attendees ?? []).map((attendee) => ({
-      email: attendee.email || '',
-      response_status: attendee.responseStatus ?? null,
-    })),
+    // Google omits the email for rooms, resources and some imported invites.
+    // Those attendees carry nothing actionable, so drop them rather than
+    // emitting a blank address that fails payload validation.
+    attendees: (event.attendees ?? [])
+      .filter(
+        (attendee): attendee is typeof attendee & { email: string } =>
+          Boolean(attendee.email),
+      )
+      .map((attendee) => ({
+        email: attendee.email,
+        response_status: attendee.responseStatus ?? null,
+      })),
     location: event.location ?? null,
     html_link: event.htmlLink ?? null,
     updated_at: event.updated ?? null,

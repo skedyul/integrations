@@ -14,9 +14,12 @@ export const GoogleCalendarContextSchema = z
   })
   .strict()
 
+// Attendee addresses come from third-party calendars and cannot be corrected
+// here, so they are not format-checked. Rejecting the whole event over another
+// organisation's attendee list loses real data.
 export const GoogleEventAttendeeSchema = z
   .object({
-    email: z.string().email(),
+    email: z.string().min(1),
     response_status: nullableString.optional(),
   })
   .strict()

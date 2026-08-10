@@ -2,6 +2,7 @@ import type { WebhookDefinition, WebhookHandler, WebhookResponse } from 'skedyul
 import { isRuntimeWebhookContext } from 'skedyul'
 import { ensureCalendarWatch } from '../lib/calendar_link'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
+import { isCalendarSyncEnabled } from '../lib/setup_gate'
 import {
   loadGoogleCalendarRecordByWatchChannel,
   syncGoogleCalendar,
@@ -23,6 +24,12 @@ const calendarPushHandler: WebhookHandler = async (request, context): Promise<We
 
   if (!channelId) {
     return { status: 400, body: { error: 'Missing X-Goog-Channel-ID header' } }
+  }
+
+  // Acknowledge rather than fail, so Google stops retrying while the
+  // installation has no CRM mapping to receive events.
+  if (!(await isCalendarSyncEnabled())) {
+    return { status: 200, body: { ok: true, action: 'skipped_setup_incomplete' } }
   }
 
   const record = await loadGoogleCalendarRecordByWatchChannel(channelId)

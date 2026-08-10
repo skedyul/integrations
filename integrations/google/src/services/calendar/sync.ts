@@ -7,6 +7,7 @@ import type {
   GoogleSyncTrigger,
 } from '../../events/types'
 import { emitGoogleEvent } from '../../lib/emit-google-event'
+import { isCalendarSyncEnabled } from '../../lib/setup_gate'
 import { listGoogleCalendarEvents } from './client'
 import { normalizeGoogleCalendarEvent, resolveEventChangeType } from './normalize'
 
@@ -39,18 +40,29 @@ async function updateCalendarRecord(
   await instance.update('google_calendar', recordId, patch)
 }
 
+function emptySyncResult(record: GoogleCalendarRecord): CalendarSyncResult {
+  return {
+    eventsCreated: 0,
+    eventsUpdated: 0,
+    eventsDeleted: 0,
+    nextSyncToken: record.sync_token ?? null,
+  }
+}
+
 export async function syncGoogleCalendar(
   options: CalendarSyncOptions,
 ): Promise<CalendarSyncResult> {
+  if (!(await isCalendarSyncEnabled())) {
+    console.log(
+      `[Google] Skipping sync for ${options.calendarRecord.calendar_id}: setup_calendar_events is not complete`,
+    )
+    return emptySyncResult(options.calendarRecord)
+  }
+
   const direction = options.direction ?? options.calendarRecord.sync_direction ?? 'both'
 
   if (!shouldPull(direction)) {
-    return {
-      eventsCreated: 0,
-      eventsUpdated: 0,
-      eventsDeleted: 0,
-      nextSyncToken: options.calendarRecord.sync_token ?? null,
-    }
+    return emptySyncResult(options.calendarRecord)
   }
 
   const correlationId =

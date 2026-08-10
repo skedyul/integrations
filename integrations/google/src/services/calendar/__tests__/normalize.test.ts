@@ -39,6 +39,24 @@ describe('normalizeGoogleCalendarEvent', () => {
     })
   })
 
+  it('drops attendees Google returned without an email', () => {
+    const event: calendar_v3.Schema$Event = {
+      id: 'evt_3',
+      status: 'confirmed',
+      attendees: [
+        { email: 'user@example.com', responseStatus: 'accepted' },
+        { displayName: 'Meeting Room 4', responseStatus: 'needsAction' },
+        { email: '', responseStatus: 'needsAction' },
+        { email: 'room_a@resource.calendar.google.com' },
+      ],
+    }
+
+    expect(normalizeGoogleCalendarEvent(event).attendees).toEqual([
+      { email: 'user@example.com', response_status: 'accepted' },
+      { email: 'room_a@resource.calendar.google.com', response_status: null },
+    ])
+  })
+
   it('normalizes all-day events', () => {
     const event: calendar_v3.Schema$Event = {
       id: 'evt_2',
