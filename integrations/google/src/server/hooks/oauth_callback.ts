@@ -70,7 +70,7 @@ export default async function oauthCallback(
 
   ctx.log.info(`[Google OAuth] Processing callback for installation ${appInstallationId}`)
 
-  const { token: scopedToken } = await token.exchange(appInstallationId)
+  const { token: scopedToken } = await token.exchangeRaw(appInstallationId)
   const currentConfig = getConfig()
 
   try {
