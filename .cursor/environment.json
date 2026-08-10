@@ -1,4 +1,4 @@
 {
   "name": "Skedyul Integrations",
-  "install": "bash ./.cursor/install.sh"
+  "install": "bash \"$([ -f .cursor/install.sh ] && echo .cursor/install.sh || echo repos/integrations/.cursor/install.sh)\""
 }
