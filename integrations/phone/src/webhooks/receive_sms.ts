@@ -1,10 +1,4 @@
-import {
-  communicationChannel,
-  instance,
-  token as tokenClient,
-  runWithConfig,
-  getConfig,
-} from 'skedyul'
+import { communicationChannel, instance } from 'skedyul'
 import type {
   CommunicationChannelLifecycleContext,
   WebhookContext,
@@ -16,6 +10,7 @@ import type {
 import { URLSearchParams } from 'url'
 import twilio from 'twilio'
 import { getHeaderValue, serializeBody } from './lib/helpers'
+import { withInstallationScope } from '../lib/installation_scope'
 import {
   parseTwilioMedia,
   processMmsAttachments,
@@ -301,14 +296,10 @@ async function handleReceiveSms(
 
   const channel = channels[0]
 
-  // Exchange for workplace-scoped token (required for file.upload / attach)
+  // Needs a workplace-scoped token for file.upload / attach. Webhook invocations
+  // already run with one, so withInstallationScope skips the exchange.
   try {
-    const { token: scopedToken } = await tokenClient.exchange(
-      channel.appInstallationId,
-    )
-    const config = getConfig()
-
-    await runWithConfig({ ...config, apiToken: scopedToken }, async () => {
+    await withInstallationScope(channel.appInstallationId, async () => {
       await captureInboundSmsWithMedia({
         channelId: channel.id,
         from,
@@ -431,62 +422,50 @@ async function handleReceiveSmsWithTokenExchange(
   console.log(`[Webhook] Found phone ${to} in installation ${appInstallationId}`)
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Step 2: Exchange for installation-scoped token
+  // Step 2 & 3: Scope to the installation, then use that scope for all operations
   // ─────────────────────────────────────────────────────────────────────────────
-  const { token: scopedToken } = await tokenClient.exchange(appInstallationId)
+  return await withInstallationScope(appInstallationId, async () => {
+    // Now we have full access to this installation
+    const channels = await communicationChannel.list({
+      filter: { identifierValue: to },
+      limit: 1,
+    })
 
-  console.log(`[Webhook] Exchanged for installation-scoped token`)
+    if (channels.length === 0) {
+      return { status: 404, body: { error: 'Communication channel not found' } }
+    }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Step 3: Use scoped token for subsequent operations
-  // ─────────────────────────────────────────────────────────────────────────────
-  const config = getConfig()
-
-  return await runWithConfig(
-    { baseUrl: config.baseUrl, apiToken: scopedToken },
-    async () => {
-      // Now we have full access to this installation
-      const channels = await communicationChannel.list({
-        filter: { identifierValue: to },
-        limit: 1,
-      })
-
-      if (channels.length === 0) {
-        return { status: 404, body: { error: 'Communication channel not found' } }
-      }
-
-      const channel = channels[0]
-      const accountSid = context.env.TWILIO_ACCOUNT_SID
-      if (!accountSid) {
-        return {
-          status: 500,
-          body: { error: 'TWILIO_ACCOUNT_SID is not configured' },
-        }
-      }
-
-      try {
-        await captureInboundSmsWithMedia({
-          channelId: channel.id,
-          from,
-          to,
-          body,
-          messageSid,
-          formParams: params,
-          accountSid,
-          authToken: twilioAuthToken,
-        })
-      } catch (err) {
-        console.error('[Webhook] Failed to process message:', err)
-        return { status: 500, body: { error: 'Failed to process message' } }
-      }
-
+    const channel = channels[0]
+    const accountSid = context.env.TWILIO_ACCOUNT_SID
+    if (!accountSid) {
       return {
-        status: 200,
-        headers: { 'Content-Type': 'application/xml' },
-        body: EMPTY_TWIML,
+        status: 500,
+        body: { error: 'TWILIO_ACCOUNT_SID is not configured' },
       }
-    },
-  )
+    }
+
+    try {
+      await captureInboundSmsWithMedia({
+        channelId: channel.id,
+        from,
+        to,
+        body,
+        messageSid,
+        formParams: params,
+        accountSid,
+        authToken: twilioAuthToken,
+      })
+    } catch (err) {
+      console.error('[Webhook] Failed to process message:', err)
+      return { status: 500, body: { error: 'Failed to process message' } }
+    }
+
+    return {
+      status: 200,
+      headers: { 'Content-Type': 'application/xml' },
+      body: EMPTY_TWIML,
+    }
+  })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

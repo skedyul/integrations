@@ -1,4 +1,4 @@
-import { communicationChannel, token, runWithConfig, getConfig } from 'skedyul'
+import { communicationChannel } from 'skedyul'
 import type {
   WebhookContext,
   WebhookRequest,
@@ -9,6 +9,7 @@ import type {
 } from 'skedyul'
 import { createEmailProvider, type EmailEnv } from '../lib/email_provider'
 import { processAttachments } from '../lib/attachments'
+import { withInstallationScope } from '../lib/installation_scope'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Webhook Lifecycle Hooks
@@ -116,15 +117,11 @@ async function handleReceiveEmail(
 
   const channel = channels[0]
 
-  // Exchange token to get a workplace-scoped token for file operations
-  // The provision-level webhook doesn't have workplace context, but the channel does
-  console.log('[Email Webhook] Exchanging token for installation:', channel.appInstallationId)
-  const { token: scopedToken } = await token.exchange(channel.appInstallationId)
-  const currentConfig = getConfig()
-
+  // File operations need a workplace-scoped token. Installation-scoped webhook
+  // invocations already have one, so withInstallationScope skips the exchange.
   try {
-    const result = await runWithConfig(
-      { ...currentConfig, apiToken: scopedToken },
+    const result = await withInstallationScope(
+      channel.appInstallationId,
       async () => {
         // Capture message first so we have a stable platform messageId
         const messageResult = await communicationChannel.receiveMessage({
