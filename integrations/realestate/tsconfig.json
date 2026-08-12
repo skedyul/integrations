@@ -10,8 +10,7 @@
     "outDir": "./dist",
     "rootDir": ".",
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "ignoreDeprecations": "6.0"
+    "isolatedModules": true
   },
   "include": ["src/**/*", "skedyul.config.ts", "package.json"],
   "exclude": ["node_modules", "dist"]
