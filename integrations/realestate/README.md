@@ -7,7 +7,7 @@ Skedyul integration for the [REA Partner Platform](https://partner.realestate.co
 - **Multi-agency, one install** — many REA agencies as internal `agency` records; second workplace installs are not supported
 - **Ignite enablement** — `IntegrationCreated` / `Updated` / `Deleted` webhooks plus `check_ignite_integration` tool
 - **Lead webhook** — `EnquiryCreated` events, Ed25519 verify, Leads API fetch, `enquiry.created` app events
-- **CRM maps + workflow** — `lead` entity + `sync-rea-enquiry-from-webhook` for zero-config sync after field mapping
+- **CRM maps + workflow** — `lead` + `enquiry` entities and `sync-rea-enquiry-from-webhook` (Default Realestate Enquiry Event) for zero-config sync after field mapping
 
 ## Setup
 
@@ -43,7 +43,22 @@ Subscription IDs are stored on the install env by the install hook (not user-ent
 
 ### Set up Leads (CRM)
 
-Map the `lead` entity to workplace CRM fields and enable the bundled workflow. After mapping, enquiries upsert with no further config.
+Map the **Lead** (person) and **Enquiry** entities to workplace CRM fields and enable the bundled workflow.
+
+On each `enquiry.created` event, **Default Realestate Enquiry Event** (`sync-rea-enquiry-from-webhook`):
+
+1. **Create-or-find Lead** — upsert person fields matched on email/phone (when a Lead map is configured and identity is present)
+2. **Always create/upsert Enquiry** — matched on `rea_enquiry_id`, with a relationship link to the Lead instance
+3. **Conversation contact + signal** — resolve/create contact on the Lead and post an enquiry signal
+
+Listing details (`listing_id`, `listing_address`) stay denormalized on Enquiry (no separate Property entity).
+
+#### Breaking change (v1.1 → v1.2)
+
+Earlier releases mapped a single flat `lead` entity that included `rea_enquiry_id` and enquiry-specific fields. Those fields moved to the **Enquiry** entity. Existing installs must re-map:
+
+- **Lead** — person fields only (`first_name`, `last_name`, `email`, `phone`, …)
+- **Enquiry** — `rea_enquiry_id`, listing/comments/source, and the `lead` relationship
 
 ## Uninstall
 
@@ -74,7 +89,7 @@ pnpm build
 | ----- | ----------- |
 | `enquiry.created` | A new REA enquiry was received for a connected agency |
 
-Workflow input type: `@app/realestate/enquiry/created`. Bundled handle: `sync-rea-enquiry-from-webhook`.
+Workflow input type: `@app/realestate/enquiry/created`. Bundled handle: `sync-rea-enquiry-from-webhook` (**Default Realestate Enquiry Event**).
 
 ## Tools
 

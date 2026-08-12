@@ -15,13 +15,13 @@ export const setupLeadsStep = defineSetupStep({
   handle: 'setup_leads',
   label: 'Set up Leads',
   description:
-    'Map REA enquiry fields to your CRM and enable the lead sync workflow.',
+    'Map Lead and Enquiry to your CRM and enable the enquiry sync workflow.',
   kind: 'crm',
   requires: ['connect_agencies'],
-  entities: ['lead'],
+  entities: ['lead', 'enquiry'],
   workflowHandles: ['sync-rea-enquiry-from-webhook'],
   listenToCrm: true,
-  capabilities: ['crm.lead', 'realtime.lead'],
+  capabilities: ['crm.lead', 'realtime.lead', 'crm.enquiry', 'realtime.enquiry'],
   href: '/leads',
 })
 

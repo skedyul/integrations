@@ -1,13 +1,13 @@
 name: Sync REA Lead
 handle: sync-rea-lead
-description: "Upsert CRM lead/prospect from a REA enquiry payload using the install CRM map (| realestate: format/config, lead)"
+description: "Upsert CRM lead/prospect from REA contact fields using the install CRM map (| realestate: format/config, lead)"
 
 variables: {}
 
 inputs:
   data:
-    label: Enquiry data
-    description: Enquiry object (fields matching the lead entity)
+    label: Lead data
+    description: Lead envelope or object ({ lead: { first_name, last_name, email, phone, ... } })
     required: true
     type: object
 
@@ -24,10 +24,10 @@ outputs:
 steps:
   build-upsert-payload:
     type: task
-    name: Format enquiry for CRM
+    name: Format lead for CRM
     description: Apply install CRM map for entity lead
     timeout: 30 seconds
-    if: "{{ 'model_handle' | realestate: 'config', 'lead' != blank }}"
+    if: "{{ 'model_handle' | realestate: 'present', 'lead' }}"
     service:
       name: skedyul/tools
       cmd: liquid.render
@@ -42,7 +42,7 @@ steps:
     name: Upsert lead via CRM map
     description: Match on configured match field and upsert mapped fields
     timeout: 5 minutes
-    if: "{{ 'model_handle' | realestate: 'config', 'lead' != blank and 'match_id' | realestate: 'config', 'lead' != blank and steps.build-upsert-payload.outputs.response.data != blank }}"
+    if: "{% assign has_lead = 'model_handle' | realestate: 'present', 'lead' %}{% assign has_lead_match = 'match_id' | realestate: 'present', 'lead' %}{{ has_lead and has_lead_match and steps.build-upsert-payload.outputs.response.data != blank }}"
     service:
       name: skedyul/crm
       cmd: instance.upsertMany

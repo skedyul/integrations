@@ -4,7 +4,7 @@ import navigation from './pages/navigation'
 import relationships from './relationships'
 import setup from './setup'
 import agency from './models/agency'
-import { lead } from './entities'
+import { enquiry, lead } from './entities'
 import * as workflows from './workflows'
 
 import setupPage from './pages/setup'
@@ -16,7 +16,7 @@ const config: ProvisionConfig = {
   navigation,
   relationships,
   models: [agency],
-  entities: [lead],
+  entities: [lead, enquiry],
   setup,
   workflows: Object.values(workflows),
   pages: [setupPage, agenciesPage, leadsPage],

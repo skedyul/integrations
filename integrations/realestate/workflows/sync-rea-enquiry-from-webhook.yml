@@ -1,6 +1,6 @@
-name: Default REA Enquiry Created
+name: Default Realestate Enquiry Event
 handle: sync-rea-enquiry-from-webhook
-description: "Upsert CRM lead + conversation contact when app.realestate.enquiry.created arrives via REA webhook (uses install CRM maps)"
+description: "Create-or-find CRM Lead, always upsert Enquiry linked to Lead, and signal conversation contact when app.realestate.enquiry.created arrives (uses install CRM maps)"
 
 variables:
   label-enquiry-created: "New REA enquiry"
@@ -17,6 +17,10 @@ outputs:
     type: string
     description: "Upserted lead instance ID"
     value: "{{ steps.sync-lead.outputs.data.lead-id }}"
+  enquiry-id:
+    type: string
+    description: "Upserted enquiry instance ID"
+    value: "{{ steps.upsert-enquiry.outputs.response.results[0].instanceId }}"
   contact-id:
     type: string
     description: "Conversation contact linked to the lead"
@@ -27,17 +31,103 @@ outputs:
     value: "{{ steps.send-enquiry-signal.outputs.response.block-id }}"
 
 steps:
+  build-lead-payload:
+    type: task
+    name: Build lead CRM payload
+    description: Shape enquiry contact details into a lead envelope for the CRM map
+    timeout: 30 seconds
+    if: "{% assign has_lead = 'model_handle' | realestate: 'present', 'lead' %}{% assign has_identity = false %}{% if inputs.data.enquiry.email != blank or inputs.data.enquiry.phone != blank %}{% assign has_identity = true %}{% endif %}{{ has_lead and has_identity }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "lead": {
+            "first_name": {{ inputs.data.enquiry.first_name | json }},
+            "last_name": {{ inputs.data.enquiry.last_name | json }},
+            "email": {{ inputs.data.enquiry.email | json }},
+            "phone": {{ inputs.data.enquiry.phone | json }},
+            "postcode": {{ inputs.data.enquiry.postcode | json }},
+            "preferred_contact_method": {{ inputs.data.enquiry.preferred_contact_method | json }}
+          }
+        }
+
   sync-lead:
+    needs: [build-lead-payload]
     type: workflow
     name: Sync REA lead
-    description: Upsert CRM record via lead CRM map
+    description: Create-or-find CRM lead via lead CRM map
     run: sync-rea-lead
-    if: "{{ 'model_handle' | realestate: 'config', 'lead' != blank }}"
+    if: "{{ steps.build-lead-payload.outputs.response.data != blank }}"
     inputs:
-      data: "{{ inputs.data.enquiry }}"
+      data: "{{ steps.build-lead-payload.outputs.response.data }}"
+
+  build-enquiry-payload:
+    needs: [sync-lead]
+    on-parent-skip: run
+    type: task
+    name: Build enquiry CRM payload
+    description: Shape enquiry fields and optional lead relationship for the CRM map
+    timeout: 30 seconds
+    if: "{% assign has_enquiry = 'model_handle' | realestate: 'present', 'enquiry' %}{{ has_enquiry and inputs.data.enquiry.rea_enquiry_id != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "enquiry": {
+            "rea_enquiry_id": {{ inputs.data.enquiry.rea_enquiry_id | json }},
+            "rea_agency_id": {{ inputs.data.enquiry.rea_agency_id | json }},
+            "enquiry_type": {{ inputs.data.enquiry.enquiry_type | json }},
+            "comments": {{ inputs.data.enquiry.comments | json }},
+            "received_at": {{ inputs.data.enquiry.received_at | json }},
+            "processed_at": {{ inputs.data.enquiry.processed_at | json }},
+            "listing_id": {{ inputs.data.enquiry.listing_id | json }},
+            "listing_address": {{ inputs.data.enquiry.listing_address | json }},
+            "source": {{ inputs.data.enquiry.source | json }},
+            "lead": {{ steps.sync-lead.outputs.data.lead-id | json }}
+          }
+        }
+
+  format-enquiry:
+    needs: [build-enquiry-payload]
+    type: task
+    name: Format enquiry for CRM
+    description: Apply install CRM map for entity enquiry
+    timeout: 30 seconds
+    if: "{{ steps.build-enquiry-payload.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [{{ steps.build-enquiry-payload.outputs.response.data | realestate: "format", "enquiry" | json }}]
+
+  upsert-enquiry:
+    needs: [format-enquiry]
+    type: task
+    name: Upsert enquiry via CRM map
+    description: Always upsert enquiry matched on rea_enquiry_id; link to lead when available
+    timeout: 5 minutes
+    if: "{% assign has_enquiry = 'model_handle' | realestate: 'present', 'enquiry' %}{% assign has_enquiry_match = 'match_id' | realestate: 'present', 'enquiry' %}{{ has_enquiry and has_enquiry_match and steps.format-enquiry.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.upsertMany
+    inputs:
+      model-handle: "{{ 'model_handle' | realestate: 'config', 'enquiry' }}"
+      matchField: "{{ 'match_id' | realestate: 'config', 'enquiry' }}"
+      matchFields: "{{ 'match_fields' | realestate: 'config', 'enquiry' | json }}"
+      errorMode: partial
+      data: "{{ steps.format-enquiry.outputs.response.data }}"
 
   resolve-contact:
     needs: [sync-lead]
+    on-parent-skip: run
     type: task
     name: Resolve conversation contact
     description: Find existing conversation contact linked to the lead instance
@@ -51,6 +141,7 @@ steps:
 
   ensure-contact:
     needs: [sync-lead, resolve-contact]
+    on-parent-skip: run
     type: task
     name: Ensure conversation contact
     description: Create conversation contact linked to the lead when none exists yet
