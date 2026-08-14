@@ -23,7 +23,7 @@ steps:
     name: Build calendar event CRM payload
     description: Flatten calendar + event envelope for CRM map format
     timeout: 30 seconds
-    if: "{{ 'model_handle' | google: 'config', 'calendar_event' != blank }}"
+    if: "{{ 'model_handle' | google: 'present', 'calendar_event' }}"
     service:
       name: skedyul/tools
       cmd: liquid.render
@@ -71,7 +71,7 @@ steps:
     type: task
     name: Upsert calendar event via CRM map
     timeout: 5 minutes
-    if: "{{ 'model_handle' | google: 'config', 'calendar_event' != blank and 'match_id' | google: 'config', 'calendar_event' != blank and steps.format-event.outputs.response.data != blank }}"
+    if: "{% assign has_event = 'model_handle' | google: 'present', 'calendar_event' %}{% assign has_event_match = 'match_id' | google: 'present', 'calendar_event' %}{{ has_event and has_event_match and steps.format-event.outputs.response.data != blank }}"
     service:
       name: skedyul/crm
       cmd: instance.upsertMany

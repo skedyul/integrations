@@ -32,7 +32,7 @@ steps:
     name: Sync REA lead
     description: Upsert CRM record via lead CRM map
     run: sync-rea-lead
-    if: "{{ 'model_handle' | realestate: 'config', 'lead' != blank }}"
+    if: "{{ 'model_handle' | realestate: 'present', 'lead' }}"
     inputs:
       data: "{{ inputs.data.enquiry }}"
 
