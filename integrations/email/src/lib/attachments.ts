@@ -49,7 +49,7 @@ function sanitizeFilename(filename: string): string {
 export async function processAttachments(
   params: ProcessAttachmentsParams,
 ): Promise<ProcessedAttachment[]> {
-  const { attachments, messageId, provider } = params
+  const { attachments, provider } = params
 
   if (!attachments || attachments.length === 0) {
     return []
@@ -77,16 +77,12 @@ export async function processAttachments(
       // Use provided size or calculate from buffer
       const size = attachment.size > 0 ? attachment.size : content.length
 
-      // Build storage path for organization
-      const path = `email/messages/${messageId}/attachments`
-
-      // Upload to S3 and create file record via skedyul SDK
+      // Stored under workplaces/{subdomain}/files/{timestamp}-{name} by file.upload
       console.log(`[Email] Uploading attachment ${i + 1}: ${filename} (${size} bytes)`)
       const result = await file.upload({
         content,
         name: sanitizedFilename,
         mimeType: contentType,
-        path,
       })
 
       processed.push({

@@ -105,7 +105,7 @@ export async function processMmsAttachments(params: {
   accountSid: string
   authToken: string
 }): Promise<ProcessedMmsAttachment[]> {
-  const { media, messageId, accountSid, authToken } = params
+  const { media, accountSid, authToken } = params
   if (media.length === 0) {
     return []
   }
@@ -122,17 +122,16 @@ export async function processMmsAttachments(params: {
       const mimeType = item.contentType || 'application/octet-stream'
       const ext = extensionForMime(mimeType)
       const name = sanitizeFilename(`mms-${item.index}.${ext}`)
-      const path = `phone/messages/${messageId}/attachments`
 
       console.log(
         `[Phone MMS] Uploading media ${item.index + 1}/${media.length}: ${name} (${content.length} bytes, ${mimeType})`,
       )
 
+      // Stored under workplaces/{subdomain}/files/{timestamp}-{name} by file.upload
       const result = await file.upload({
         content,
         name,
         mimeType,
-        path,
       })
 
       processed.push({
