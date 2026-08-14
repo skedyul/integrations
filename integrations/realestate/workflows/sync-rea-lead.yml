@@ -25,7 +25,7 @@ steps:
   build-upsert-payload:
     type: task
     name: Format enquiry for CRM
-    description: Apply install CRM map for entity lead. Do not gate on | realestate: present — this child run has no event trigger so that filter is false here.
+    description: "Apply install CRM map for entity lead. Child runs must not gate on present; that filter is false without an event trigger."
     timeout: 30 seconds
     if: "{{ inputs.data != blank }}"
     service:
