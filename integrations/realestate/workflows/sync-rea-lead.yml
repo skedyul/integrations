@@ -25,9 +25,9 @@ steps:
   build-upsert-payload:
     type: task
     name: Format enquiry for CRM
-    description: Apply install CRM map for entity lead
+    description: Apply install CRM map for entity lead. Do not gate on | realestate: present — this child run has no event trigger so that filter is false here.
     timeout: 30 seconds
-    if: "{{ 'model_handle' | realestate: 'present', 'lead' }}"
+    if: "{{ inputs.data != blank }}"
     service:
       name: skedyul/tools
       cmd: liquid.render
@@ -42,7 +42,7 @@ steps:
     name: Upsert lead via CRM map
     description: Match on configured match field and upsert mapped fields
     timeout: 5 minutes
-    if: "{% assign has_lead = 'model_handle' | realestate: 'present', 'lead' %}{% assign has_lead_match = 'match_id' | realestate: 'present', 'lead' %}{{ has_lead and has_lead_match and steps.build-upsert-payload.outputs.response.data != blank }}"
+    if: "{{ steps.build-upsert-payload.outputs.response.data != blank }}"
     service:
       name: skedyul/crm
       cmd: instance.upsertMany
