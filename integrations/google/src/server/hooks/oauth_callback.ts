@@ -1,4 +1,4 @@
-import { instance, setup } from 'skedyul'
+import { setup } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import {
   createOAuth2Client,
@@ -10,9 +10,9 @@ import {
 import { buildOAuthRedirectUri } from '../../lib/google_install_env'
 import { withInstallationScope } from '../../lib/installation_scope'
 import { listGoogleCalendars } from '../../services/calendar/client'
-import { ensureCalendarWatch, ensureInstallCalendarPushWebhook } from '../../lib/calendar_link'
-import { loadGoogleCalendarRecord, syncGoogleCalendar } from '../../services/calendar/sync'
-import type { GoogleCalendarRecord } from '../../events/types'
+import { ensureInstallCalendarPushWebhook } from '../../lib/calendar_link'
+import { upsertLinkedGoogleCalendars } from '../../lib/seed-google-calendars'
+import { runPrimaryCalendarBackfill } from '../../lib/run-install-backfill'
 
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
@@ -91,39 +91,15 @@ export default async function oauthCallback(
       expiry_date: tokens.expiryDate ?? undefined,
     })
 
-    let primaryCalendarId: string | null = null
-
     await withInstallationScope(appInstallationId, async () => {
       await ensureInstallCalendarPushWebhook()
 
       const calendars = await listGoogleCalendars(authClient)
-
-      for (const calendar of calendars) {
-        const existing = await instance.list('google_calendar', {
-          filter: { calendar_id: calendar.calendar_id },
-          limit: 1,
-        })
-
-        const payload = {
-          calendar_id: calendar.calendar_id,
-          summary: calendar.summary,
-          primary: calendar.primary,
-          sync_enabled: calendar.primary,
-          sync_direction: 'both',
-          external_read_only: false,
-        }
-
-        if (calendar.primary) {
-          primaryCalendarId = calendar.calendar_id
-        }
-
-        if (existing.data.length > 0) {
-          const record = existing.data[0] as { id: string }
-          await instance.update('google_calendar', record.id, payload)
-        } else {
-          await instance.create('google_calendar', payload)
-        }
-      }
+      const seeded = await upsertLinkedGoogleCalendars({
+        calendars,
+        appInstallationId,
+        trigger: 'install',
+      })
 
       ctx.log.info(`[Google OAuth] Seeded ${calendars.length} calendar records`)
 
@@ -132,20 +108,12 @@ export default async function oauthCallback(
         await setup.reconcile()
       }
 
-      if (primaryCalendarId) {
-        const record = await loadGoogleCalendarRecord(primaryCalendarId)
-        if (record?.sync_enabled) {
-          const watched = await ensureCalendarWatch(authClient, record as GoogleCalendarRecord)
-          await syncGoogleCalendar({
-            auth: authClient,
-            appInstallationId,
-            calendarRecord: watched,
-            trigger: 'install',
-            correlationId: `install-${primaryCalendarId}-${Date.now()}`,
-          })
-          ctx.log.info(`[Google OAuth] Ran install backfill sync for ${primaryCalendarId}`)
-        }
-      }
+      await runPrimaryCalendarBackfill({
+        auth: authClient,
+        appInstallationId,
+        primaryCalendarId: seeded.primaryCalendarId,
+        log: ctx.log,
+      })
     })
 
     return {

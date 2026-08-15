@@ -1,7 +1,7 @@
 /**
  * Calendar Events Page
  *
- * CRM map status and live event wiring for calendar_event entity.
+ * Import, CRM map status, and live event wiring for calendar_event entity.
  * Path: /events
  */
 
@@ -19,6 +19,39 @@ export default definePage({
   navigation: true,
 
   blocks: [
+    {
+      type: 'card',
+      restructurable: false,
+      header: {
+        title: 'Import Calendar Events',
+        description:
+          'Bulk import events from sync-enabled Google calendars into your CRM. Configure the calendar map first so each event can link to its calendar.',
+      },
+      form: {
+        id: 'calendar-event-import-form',
+        fields: [
+          {
+            component: 'BatchOperationPanel',
+            id: 'calendar-event-import-panel',
+            row: 0,
+            col: 0,
+            props: {
+              entity: 'calendar_event',
+              operationHandle: 'import_calendar_events',
+              title: 'Event Import',
+              description:
+                'Page events from linked calendars and upsert them when the calendar and event CRM maps are ready',
+              buttonLabel: 'Start Import',
+              icon: 'CalendarDays',
+            },
+          },
+        ],
+        layout: {
+          type: 'form',
+          rows: [{ columns: [{ field: 'calendar-event-import-panel', colSpan: 12 }] }],
+        },
+      },
+    },
     {
       type: 'card',
       restructurable: false,
@@ -44,7 +77,7 @@ export default definePage({
             props: {
               title: 'How calendar event sync works',
               description:
-                'When Google Calendar events change (via push sync or manual sync), the Google app emits app.google.calendar.event.* events. Connect these to the bundled sync workflow. CRM field mapping is configured below.',
+                'When Google Calendar events change (via push sync, import, or manual sync), the Google app emits app.google.calendar.event.* events. The bundled workflow upserts the parent calendar first, then the event with a calendar relationship. On a workplace Event list, set Calendar view section to that relationship so events from every synced calendar appear together.',
               icon: 'Info',
             },
           },
@@ -75,7 +108,7 @@ export default definePage({
       header: {
         title: 'Calendar event CRM map',
         description:
-          'Map Google Calendar events to a workplace CRM model. Use google_event_id + calendar_id as composite match keys.',
+          'Map Google Calendar events to a workplace CRM model. Use google_event_id + calendar_id as composite match keys, and map the calendar relationship so Calendar LIST view can group events by calendar.',
       },
       form: {
         id: 'calendar-event-crm-map-form',
@@ -89,7 +122,7 @@ export default definePage({
               entity: 'calendar_event',
               title: 'Calendar events',
               description:
-                'Map calendar event fields to your CRM event or appointment model',
+                'Map calendar event fields and the calendar relationship to your CRM event or appointment model',
             },
           },
         ],

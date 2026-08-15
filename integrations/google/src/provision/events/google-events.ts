@@ -9,6 +9,27 @@ export type GoogleAppEventDefinition = {
   icon: string
 }
 
+export const calendarTypes: GoogleAppEventDefinition[] = [
+  {
+    type: 'app.google.calendar.created',
+    label: 'Calendar created',
+    description: 'A Google Calendar was discovered or linked for this installation',
+    icon: 'CalendarPlus',
+  },
+  {
+    type: 'app.google.calendar.updated',
+    label: 'Calendar updated',
+    description: 'A linked Google Calendar\'s metadata changed',
+    icon: 'Calendar',
+  },
+  {
+    type: 'app.google.calendar.deleted',
+    label: 'Calendar deleted',
+    description: 'A Google Calendar was removed from the connected account',
+    icon: 'CalendarX',
+  },
+]
+
 export const calendarEventTypes: GoogleAppEventDefinition[] = [
   {
     type: 'app.google.calendar.event.created',
@@ -30,5 +51,6 @@ export const calendarEventTypes: GoogleAppEventDefinition[] = [
   },
 ]
 
-/** Bundled sync workflow handle (created on Google app install). */
+/** Bundled sync workflow handles (created on Google app install). */
+export const calendarWorkflowHandle = 'sync-google-calendar-from-webhook'
 export const calendarEventWorkflowHandle = 'sync-google-calendar-event-from-webhook'

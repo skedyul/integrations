@@ -3,11 +3,19 @@
  */
 
 export type GoogleSyncDirection = 'push' | 'pull' | 'both'
-export type GoogleSyncTrigger = 'manual' | 'push' | 'install' | 'tool'
+export type GoogleSyncTrigger = 'manual' | 'push' | 'install' | 'tool' | 'import'
 
 export interface GoogleCalendarContext {
   calendar_id: string
   summary: string
+}
+
+export interface GoogleCalendarEntity {
+  calendar_id: string
+  summary: string
+  primary: boolean
+  timezone: string | null
+  description: string | null
 }
 
 export interface GoogleEventEntity {
@@ -38,6 +46,13 @@ export interface GoogleCalendarEventPayload {
   sync: GoogleEventSyncContext
 }
 
+export interface GoogleCalendarChangedPayload {
+  calendar: GoogleCalendarEntity
+  sync: {
+    trigger: GoogleSyncTrigger
+  }
+}
+
 export interface GoogleSyncCompletedPayload {
   calendar: GoogleCalendarContext
   sync: GoogleEventSyncContext & {
@@ -55,6 +70,9 @@ export interface GoogleSyncFailedPayload {
 }
 
 export interface GoogleEventCatalogPayloadMap {
+  'calendar.created': GoogleCalendarChangedPayload
+  'calendar.updated': GoogleCalendarChangedPayload
+  'calendar.deleted': GoogleCalendarChangedPayload
   'calendar.event.created': GoogleCalendarEventPayload
   'calendar.event.updated': GoogleCalendarEventPayload
   'calendar.event.deleted': GoogleCalendarEventPayload

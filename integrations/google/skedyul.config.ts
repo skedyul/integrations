@@ -29,6 +29,7 @@ export default defineConfig({
 
   tools: import('./src/registries'),
   webhooks: import('./src/registries'),
+  batchOperations: import('./src/registries'),
 
   provision: import('./src/provision'),
   events,

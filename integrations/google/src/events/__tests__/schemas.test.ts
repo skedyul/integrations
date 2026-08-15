@@ -51,4 +51,22 @@ describe('parseGoogleEventPayload', () => {
 
     expect(payload.sync.events_updated).toBe(2)
   })
+
+  it('parses calendar.created payloads', () => {
+    const payload = parseGoogleEventPayload('calendar.created', {
+      calendar: {
+        calendar_id: 'primary',
+        summary: 'Work',
+        primary: true,
+        timezone: 'Australia/Sydney',
+        description: null,
+      },
+      sync: {
+        trigger: 'install',
+      },
+    })
+
+    expect(payload.calendar.primary).toBe(true)
+    expect(payload.sync.trigger).toBe('install')
+  })
 })

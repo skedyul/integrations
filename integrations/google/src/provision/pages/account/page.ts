@@ -19,7 +19,8 @@ export default definePage({
       restructurable: false,
       header: {
         title: 'Google Account',
-        description: 'View your connected Google account status.',
+        description:
+          'View your connected Google account status. Reconnect if tokens are missing or the connection is pending.',
       },
       form: {
         id: 'google-account-status-form',
@@ -54,6 +55,15 @@ export default definePage({
             { columns: [{ field: 'status', colSpan: 12 }] },
           ],
         },
+        actions: [
+          {
+            handle: 'reconnect_google',
+            label: 'Reconnect Google',
+            handler: 'reconnect_google',
+            icon: 'RefreshCw',
+            variant: 'primary',
+          },
+        ],
       },
     },
   ],

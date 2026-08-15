@@ -1,0 +1,71 @@
+name: Sync Google Calendar
+handle: sync-google-calendar-from-webhook
+description: "Upsert CRM calendars via install CRM map when app.google.calendar.created/updated/deleted events arrive"
+
+variables: {}
+
+inputs:
+  data:
+    type: "@app/google/calendar/*"
+    label: Calendar data
+    description: Google Calendar payload ({ calendar, sync })
+    required: true
+
+outputs:
+  calendar-id:
+    type: string
+    description: Upserted calendar instance ID
+    value: "{{ steps.upsert-calendar.outputs.response.results[0].instanceId }}"
+
+steps:
+  build-payload:
+    type: task
+    name: Build calendar CRM payload
+    description: Flatten calendar envelope for CRM map format
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | google: 'config', 'calendar' != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "calendar": {
+            "google_calendar_id": {{ inputs.data.calendar.calendar_id | json }},
+            "summary": {{ inputs.data.calendar.summary | json }},
+            "primary": {{ inputs.data.calendar.primary | json }},
+            "timezone": {{ inputs.data.calendar.timezone | json }},
+            "description": {{ inputs.data.calendar.description | json }}
+          }
+        }
+
+  format-calendar:
+    needs: [build-payload]
+    type: task
+    name: Format calendar for CRM
+    timeout: 30 seconds
+    if: "{{ steps.build-payload.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [{{ steps.build-payload.outputs.response.data | google: "format", "calendar" | json }}]
+
+  upsert-calendar:
+    needs: [format-calendar]
+    type: task
+    name: Upsert calendar via CRM map
+    timeout: 5 minutes
+    if: "{{ 'model_handle' | google: 'config', 'calendar' != blank and 'match_id' | google: 'config', 'calendar' != blank and steps.format-calendar.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.upsertMany
+    inputs:
+      model-handle: "{{ 'model_handle' | google: 'config', 'calendar' }}"
+      matchField: "{{ 'match_id' | google: 'config', 'calendar' }}"
+      matchFields: "{{ 'match_fields' | google: 'config', 'calendar' | json }}"
+      errorMode: partial
+      data: "{{ steps.format-calendar.outputs.response.data }}"

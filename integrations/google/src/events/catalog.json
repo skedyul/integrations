@@ -1,5 +1,26 @@
 [
   {
+    "name": "calendar.created",
+    "label": "Calendar created",
+    "description": "A Google Calendar was discovered or linked for this installation",
+    "group": "Calendar",
+    "icon": "CalendarPlus"
+  },
+  {
+    "name": "calendar.updated",
+    "label": "Calendar updated",
+    "description": "A linked Google Calendar's metadata changed",
+    "group": "Calendar",
+    "icon": "Calendar"
+  },
+  {
+    "name": "calendar.deleted",
+    "label": "Calendar deleted",
+    "description": "A Google Calendar was removed from the connected account",
+    "group": "Calendar",
+    "icon": "CalendarX"
+  },
+  {
     "name": "calendar.event.created",
     "label": "Calendar event created",
     "description": "A new Google Calendar event was detected or created",

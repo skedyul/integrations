@@ -9,6 +9,7 @@
     "test": "NODE_OPTIONS='--experimental-vm-modules' npx jest --colors --forceExit"
   },
   "dependencies": {
+    "google-auth-library": "10.5.0",
     "googleapis": "173.0.0",
     "skedyul": "1.7.26"
   },

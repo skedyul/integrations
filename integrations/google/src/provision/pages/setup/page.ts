@@ -23,7 +23,7 @@ export default definePage({
       header: {
         title: 'Setup Google',
         description:
-          'Connect your Google account, link calendars, and map calendar events to your CRM.',
+          'Connect your Google account, map calendars and events to your CRM, and enable live sync.',
       },
       form: {
         id: 'install-setup-form',
