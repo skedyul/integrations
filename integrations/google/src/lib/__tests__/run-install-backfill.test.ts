@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import type { GoogleCalendarRecord } from '../../events/types'
 
-const loadGoogleCalendarRecord = jest.fn()
-const ensureCalendarWatch = jest.fn()
-const syncGoogleCalendar = jest.fn()
+const loadGoogleCalendarRecord =
+  jest.fn<(calendarId: string) => Promise<GoogleCalendarRecord | null>>()
+const ensureCalendarWatch =
+  jest.fn<(auth: unknown, record: GoogleCalendarRecord) => Promise<GoogleCalendarRecord>>()
+const syncGoogleCalendar = jest.fn<(options: unknown) => Promise<void>>()
 
 jest.unstable_mockModule('../../services/calendar/sync.ts', () => ({
   loadGoogleCalendarRecord,

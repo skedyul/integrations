@@ -24,7 +24,7 @@ export async function upsertLinkedGoogleCalendars(options: {
 
   for (const calendar of options.calendars) {
     const existing = await instance.list('google_calendar', {
-      filter: { calendar_id: calendar.calendar_id },
+      filter: { calendar_id: { eq: calendar.calendar_id } },
       limit: 1,
     })
 
@@ -45,7 +45,7 @@ export async function upsertLinkedGoogleCalendars(options: {
     let change: 'created' | 'updated'
 
     if (existing.data.length > 0) {
-      const current = existing.data[0] as GoogleCalendarRecord
+      const current = existing.data[0] as unknown as GoogleCalendarRecord
       await instance.update('google_calendar', current.id, {
         summary: calendar.summary,
         primary: calendar.primary,
@@ -57,7 +57,10 @@ export async function upsertLinkedGoogleCalendars(options: {
       }
       change = 'updated'
     } else {
-      const created = (await instance.create('google_calendar', payload)) as GoogleCalendarRecord
+      const created = (await instance.create(
+        'google_calendar',
+        payload,
+      )) as unknown as GoogleCalendarRecord
       record = {
         ...created,
         calendar_id: calendar.calendar_id,
