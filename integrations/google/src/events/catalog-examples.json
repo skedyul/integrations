@@ -1,4 +1,40 @@
 {
+  "calendar.created": {
+    "calendar": {
+      "calendar_id": "primary",
+      "summary": "Work Calendar",
+      "primary": true,
+      "timezone": "Australia/Sydney",
+      "description": "Team calendar"
+    },
+    "sync": {
+      "trigger": "install"
+    }
+  },
+  "calendar.updated": {
+    "calendar": {
+      "calendar_id": "primary",
+      "summary": "Work Calendar",
+      "primary": true,
+      "timezone": "Australia/Sydney",
+      "description": "Team calendar"
+    },
+    "sync": {
+      "trigger": "import"
+    }
+  },
+  "calendar.deleted": {
+    "calendar": {
+      "calendar_id": "primary",
+      "summary": "Work Calendar",
+      "primary": true,
+      "timezone": "Australia/Sydney",
+      "description": null
+    },
+    "sync": {
+      "trigger": "import"
+    }
+  },
   "calendar.event.created": {
     "calendar": {
       "calendar_id": "primary",

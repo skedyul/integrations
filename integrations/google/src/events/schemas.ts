@@ -40,8 +40,29 @@ export const GoogleEventEntitySchema = z
   })
   .strict()
 
+export const GoogleCalendarEntitySchema = z
+  .object({
+    calendar_id: z.string().min(1),
+    summary: z.string().min(1),
+    primary: z.boolean(),
+    timezone: nullableString,
+    description: nullableString,
+  })
+  .strict()
+
 export const GoogleSyncDirectionSchema = z.enum(['push', 'pull', 'both'])
-export const GoogleSyncTriggerSchema = z.enum(['manual', 'push', 'install', 'tool'])
+export const GoogleSyncTriggerSchema = z.enum(['manual', 'push', 'install', 'tool', 'import'])
+
+export const GoogleCalendarChangedPayloadSchema = z
+  .object({
+    calendar: GoogleCalendarEntitySchema,
+    sync: z
+      .object({
+        trigger: GoogleSyncTriggerSchema,
+      })
+      .strict(),
+  })
+  .strict()
 
 export const GoogleEventSyncContextSchema = z
   .object({
@@ -79,6 +100,9 @@ export const GoogleSyncFailedPayloadSchema = z
   .strict()
 
 export const GOOGLE_EVENT_PAYLOAD_SCHEMAS = {
+  'calendar.created': GoogleCalendarChangedPayloadSchema,
+  'calendar.updated': GoogleCalendarChangedPayloadSchema,
+  'calendar.deleted': GoogleCalendarChangedPayloadSchema,
   'calendar.event.created': GoogleCalendarEventPayloadSchema,
   'calendar.event.updated': GoogleCalendarEventPayloadSchema,
   'calendar.event.deleted': GoogleCalendarEventPayloadSchema,

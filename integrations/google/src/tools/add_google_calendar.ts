@@ -6,6 +6,7 @@ import { AppAuthInvalidError } from 'skedyul'
 import { ensureCalendarWatch } from '../lib/calendar_link'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { parseSyncDirection } from '../lib/google_install_env'
+import { emitGoogleEvent } from '../lib/emit-google-event'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import {
   createAuthError,
@@ -81,6 +82,23 @@ export const addGoogleCalendarRegistry: ToolDefinition<
       if (input.sync_enabled) {
         await ensureCalendarWatch(client, updated)
       }
+
+      await emitGoogleEvent(
+        context.appInstallationId,
+        existing ? 'calendar.updated' : 'calendar.created',
+        {
+          calendar: {
+            calendar_id: input.calendar_id,
+            summary: updated.summary || input.calendar_id,
+            primary: Boolean(updated.primary),
+            timezone: null,
+            description: null,
+          },
+          sync: { trigger: 'tool' },
+        },
+        `tool:${input.calendar_id}`,
+        'tool',
+      )
 
       return createSuccessResponse({
         calendar_id: input.calendar_id,

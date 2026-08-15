@@ -4,7 +4,7 @@ export default definePage({
   handle: 'calendar_overview',
   label: 'Overview',
   type: 'instance',
-  path: '/calendars/[google_calendar_id]/overview',
+  path: '/calendars/linked/[google_calendar_id]/overview',
   model: 'google_calendar',
   navigation: false,
   context: {

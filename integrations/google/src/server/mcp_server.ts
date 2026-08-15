@@ -1,5 +1,5 @@
 import { server } from 'skedyul'
-import { toolRegistry, webhookRegistry } from '../registries'
+import { toolRegistry, webhookRegistry, batchOperationRegistry } from '../registries'
 import installHandler from './hooks/install'
 import oauthCallbackHandler from './hooks/oauth_callback'
 import provisionHandler from './hooks/provision'
@@ -29,6 +29,7 @@ const skedyulServer = server.create({
   computeLayer,
   tools: toolRegistry,
   webhooks: webhookRegistry,
+  batchOperations: batchOperationRegistry,
   hooks: {
     install: {
       handler: installHandler,

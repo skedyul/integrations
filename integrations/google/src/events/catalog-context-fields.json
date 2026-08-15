@@ -1,4 +1,15 @@
 {
+  "calendar.created": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "calendar.summary", "label": "Calendar Name", "type": "string" }
+  ],
+  "calendar.updated": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
+    { "path": "calendar.summary", "label": "Calendar Name", "type": "string" }
+  ],
+  "calendar.deleted": [
+    { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" }
+  ],
   "calendar.event.created": [
     { "path": "calendar.calendar_id", "label": "Calendar ID", "type": "string" },
     { "path": "event.google_event_id", "label": "Google Event ID", "type": "string" },

@@ -21,6 +21,7 @@ const CalendarsListOutputSchema = z.object({
       primary: z.boolean(),
       access_role: z.string().nullable(),
       time_zone: z.string().nullable(),
+      description: z.string().nullable(),
     }),
   ),
 })

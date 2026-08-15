@@ -4,6 +4,7 @@
  */
 
 import { defineEntity } from 'skedyul'
+import { calendarEventCrmMapDefaults } from './crmMapDefaults'
 
 export default defineEntity({
   handle: 'calendar_event',
@@ -11,6 +12,7 @@ export default defineEntity({
   labelPlural: 'Calendar Events',
   description:
     'Google Calendar event from app.google.calendar.event.* sync and calendar tools',
+  crmMapDefaults: calendarEventCrmMapDefaults,
   fields: [
     {
       handle: 'google_event_id',
@@ -40,6 +42,13 @@ export default defineEntity({
     { handle: 'attendees', label: 'Attendees', type: 'object' },
     { handle: 'etag', label: 'ETag', type: 'string' },
   ],
+  relationships: [
+    {
+      handle: 'calendar',
+      label: 'Calendar',
+      targetEntity: 'calendar',
+    },
+  ],
   contextFields: [
     {
       handle: 'calendar_summary',
@@ -55,6 +64,7 @@ export default defineEntity({
         { value: 'push', label: 'Push notification' },
         { value: 'install', label: 'Install backfill' },
         { value: 'tool', label: 'Tool' },
+        { value: 'import', label: 'Import' },
       ],
     },
   ],
