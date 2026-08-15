@@ -3,8 +3,10 @@
  */
 
 import type { ToolRegistry, WebhookRegistry } from 'skedyul'
+import { batchOperationRegistry } from './batch-operations'
 
 import { fetchGoogleConnectionRegistry } from './tools/fetch_google_connection'
+import { reconnectGoogleRegistry } from './tools/reconnect_google'
 import { calendarsListRegistry } from './tools/calendars_list'
 import { addGoogleCalendarRegistry } from './tools/add_google_calendar'
 import { removeGoogleCalendarRegistry } from './tools/remove_google_calendar'
@@ -19,6 +21,7 @@ import { calendarPushRegistry } from './webhooks/calendar_push'
 
 export const toolRegistry: ToolRegistry = {
   fetch_google_connection: fetchGoogleConnectionRegistry,
+  reconnect_google: reconnectGoogleRegistry,
   calendars_list: calendarsListRegistry,
   add_google_calendar: addGoogleCalendarRegistry,
   remove_google_calendar: removeGoogleCalendarRegistry,
@@ -34,3 +37,5 @@ export const toolRegistry: ToolRegistry = {
 export const webhookRegistry: WebhookRegistry = {
   calendar_push: calendarPushRegistry,
 }
+
+export { batchOperationRegistry }
