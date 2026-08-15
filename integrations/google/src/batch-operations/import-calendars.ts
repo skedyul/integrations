@@ -1,13 +1,11 @@
-import { defineBatchOperation, instance, type BatchOperationContext } from 'skedyul'
+import { defineBatchOperation, type BatchOperationContext } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import type { GoogleInstallEnv } from '../lib/google_install_env'
-import { emitGoogleEvent } from '../lib/emit-google-event'
 import {
   toCalendarEntityPayload,
   upsertLinkedGoogleCalendars,
 } from '../lib/seed-google-calendars'
 import { listGoogleCalendars, type GoogleCalendarSummary } from '../services/calendar/client'
-import type { GoogleCalendarRecord } from '../events/types'
 
 interface ImportCalendarsState {
   calendars: GoogleCalendarSummary[]
@@ -28,36 +26,11 @@ export default defineBatchOperation({
   setup: async (ctx: BatchOperationContext) => {
     const { client } = await getAuthenticatedOAuthClient(ctx.env as GoogleInstallEnv)
     const calendars = await listGoogleCalendars(client)
-    const existing = await instance.list('google_calendar', { limit: 250 })
-    const incomingIds = new Set(calendars.map((calendar) => calendar.calendar_id))
-
-    for (const raw of existing.data) {
-      const record = raw as GoogleCalendarRecord
-      if (!record.calendar_id || incomingIds.has(record.calendar_id)) {
-        continue
-      }
-      await emitGoogleEvent(
-        ctx.appInstallationId,
-        'calendar.deleted',
-        {
-          calendar: {
-            calendar_id: record.calendar_id,
-            summary: record.summary || record.calendar_id,
-            primary: Boolean(record.primary),
-            timezone: null,
-            description: null,
-          },
-          sync: { trigger: 'import' },
-        },
-        `import:deleted:${record.calendar_id}`,
-        'import',
-      )
-    }
-
     await upsertLinkedGoogleCalendars({
       calendars,
       appInstallationId: ctx.appInstallationId,
       trigger: 'import',
+      emitEvents: false,
     })
 
     ctx.log.info(`Prepared ${calendars.length} Google calendars for CRM import`)

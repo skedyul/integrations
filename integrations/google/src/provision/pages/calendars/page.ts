@@ -22,7 +22,7 @@ export default definePage({
       header: {
         title: 'Import Calendars',
         description:
-          'Import calendars from the connected Google account into your CRM. Linked sync-state records stay on the Linked calendars page.',
+          'History lives here. Connect does not import. Start one calendar import batch after the CRM map is ready. Linked sync-state records stay on the Linked calendars page.',
       },
       form: {
         id: 'calendar-import-form',
@@ -53,9 +53,9 @@ export default definePage({
       type: 'card',
       restructurable: false,
       header: {
-        title: 'Calendar events',
+        title: 'Live calendar wiring',
         description:
-          'When Google calendars are discovered or change, the Google app emits app.google.calendar.* events. Connect these to the bundled calendar sync workflow.',
+          'Optional wiring for later single calendar created/updated/deleted changes. Do not use this for history — Import above is the backfill path.',
       },
       form: {
         id: 'calendar-events-form',
@@ -72,9 +72,9 @@ export default definePage({
             row: 1,
             col: 0,
             props: {
-              title: 'How calendar sync works',
+              title: 'How calendar history works',
               description:
-                'OAuth, import, and calendar list refresh emit calendar.created/updated/deleted. Wire those events to sync-google-calendar-from-webhook. Review linked watch/sync state at /calendars/linked.',
+                'Connect only authorizes Google. Import Calendars starts one batch job that upserts CRM rows. Live wiring is for later single changes, not backfill. Review linked watch/sync state at /calendars/linked.',
               icon: 'Info',
             },
           },

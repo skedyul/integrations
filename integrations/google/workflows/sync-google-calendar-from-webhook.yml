@@ -6,10 +6,20 @@ variables: {}
 
 inputs:
   data:
-    type: "@app/google/calendar/*"
+    type: "@app/google/calendar/created"
     label: Calendar data
     description: Google Calendar payload ({ calendar, sync })
     required: true
+  calendar-updated:
+    type: "@app/google/calendar/updated"
+    label: Calendar updated
+    description: Same calendar payload for updates; mapped to data at subscribe time
+    required: false
+  calendar-deleted:
+    type: "@app/google/calendar/deleted"
+    label: Calendar deleted
+    description: Same calendar payload for deletes; mapped to data at subscribe time
+    required: false
 
 outputs:
   calendar-id:

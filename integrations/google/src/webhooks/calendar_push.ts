@@ -1,11 +1,10 @@
 import type { WebhookDefinition, WebhookHandler, WebhookResponse } from 'skedyul'
 import { isRuntimeWebhookContext } from 'skedyul'
-import { ensureCalendarWatch } from '../lib/calendar_link'
-import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import {
-  loadGoogleCalendarRecordByWatchChannel,
-  syncGoogleCalendar,
-} from '../services/calendar/sync'
+  StartAppBatchOperationError,
+  startAppBatchOperation,
+} from '../lib/start-app-batch-operation'
+import { loadGoogleCalendarRecordByWatchChannel } from '../services/calendar/sync'
 import { getHeaderValue } from './lib/helpers'
 
 const calendarPushHandler: WebhookHandler = async (request, context): Promise<WebhookResponse> => {
@@ -40,24 +39,33 @@ const calendarPushHandler: WebhookHandler = async (request, context): Promise<We
   }
 
   try {
-    const { client } = await getAuthenticatedOAuthClient(context.env)
-    const watched = await ensureCalendarWatch(client, record)
-
-    await syncGoogleCalendar({
-      auth: client,
-      appInstallationId: context.appInstallationId,
-      calendarRecord: watched,
-      trigger: 'push',
-      correlationId: `${channelId}-${Date.now()}`,
+    const started = await startAppBatchOperation({
+      operationHandle: 'import_calendar_events',
+      entityHandle: 'calendar_event',
+      label: `Push sync ${record.calendar_id}`,
+      input: {
+        calendar_id: record.calendar_id,
+        use_sync_token: true,
+      },
     })
 
-    return { status: 200, body: { ok: true, action: 'synced' } }
+    return {
+      status: 200,
+      body: { ok: true, action: 'batch_started', batchJobId: started.batchJobId },
+    }
   } catch (error) {
-    console.error('[Google Webhook] calendar_push sync failed:', error)
+    if (error instanceof StartAppBatchOperationError && error.code === 'CONFLICT') {
+      return {
+        status: 200,
+        body: { ok: true, action: 'already_running' },
+      }
+    }
+
+    console.error('[Google Webhook] calendar_push batch start failed:', error)
     return {
       status: 500,
       body: {
-        error: error instanceof Error ? error.message : 'Sync failed',
+        error: error instanceof Error ? error.message : 'Failed to start calendar import',
       },
     }
   }
@@ -65,7 +73,8 @@ const calendarPushHandler: WebhookHandler = async (request, context): Promise<We
 
 export const calendarPushRegistry: WebhookDefinition = {
   name: 'calendar_push',
-  description: 'Receives Google Calendar push notifications and triggers incremental sync',
+  description:
+    'Receives Google Calendar push notifications and starts one import_calendar_events batch job',
   methods: ['POST'],
   type: 'WEBHOOK',
   handler: calendarPushHandler,

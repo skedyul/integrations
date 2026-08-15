@@ -7,14 +7,20 @@ import {
   type GoogleCalendarSummary,
 } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
-import { loadLinkedGoogleCalendars } from '../services/calendar/sync'
+import {
+  loadGoogleCalendarRecord,
+  loadLinkedGoogleCalendars,
+  persistCalendarSyncToken,
+} from '../services/calendar/sync'
 import type { GoogleCalendarRecord } from '../events/types'
 
 interface ImportCalendarEventsState {
   calendars: Array<GoogleCalendarRecord & { time_zone?: string | null; description?: string | null }>
   calendarIndex: number
   pageToken?: string
+  nextSyncToken?: string | null
   calendarsEmitted?: boolean
+  useSyncToken?: boolean
 }
 
 function toSummary(record: GoogleCalendarRecord): GoogleCalendarSummary {
@@ -26,6 +32,35 @@ function toSummary(record: GoogleCalendarRecord): GoogleCalendarSummary {
     time_zone: null,
     description: null,
   }
+}
+
+function readStringInput(
+  input: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = input?.[key]
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+async function resolveImportCalendars(
+  input: Record<string, unknown> | undefined,
+): Promise<GoogleCalendarRecord[]> {
+  const calendarId = readStringInput(input, 'calendar_id')
+  if (!calendarId) {
+    return loadLinkedGoogleCalendars()
+  }
+
+  const linked = await loadLinkedGoogleCalendars()
+  const matched = linked.filter((record) => record.calendar_id === calendarId)
+  if (matched.length > 0) {
+    return matched
+  }
+
+  const record = await loadGoogleCalendarRecord(calendarId)
+  if (!record) {
+    throw new Error(`Calendar ${calendarId} is not linked`)
+  }
+  return [record]
 }
 
 export default defineBatchOperation({
@@ -43,19 +78,23 @@ export default defineBatchOperation({
   icon: 'calendar-days',
 
   setup: async (ctx: BatchOperationContext) => {
-    const calendars = await loadLinkedGoogleCalendars()
+    const calendars = await resolveImportCalendars(ctx.input)
     if (calendars.length === 0) {
       throw new Error(
         'No sync-enabled calendars found. Import calendars and enable sync first.',
       )
     }
 
-    ctx.log.info(`Importing events from ${calendars.length} sync-enabled calendars`)
+    const useSyncToken = ctx.input?.use_sync_token !== false
+    ctx.log.info(
+      `Importing events from ${calendars.length} calendar(s) (useSyncToken=${useSyncToken})`,
+    )
     return {
       state: {
         calendars,
         calendarIndex: 0,
         calendarsEmitted: false,
+        useSyncToken,
       } satisfies ImportCalendarEventsState,
     }
   },
@@ -89,11 +128,39 @@ export default defineBatchOperation({
 
     const calendar = state.calendars[state.calendarIndex]
     const { client } = await getAuthenticatedOAuthClient(ctx.env as GoogleInstallEnv)
-    const page = await listGoogleCalendarEvents(client, {
-      calendarId: calendar.calendar_id,
-      pageToken: state.pageToken,
-      maxResults: ctx.limit > 0 ? ctx.limit : 100,
-    })
+    const useSyncToken = state.useSyncToken !== false
+    const syncToken = useSyncToken ? calendar.sync_token : undefined
+    const timeMin = syncToken ? undefined : readStringInput(ctx.input, 'time_min')
+    const timeMax = syncToken ? undefined : readStringInput(ctx.input, 'time_max')
+
+    let page
+    try {
+      page = await listGoogleCalendarEvents(client, {
+        calendarId: calendar.calendar_id,
+        syncToken: syncToken || undefined,
+        timeMin,
+        timeMax,
+        pageToken: state.pageToken,
+        maxResults: ctx.limit > 0 ? ctx.limit : 100,
+      })
+    } catch (error) {
+      if (!(error instanceof Error) || error.message !== 'SYNC_TOKEN_INVALID') {
+        throw error
+      }
+
+      await persistCalendarSyncToken(calendar.id, { sync_token: null })
+      state.calendars[state.calendarIndex] = {
+        ...calendar,
+        sync_token: null,
+      }
+      page = await listGoogleCalendarEvents(client, {
+        calendarId: calendar.calendar_id,
+        timeMin: readStringInput(ctx.input, 'time_min'),
+        timeMax: readStringInput(ctx.input, 'time_max'),
+        pageToken: state.pageToken,
+        maxResults: ctx.limit > 0 ? ctx.limit : 100,
+      })
+    }
 
     const eventItems: Record<string, unknown>[] = []
     if (cascadeEntities.has('calendar_event')) {
@@ -116,10 +183,19 @@ export default defineBatchOperation({
       itemsByEntity.calendar_event = eventItems
     }
 
+    if (page.nextSyncToken) {
+      state.nextSyncToken = page.nextSyncToken
+    }
+
     if (page.nextPageToken) {
       state.pageToken = page.nextPageToken
     } else {
+      await persistCalendarSyncToken(calendar.id, {
+        sync_token: state.nextSyncToken ?? calendar.sync_token ?? null,
+        last_synced_at: new Date().toISOString(),
+      })
       state.pageToken = undefined
+      state.nextSyncToken = undefined
       state.calendarIndex += 1
     }
 

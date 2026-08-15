@@ -25,7 +25,7 @@ export default definePage({
       header: {
         title: 'Import Calendar Events',
         description:
-          'Bulk import events from sync-enabled Google calendars into your CRM. Configure the calendar map first so each event can link to its calendar.',
+          'History lives here. Connect and live event wiring do not backfill. Start one event import batch after the calendar and event CRM maps are ready.',
       },
       form: {
         id: 'calendar-event-import-form',
@@ -56,9 +56,9 @@ export default definePage({
       type: 'card',
       restructurable: false,
       header: {
-        title: 'Calendar Events',
+        title: 'Live event wiring',
         description:
-          'Google Calendar changes sync to your CRM via workflow triggers. Configure the CRM map and event wiring below.',
+          'Optional wiring for a later single calendar.event change. Pull sync, Import, and Google push start one batch job — they do not emit one webhook per event.',
       },
       form: {
         id: 'calendar-events-form',
@@ -75,9 +75,9 @@ export default definePage({
             row: 1,
             col: 0,
             props: {
-              title: 'How calendar event sync works',
+              title: 'How calendar event history works',
               description:
-                'When Google Calendar events change (via push sync, import, or manual sync), the Google app emits app.google.calendar.event.* events. The bundled workflow upserts the parent calendar first, then the event with a calendar relationship. On a workplace Event list, set Calendar view section to that relationship so events from every synced calendar appear together.',
+                'Import Calendar Events (or calendar_sync / a live Google push ping) starts one import_calendar_events batch. That job pages Google and upserts CRM rows. Do not wire live events to backfill history. On a workplace Event list, set Calendar view section to the calendar relationship so events from every synced calendar appear together.',
               icon: 'Info',
             },
           },
