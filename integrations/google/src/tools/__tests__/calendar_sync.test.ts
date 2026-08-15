@@ -54,11 +54,14 @@ describe('calendar_sync', () => {
   })
 
   it('starts exactly one import_calendar_events batch and does not watch by default', async () => {
-    const result = await calendarSyncRegistry.handler({}, context as never)
+    const result = await calendarSyncRegistry.handler(
+      { enable_live_sync: false },
+      context as never,
+    )
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data).toEqual({
+      expect(result.output).toEqual({
         batch_job_id: 'job_1',
         operation_handle: 'import_calendar_events',
         calendars: 2,
@@ -82,7 +85,10 @@ describe('calendar_sync', () => {
       sync_enabled: true,
     } as GoogleCalendarRecord)
 
-    await calendarSyncRegistry.handler({ calendar_id: 'primary' }, context as never)
+    await calendarSyncRegistry.handler(
+      { calendar_id: 'primary', enable_live_sync: false },
+      context as never,
+    )
 
     expect(startAppBatchOperation).toHaveBeenCalledTimes(1)
     expect(startAppBatchOperation.mock.calls[0]?.[0]).toMatchObject({
