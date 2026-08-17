@@ -32,6 +32,8 @@ export const GoogleEventEntitySchema = z
     timezone: nullableString,
     all_day: z.boolean(),
     recurrence: z.array(z.string()).nullable(),
+    recurring_event_id: nullableString,
+    original_start: nullableString,
     attendees: z.array(GoogleEventAttendeeSchema),
     location: nullableString,
     html_link: nullableString,

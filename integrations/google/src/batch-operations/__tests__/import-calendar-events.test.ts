@@ -16,4 +16,9 @@ describe('import_calendar_events source', () => {
     expect(source).toContain('persistCalendarSyncToken')
     expect(source).not.toContain('emitGoogleEvent')
   })
+
+  it('imports Google payloads as-is (masters and exceptions, not expanded occurrences)', () => {
+    expect(source).toContain('normalizeGoogleCalendarEvent')
+    expect(source).toContain('listGoogleCalendarEvents')
+  })
 })

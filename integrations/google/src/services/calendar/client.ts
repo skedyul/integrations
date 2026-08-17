@@ -66,6 +66,11 @@ export async function listGoogleCalendarEvents(
     updatedMin?: string
     maxResults?: number
     pageToken?: string
+    /**
+     * Google expands recurring series when true. Import and incremental sync
+     * must keep this false so CRM stores series masters + exceptions only.
+     */
+    singleEvents?: boolean
   },
 ): Promise<{
   events: calendar_v3.Schema$Event[]
@@ -82,7 +87,7 @@ export async function listGoogleCalendarEvents(
       updatedMin: options.updatedMin,
       maxResults: options.maxResults ?? 250,
       pageToken: options.pageToken,
-      singleEvents: true,
+      singleEvents: options.singleEvents ?? false,
       showDeleted: true,
     })
 

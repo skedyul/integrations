@@ -35,6 +35,9 @@ export const calendarEventCrmMapDefaults: EntityCrmMapDefaults = {
     location: 'location',
     html_link: 'html_link',
     updated_at: 'updated_at',
+    recurrence: 'recurrence',
+    recurring_event_id: 'recurring_event_id',
+    original_start: 'original_start',
   },
   relationshipHandles: {
     calendar: 'calendar',

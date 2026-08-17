@@ -40,6 +40,8 @@ const CalendarEventCreateOutputSchema = z.object({
     timezone: z.string().nullable(),
     all_day: z.boolean(),
     recurrence: z.array(z.string()).nullable(),
+    recurring_event_id: z.string().nullable(),
+    original_start: z.string().nullable(),
     attendees: z.array(
       z.object({
         email: z.string(),

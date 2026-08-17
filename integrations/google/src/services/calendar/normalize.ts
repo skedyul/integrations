@@ -25,6 +25,8 @@ export function normalizeGoogleCalendarEvent(
   const start = readDateTime(event.start)
   const end = readDateTime(event.end)
 
+  const originalStart = readDateTime(event.originalStartTime)
+
   return {
     google_event_id: event.id || '',
     status: event.status || 'confirmed',
@@ -35,6 +37,8 @@ export function normalizeGoogleCalendarEvent(
     timezone: start.timezone ?? end.timezone,
     all_day: start.allDay || end.allDay,
     recurrence: event.recurrence ?? null,
+    recurring_event_id: event.recurringEventId ?? null,
+    original_start: originalStart.value,
     attendees: (event.attendees ?? []).map((attendee) => ({
       email: attendee.email || '',
       response_status: attendee.responseStatus ?? null,
@@ -44,6 +48,20 @@ export function normalizeGoogleCalendarEvent(
     updated_at: event.updated ?? null,
     etag: event.etag ?? null,
   }
+}
+
+export type GoogleCalendarEventKind = 'series' | 'exception' | 'single'
+
+export function classifyGoogleCalendarEvent(
+  event: Pick<GoogleEventEntity, 'recurrence' | 'recurring_event_id'>,
+): GoogleCalendarEventKind {
+  if (event.recurring_event_id) {
+    return 'exception'
+  }
+  if (Array.isArray(event.recurrence) && event.recurrence.length > 0) {
+    return 'series'
+  }
+  return 'single'
 }
 
 export function isNewlyCreatedEvent(event: calendar_v3.Schema$Event): boolean {
