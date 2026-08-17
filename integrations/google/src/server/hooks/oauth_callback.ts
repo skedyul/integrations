@@ -10,9 +10,7 @@ import {
 import { buildOAuthRedirectUri } from '../../lib/google_install_env'
 import { withInstallationScope } from '../../lib/installation_scope'
 import { listGoogleCalendars } from '../../services/calendar/client'
-import { ensureInstallCalendarPushWebhook } from '../../lib/calendar_link'
 import { upsertLinkedGoogleCalendars } from '../../lib/seed-google-calendars'
-import { runPrimaryCalendarBackfill } from '../../lib/run-install-backfill'
 
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
@@ -92,28 +90,22 @@ export default async function oauthCallback(
     })
 
     await withInstallationScope(appInstallationId, async () => {
-      await ensureInstallCalendarPushWebhook()
-
       const calendars = await listGoogleCalendars(authClient)
-      const seeded = await upsertLinkedGoogleCalendars({
+      await upsertLinkedGoogleCalendars({
         calendars,
         appInstallationId,
         trigger: 'install',
+        emitEvents: false,
       })
 
-      ctx.log.info(`[Google OAuth] Seeded ${calendars.length} calendar records`)
+      ctx.log.info(
+        `[Google OAuth] Seeded ${calendars.length} calendar records without emitting events`,
+      )
 
       await setup.complete('connect_google')
       if (typeof setup.reconcile === 'function') {
         await setup.reconcile()
       }
-
-      await runPrimaryCalendarBackfill({
-        auth: authClient,
-        appInstallationId,
-        primaryCalendarId: seeded.primaryCalendarId,
-        log: ctx.log,
-      })
     })
 
     return {

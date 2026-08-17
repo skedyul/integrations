@@ -5,9 +5,12 @@ import { AppAuthInvalidError } from 'skedyul'
 import { ensureCalendarWatch } from '../lib/calendar_link'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import {
+  StartAppBatchOperationError,
+  startAppBatchOperation,
+} from '../lib/start-app-batch-operation'
+import {
   loadGoogleCalendarRecord,
   loadLinkedGoogleCalendars,
-  syncGoogleCalendar,
 } from '../services/calendar/sync'
 import {
   createAuthError,
@@ -21,13 +24,14 @@ const CalendarSyncInputSchema = z.object({
   calendar_id: z.string().optional(),
   time_min: z.string().optional(),
   time_max: z.string().optional(),
+  enable_live_sync: z.boolean().optional().default(false),
 })
 
 const CalendarSyncOutputSchema = z.object({
-  calendars_synced: z.number().int().nonnegative(),
-  events_created: z.number().int().nonnegative(),
-  events_updated: z.number().int().nonnegative(),
-  events_deleted: z.number().int().nonnegative(),
+  batch_job_id: z.string(),
+  operation_handle: z.string(),
+  calendars: z.number().int().nonnegative(),
+  live_sync_enabled: z.boolean(),
 })
 
 type CalendarSyncInput = z.infer<typeof CalendarSyncInputSchema>
@@ -39,7 +43,8 @@ export const calendarSyncRegistry: ToolDefinition<
 > = {
   name: 'calendar_sync',
   label: 'Sync Google Calendar',
-  description: 'Run an incremental sync for one linked calendar or all enabled calendars',
+  description:
+    'Start one calendar-event import batch for a linked calendar or all enabled calendars. Does not emit per-event webhooks.',
   inputSchema: CalendarSyncInputSchema,
   outputSchema: CalendarSyncOutputSchema,
   handler: async (input, context) => {
@@ -48,7 +53,6 @@ export const calendarSyncRegistry: ToolDefinition<
     }
 
     try {
-      const { client } = await getAuthenticatedOAuthClient(context.env)
       const targets = input.calendar_id
         ? [await loadGoogleCalendarRecord(input.calendar_id)]
         : await loadLinkedGoogleCalendars()
@@ -56,44 +60,51 @@ export const calendarSyncRegistry: ToolDefinition<
       const records = targets.filter(
         (record): record is NonNullable<typeof record> => Boolean(record),
       )
+      const enabled = records.filter((record) => record.sync_enabled)
 
-      if (records.length === 0) {
+      if (enabled.length === 0) {
         return createNotFoundError('No linked calendars were found to sync')
       }
 
-      let eventsCreated = 0
-      let eventsUpdated = 0
-      let eventsDeleted = 0
-
-      for (const record of records) {
-        if (!record.sync_enabled) {
-          continue
+      if (input.enable_live_sync) {
+        const { client } = await getAuthenticatedOAuthClient(context.env)
+        for (const record of enabled) {
+          await ensureCalendarWatch(client, record)
         }
-
-        const watched = await ensureCalendarWatch(client, record)
-        const result = await syncGoogleCalendar({
-          auth: client,
-          appInstallationId: context.appInstallationId,
-          calendarRecord: watched,
-          trigger: 'manual',
-          timeMin: input.time_min,
-          timeMax: input.time_max,
-        })
-
-        eventsCreated += result.eventsCreated
-        eventsUpdated += result.eventsUpdated
-        eventsDeleted += result.eventsDeleted
       }
 
+      const started = await startAppBatchOperation({
+        operationHandle: 'import_calendar_events',
+        entityHandle: 'calendar_event',
+        label: input.calendar_id
+          ? `Sync calendar ${input.calendar_id}`
+          : 'Sync Google Calendar events',
+        input: {
+          ...(input.calendar_id ? { calendar_id: input.calendar_id } : {}),
+          ...(input.time_min ? { time_min: input.time_min } : {}),
+          ...(input.time_max ? { time_max: input.time_max } : {}),
+          use_sync_token: true,
+        },
+      })
+
       return createSuccessResponse({
-        calendars_synced: records.filter((record) => record.sync_enabled).length,
-        events_created: eventsCreated,
-        events_updated: eventsUpdated,
-        events_deleted: eventsDeleted,
+        batch_job_id: started.batchJobId,
+        operation_handle: 'import_calendar_events',
+        calendars: enabled.length,
+        live_sync_enabled: Boolean(input.enable_live_sync),
       })
     } catch (error) {
       if (error instanceof AppAuthInvalidError) {
         return createAuthError(error.message)
+      }
+      if (error instanceof StartAppBatchOperationError) {
+        if (error.code === 'PRECONDITION_FAILED') {
+          return createValidationError(error.message)
+        }
+        if (error.code === 'CONFLICT') {
+          return createValidationError(error.message)
+        }
+        return createGoogleError(error.message)
       }
       return createGoogleError(error instanceof Error ? error.message : String(error))
     }
