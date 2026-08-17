@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
 import type { calendar_v3 } from 'googleapis'
 import {
+  classifyGoogleCalendarEvent,
   normalizeGoogleCalendarEvent,
   resolveEventChangeType,
 } from '../normalize'
@@ -31,6 +32,8 @@ describe('normalizeGoogleCalendarEvent', () => {
       timezone: 'Australia/Sydney',
       all_day: false,
       recurrence: null,
+      recurring_event_id: null,
+      original_start: null,
       attendees: [{ email: 'user@example.com', response_status: 'accepted' }],
       location: 'Office',
       html_link: 'https://calendar.google.com/event?eid=evt_1',
@@ -52,6 +55,33 @@ describe('normalizeGoogleCalendarEvent', () => {
     expect(normalized.all_day).toBe(true)
     expect(normalized.start).toBe('2026-07-21')
     expect(normalized.end).toBe('2026-07-22')
+  })
+
+  it('normalizes series masters and exception overrides', () => {
+    const master = normalizeGoogleCalendarEvent({
+      id: 'abc123',
+      status: 'confirmed',
+      summary: 'Weekly standup',
+      start: { dateTime: '2026-08-03T09:00:00.000Z' },
+      end: { dateTime: '2026-08-03T10:00:00.000Z' },
+      recurrence: ['RRULE:FREQ=WEEKLY;BYDAY=MO'],
+    })
+    expect(master.recurrence).toEqual(['RRULE:FREQ=WEEKLY;BYDAY=MO'])
+    expect(master.recurring_event_id).toBeNull()
+    expect(classifyGoogleCalendarEvent(master)).toBe('series')
+
+    const exception = normalizeGoogleCalendarEvent({
+      id: 'abc123_20260817T090000Z',
+      status: 'cancelled',
+      recurringEventId: 'abc123',
+      originalStartTime: { dateTime: '2026-08-17T09:00:00.000Z' },
+      start: { dateTime: '2026-08-17T09:00:00.000Z' },
+      end: { dateTime: '2026-08-17T10:00:00.000Z' },
+    })
+    expect(exception.recurring_event_id).toBe('abc123')
+    expect(exception.original_start).toBe('2026-08-17T09:00:00.000Z')
+    expect(exception.status).toBe('cancelled')
+    expect(classifyGoogleCalendarEvent(exception)).toBe('exception')
   })
 })
 

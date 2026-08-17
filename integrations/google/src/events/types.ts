@@ -28,6 +28,8 @@ export interface GoogleEventEntity {
   timezone: string | null
   all_day: boolean
   recurrence: string[] | null
+  recurring_event_id: string | null
+  original_start: string | null
   attendees: Array<{ email: string; response_status?: string | null }>
   location: string | null
   html_link: string | null

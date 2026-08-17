@@ -18,6 +18,8 @@ describe('parseGoogleEventPayload', () => {
         timezone: 'Australia/Sydney',
         all_day: false,
         recurrence: null,
+        recurring_event_id: null,
+        original_start: null,
         attendees: [],
         location: null,
         html_link: null,

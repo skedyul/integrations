@@ -39,6 +39,16 @@ export default defineEntity({
     { handle: 'html_link', label: 'Google Calendar Link', type: 'string' },
     { handle: 'updated_at', label: 'Updated At', type: 'datetime' },
     { handle: 'recurrence', label: 'Recurrence Rules', type: 'object' },
+    {
+      handle: 'recurring_event_id',
+      label: 'Recurring Event ID',
+      type: 'string',
+    },
+    {
+      handle: 'original_start',
+      label: 'Original Start',
+      type: 'datetime',
+    },
     { handle: 'attendees', label: 'Attendees', type: 'object' },
     { handle: 'etag', label: 'ETag', type: 'string' },
   ],

@@ -100,6 +100,8 @@ steps:
             "html_link": {{ inputs.data.event.html_link | json }},
             "updated_at": {{ inputs.data.event.updated_at | json }},
             "recurrence": {{ inputs.data.event.recurrence | json }},
+            "recurring_event_id": {{ inputs.data.event.recurring_event_id | json }},
+            "original_start": {{ inputs.data.event.original_start | json }},
             "attendees": {{ inputs.data.event.attendees | json }},
             "etag": {{ inputs.data.event.etag | json }}
             {%- if calendar_id != blank -%}
