@@ -6,7 +6,7 @@ Future Google services (Gmail, Drive) are stubbed under `src/services/` but not 
 
 ## Features
 
-- OAuth 2.0 install flow with offline refresh tokens. Connect does not import history, emit events, or start watches
+- OAuth 2.0 install flow with offline refresh tokens. Connect stores tokens only — it does not seed calendars, import history, emit events, or start watches
 - Reconnect from **Account** or the Setup checklist
 - Full Google Calendar support: list calendars, list/get/create/update/delete events, free/busy queries
 - History and incremental pull go through one `import_calendars` / `import_calendar_events` batch job (sync-token aware, stored on the mapped calendar). Never emit one app event per listed row
@@ -45,7 +45,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
 ### 3. Install the app (workplace)
 
 1. Install the Google app on a workplace
-2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens and quietly seeds linked calendars.
+2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens. Uninstall a previous Google install and start Import from scratch if you still have leftover calendar rows.
 3. Complete **Set up calendars**:
    - Map the `calendar` entity to your workplace calendar model (`google_calendar_id` match key)
    - Run **Import Calendars** on the Calendars page (one batch job)
@@ -123,7 +123,7 @@ pnpm build
 - One Google account per installation (Meta-style)
 - Connect does not register `calendar_push` or start watches. Live push is opt-in and starts one batch job per Google ping
 - Multi-record pulls (Import, `calendar_sync`, push) must start **0 or 1** platform batch jobs. Never `for (event of events) emit()`
-- Per-install calendar identity and sync/watch state live on the workplace `calendar` CRM map. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
+- Per-install calendar identity lives on the workplace `calendar` CRM map after Import. Tools, watches, and batch jobs list calendars from the Google API — they do not call `instance.*` on `calendar`. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
 - CRM-facing `calendar` and `calendar_event` entities are mapped per install; events relate to calendars so workplace Calendar LIST view can load events from multiple calendars in one query
 - Live `calendar.event.*` workflows stay for a later 1:1 payload, not for pull/history
 - CRM → Google two-way sync is not automatic; write tools exist for agents/manual calls

@@ -5,10 +5,6 @@ import { fileURLToPath } from 'node:url'
 
 const setupComplete = jest.fn<(handle: string) => Promise<void>>()
 const setupReconcile = jest.fn<() => Promise<void>>()
-const listGoogleCalendars = jest.fn<() => Promise<Array<{ calendar_id: string }>>>()
-const upsertLinkedGoogleCalendars = jest.fn<
-  (options: { emitEvents?: boolean }) => Promise<{ primaryCalendarId: string | null }>
->()
 const exchangeCodeForTokens = jest.fn<() => Promise<{
   accessToken: string
   refreshToken: string
@@ -16,7 +12,6 @@ const exchangeCodeForTokens = jest.fn<() => Promise<{
 }>>()
 const fetchGoogleAccountEmail = jest.fn<() => Promise<string>>()
 const createOAuth2Client = jest.fn(() => ({ setCredentials: jest.fn() }))
-const withInstallationScope = jest.fn(async (_id: string, fn: () => Promise<void>) => fn())
 
 jest.unstable_mockModule('skedyul', () => ({
   setup: {
@@ -43,18 +38,6 @@ jest.unstable_mockModule('../../../lib/google_install_env.ts', () => ({
   buildOAuthRedirectUri: () => 'https://api.example.com/callback',
 }))
 
-jest.unstable_mockModule('../../../lib/installation_scope.ts', () => ({
-  withInstallationScope,
-}))
-
-jest.unstable_mockModule('../../../services/calendar/client.ts', () => ({
-  listGoogleCalendars,
-}))
-
-jest.unstable_mockModule('../../../lib/seed-google-calendars.ts', () => ({
-  upsertLinkedGoogleCalendars,
-}))
-
 const { default: oauthCallback } = await import('../oauth_callback')
 
 function encodeState() {
@@ -70,8 +53,6 @@ describe('oauthCallback', () => {
   beforeEach(() => {
     setupComplete.mockReset().mockResolvedValue(undefined)
     setupReconcile.mockReset().mockResolvedValue(undefined)
-    listGoogleCalendars.mockReset().mockResolvedValue([{ calendar_id: 'primary' }])
-    upsertLinkedGoogleCalendars.mockReset().mockResolvedValue({ primaryCalendarId: 'primary' })
     exchangeCodeForTokens.mockReset().mockResolvedValue({
       accessToken: 'access',
       refreshToken: 'refresh',
@@ -83,7 +64,7 @@ describe('oauthCallback', () => {
     process.env.SKEDYUL_API_URL = 'https://api.example.com'
   })
 
-  it('seeds calendars quietly and does not start a batch, watch, or backfill', async () => {
+  it('stores tokens only and does not seed calendars or start a batch', async () => {
     const result = await oauthCallback({
       request: {
         query: {
@@ -101,15 +82,12 @@ describe('oauthCallback', () => {
         GOOGLE_REFRESH_TOKEN: 'refresh',
       },
     })
-    expect(upsertLinkedGoogleCalendars).toHaveBeenCalledTimes(1)
-    expect(upsertLinkedGoogleCalendars.mock.calls[0]?.[0].emitEvents).toBe(false)
     expect(setupComplete).toHaveBeenCalledWith('connect_google')
-    expect(withInstallationScope).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('oauth_callback source', () => {
-  it('does not import install backfill, watches, or calendar_push registration', () => {
+  it('does not import calendar seed, watches, or calendar_push registration', () => {
     const source = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), '../oauth_callback.ts'),
       'utf8',
@@ -119,6 +97,8 @@ describe('oauth_callback source', () => {
     expect(source).not.toContain('ensureInstallCalendarPushWebhook')
     expect(source).not.toContain('ensureCalendarWatch')
     expect(source).not.toContain('startAppBatchOperation')
-    expect(source).toContain('emitEvents: false')
+    expect(source).not.toContain('upsertLinkedGoogleCalendars')
+    expect(source).not.toContain('listGoogleCalendars')
+    expect(source).not.toContain('withInstallationScope')
   })
 })

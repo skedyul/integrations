@@ -1,6 +1,5 @@
 import type { ToolDefinition } from 'skedyul'
 import { z } from 'skedyul'
-import { instance } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
 import { AppAuthInvalidError } from 'skedyul'
 import { ensureCalendarWatch } from '../lib/calendar_link'
@@ -41,7 +40,8 @@ export const addGoogleCalendarRegistry: ToolDefinition<
 > = {
   name: 'add_google_calendar',
   label: 'Add Google Calendar',
-  description: 'Link a Google Calendar for sync and register push notifications',
+  description:
+    'Enable sync for a Google Calendar and optionally register push notifications. CRM rows are written by Import / live workflows.',
   inputSchema: AddGoogleCalendarInputSchema,
   outputSchema: AddGoogleCalendarOutputSchema,
   handler: async (input, context) => {
@@ -52,45 +52,31 @@ export const addGoogleCalendarRegistry: ToolDefinition<
     try {
       const { client } = await getAuthenticatedOAuthClient(context.env)
       const syncDirection = parseSyncDirection(input.sync_direction)
-      const existing = await loadGoogleCalendarRecord(input.calendar_id)
-
-      let recordId: string
-      if (existing) {
-        recordId = existing.id
-        await instance.update('calendar', recordId, {
-          summary: input.summary ?? existing.summary ?? input.calendar_id,
-          sync_enabled: input.sync_enabled,
-          sync_direction: syncDirection,
-          external_read_only: input.external_read_only,
-        })
-      } else {
-        const created = await instance.create('calendar', {
-          google_calendar_id: input.calendar_id,
-          summary: input.summary ?? input.calendar_id,
-          sync_enabled: input.sync_enabled,
-          sync_direction: syncDirection,
-          external_read_only: input.external_read_only,
-        })
-        recordId = (created as { id: string }).id
+      const existing = await loadGoogleCalendarRecord(input.calendar_id, context.env)
+      if (!existing) {
+        return createNotFoundError(`Google calendar ${input.calendar_id} was not found`)
       }
 
-      const updated = await loadGoogleCalendarRecord(input.calendar_id)
-      if (!updated) {
-        return createNotFoundError('Linked calendar record was not found after create/update')
+      const record = {
+        ...existing,
+        summary: input.summary ?? existing.summary ?? input.calendar_id,
+        sync_enabled: input.sync_enabled,
+        sync_direction: syncDirection,
+        external_read_only: input.external_read_only,
       }
 
       if (input.sync_enabled) {
-        await ensureCalendarWatch(client, updated)
+        await ensureCalendarWatch(client, record)
       }
 
       await emitGoogleEvent(
         context.appInstallationId,
-        existing ? 'calendar.updated' : 'calendar.created',
+        'calendar.updated',
         {
           calendar: {
             calendar_id: input.calendar_id,
-            summary: updated.summary || input.calendar_id,
-            primary: Boolean(updated.primary),
+            summary: record.summary || input.calendar_id,
+            primary: Boolean(record.primary),
             timezone: null,
             description: null,
           },
@@ -102,7 +88,7 @@ export const addGoogleCalendarRegistry: ToolDefinition<
 
       return createSuccessResponse({
         calendar_id: input.calendar_id,
-        summary: updated.summary || input.calendar_id,
+        summary: record.summary || input.calendar_id,
         sync_enabled: Boolean(input.sync_enabled),
         sync_direction: syncDirection,
         external_read_only: Boolean(input.external_read_only),

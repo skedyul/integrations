@@ -1,6 +1,5 @@
 import type { GoogleCalendarRecord, GoogleSyncDirection } from '../events/types'
-
-export const CALENDAR_ENTITY_HANDLE = 'calendar'
+import type { GoogleCalendarSummary } from '../services/calendar/client'
 
 const SYNC_DIRECTIONS = new Set<GoogleSyncDirection>(['push', 'pull', 'both'])
 
@@ -18,10 +17,29 @@ function readSyncDirection(value: unknown): GoogleSyncDirection | null {
     : null
 }
 
-/**
- * Normalize an instance.* row (entity handles after CRM-map reverse translation)
- * into the record shape tools and sync use.
- */
+/** Build the in-memory calendar record used by tools and batch jobs. */
+export function recordFromGoogleSummary(
+  calendar: GoogleCalendarSummary,
+  extras?: Partial<GoogleCalendarRecord>,
+): GoogleCalendarRecord {
+  return {
+    id: calendar.calendar_id,
+    calendar_id: calendar.calendar_id,
+    google_calendar_id: calendar.calendar_id,
+    summary: calendar.summary,
+    primary: calendar.primary,
+    sync_enabled: extras?.sync_enabled ?? calendar.primary,
+    sync_direction: extras?.sync_direction ?? 'both',
+    external_read_only: extras?.external_read_only ?? false,
+    sync_token: extras?.sync_token ?? null,
+    watch_channel_id: extras?.watch_channel_id ?? null,
+    watch_resource_id: extras?.watch_resource_id ?? null,
+    watch_expiration: extras?.watch_expiration ?? null,
+    watch_token: extras?.watch_token ?? null,
+    last_synced_at: extras?.last_synced_at ?? null,
+  }
+}
+
 export function asGoogleCalendarRecord(
   row: Record<string, unknown>,
 ): GoogleCalendarRecord {
@@ -29,7 +47,7 @@ export function asGoogleCalendarRecord(
     readString(row.google_calendar_id) ?? readString(row.calendar_id) ?? ''
 
   return {
-    id: String(row.id ?? ''),
+    id: String(row.id ?? calendarId),
     calendar_id: calendarId,
     google_calendar_id: calendarId,
     summary: readString(row.summary) ?? readString(row.name),
@@ -44,32 +62,4 @@ export function asGoogleCalendarRecord(
     watch_token: readString(row.watch_token),
     last_synced_at: readString(row.last_synced_at),
   }
-}
-
-export function toCalendarWritePayload(
-  record: Partial<GoogleCalendarRecord> & { calendar_id?: string },
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = {}
-  const calendarId = record.google_calendar_id ?? record.calendar_id
-  if (calendarId !== undefined) payload.google_calendar_id = calendarId
-  if (record.summary !== undefined) payload.summary = record.summary
-  if (record.primary !== undefined) payload.primary = record.primary
-  if (record.sync_enabled !== undefined) payload.sync_enabled = record.sync_enabled
-  if (record.sync_direction !== undefined) payload.sync_direction = record.sync_direction
-  if (record.external_read_only !== undefined) {
-    payload.external_read_only = record.external_read_only
-  }
-  if (record.sync_token !== undefined) payload.sync_token = record.sync_token
-  if (record.watch_channel_id !== undefined) {
-    payload.watch_channel_id = record.watch_channel_id
-  }
-  if (record.watch_resource_id !== undefined) {
-    payload.watch_resource_id = record.watch_resource_id
-  }
-  if (record.watch_expiration !== undefined) {
-    payload.watch_expiration = record.watch_expiration
-  }
-  if (record.watch_token !== undefined) payload.watch_token = record.watch_token
-  if (record.last_synced_at !== undefined) payload.last_synced_at = record.last_synced_at
-  return payload
 }

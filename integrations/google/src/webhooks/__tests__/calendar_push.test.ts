@@ -13,8 +13,8 @@ class StartAppBatchOperationError extends Error {
   }
 }
 
-const loadGoogleCalendarRecordByWatchChannel =
-  jest.fn<(channelId: string) => Promise<GoogleCalendarRecord | null>>()
+const loadGoogleCalendarRecord =
+  jest.fn<(calendarId: string, env: unknown) => Promise<GoogleCalendarRecord | null>>()
 
 jest.unstable_mockModule('../../lib/start-app-batch-operation.ts', () => ({
   startAppBatchOperation,
@@ -22,7 +22,7 @@ jest.unstable_mockModule('../../lib/start-app-batch-operation.ts', () => ({
 }))
 
 jest.unstable_mockModule('../../services/calendar/sync.ts', () => ({
-  loadGoogleCalendarRecordByWatchChannel,
+  loadGoogleCalendarRecord,
 }))
 
 const { calendarPushRegistry } = await import('../calendar_push')
@@ -35,10 +35,9 @@ const context = {
 describe('calendar_push', () => {
   beforeEach(() => {
     startAppBatchOperation.mockReset().mockResolvedValue({ batchJobId: 'job_1' })
-    loadGoogleCalendarRecordByWatchChannel.mockReset().mockResolvedValue({
-      id: 'rec_1',
+    loadGoogleCalendarRecord.mockReset().mockResolvedValue({
+      id: 'primary',
       calendar_id: 'primary',
-      watch_token: 'token',
       sync_enabled: true,
     } as GoogleCalendarRecord)
   })
@@ -49,7 +48,7 @@ describe('calendar_push', () => {
         headers: {
           'x-goog-channel-id': 'ch_1',
           'x-goog-resource-state': 'sync',
-          'x-goog-channel-token': 'token',
+          'x-goog-channel-token': 'primary',
         },
       } as never,
       context as never,
@@ -58,6 +57,7 @@ describe('calendar_push', () => {
     expect(response.status).toBe(200)
     expect(response.body).toEqual({ ok: true, action: 'acknowledged' })
     expect(startAppBatchOperation).not.toHaveBeenCalled()
+    expect(loadGoogleCalendarRecord).toHaveBeenCalledWith('primary', context.env)
   })
 
   it('starts exactly one import batch for a change ping', async () => {
@@ -66,7 +66,7 @@ describe('calendar_push', () => {
         headers: {
           'x-goog-channel-id': 'ch_1',
           'x-goog-resource-state': 'exists',
-          'x-goog-channel-token': 'token',
+          'x-goog-channel-token': 'primary',
         },
       } as never,
       context as never,
@@ -100,7 +100,7 @@ describe('calendar_push', () => {
         headers: {
           'x-goog-channel-id': 'ch_1',
           'x-goog-resource-state': 'exists',
-          'x-goog-channel-token': 'token',
+          'x-goog-channel-token': 'primary',
         },
       } as never,
       context as never,

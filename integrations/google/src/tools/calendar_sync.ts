@@ -44,7 +44,7 @@ export const calendarSyncRegistry: ToolDefinition<
   name: 'calendar_sync',
   label: 'Sync Google Calendar',
   description:
-    'Start one calendar-event import batch for a linked calendar or all enabled calendars. Does not emit per-event webhooks.',
+    'Start one calendar-event import batch for a Google calendar or every calendar on the connected account. Does not emit per-event webhooks.',
   inputSchema: CalendarSyncInputSchema,
   outputSchema: CalendarSyncOutputSchema,
   handler: async (input, context) => {
@@ -54,21 +54,20 @@ export const calendarSyncRegistry: ToolDefinition<
 
     try {
       const targets = input.calendar_id
-        ? [await loadGoogleCalendarRecord(input.calendar_id)]
-        : await loadLinkedGoogleCalendars()
+        ? [await loadGoogleCalendarRecord(input.calendar_id, context.env)]
+        : await loadLinkedGoogleCalendars(context.env)
 
       const records = targets.filter(
         (record): record is NonNullable<typeof record> => Boolean(record),
       )
-      const enabled = records.filter((record) => record.sync_enabled)
 
-      if (enabled.length === 0) {
-        return createNotFoundError('No linked calendars were found to sync')
+      if (records.length === 0) {
+        return createNotFoundError('No Google calendars were found to sync')
       }
 
       if (input.enable_live_sync) {
         const { client } = await getAuthenticatedOAuthClient(context.env)
-        for (const record of enabled) {
+        for (const record of records) {
           await ensureCalendarWatch(client, record)
         }
       }
@@ -90,7 +89,7 @@ export const calendarSyncRegistry: ToolDefinition<
       return createSuccessResponse({
         batch_job_id: started.batchJobId,
         operation_handle: 'import_calendar_events',
-        calendars: enabled.length,
+        calendars: records.length,
         live_sync_enabled: Boolean(input.enable_live_sync),
       })
     } catch (error) {

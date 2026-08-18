@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import { asGoogleCalendarRecord, toCalendarWritePayload } from '../calendar-record'
+import { asGoogleCalendarRecord, recordFromGoogleSummary } from '../calendar-record'
 
 describe('asGoogleCalendarRecord', () => {
   it('reads entity handles after CRM-map reverse translation', () => {
@@ -37,18 +37,25 @@ describe('asGoogleCalendarRecord', () => {
   })
 })
 
-describe('toCalendarWritePayload', () => {
-  it('writes google_calendar_id for instance.create/update on the calendar entity', () => {
+describe('recordFromGoogleSummary', () => {
+  it('uses the Google calendar id as the in-memory record id', () => {
     expect(
-      toCalendarWritePayload({
+      recordFromGoogleSummary({
         calendar_id: 'primary',
         summary: 'Work',
-        sync_token: null,
+        primary: true,
+        access_role: 'owner',
+        time_zone: 'Australia/Sydney',
+        description: null,
       }),
-    ).toEqual({
+    ).toMatchObject({
+      id: 'primary',
+      calendar_id: 'primary',
       google_calendar_id: 'primary',
       summary: 'Work',
-      sync_token: null,
+      primary: true,
+      sync_enabled: true,
+      sync_direction: 'both',
     })
   })
 })

@@ -4,6 +4,7 @@ import { isRuntimeContext } from 'skedyul'
 import { AppAuthInvalidError } from 'skedyul'
 import { removeCalendarWatch } from '../lib/calendar_link'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
+import { emitGoogleEvent } from '../lib/emit-google-event'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import {
   createAuthError,
@@ -31,7 +32,8 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
 > = {
   name: 'remove_google_calendar',
   label: 'Remove Google Calendar',
-  description: 'Unlink a Google Calendar and stop push notifications',
+  description:
+    'Stop push notifications for a Google Calendar and emit calendar.deleted so CRM workflows can update the mapped row',
   inputSchema: RemoveGoogleCalendarInputSchema,
   outputSchema: RemoveGoogleCalendarOutputSchema,
   handler: async (input, context) => {
@@ -40,13 +42,30 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
     }
 
     try {
-      const record = await loadGoogleCalendarRecord(input.calendar_id)
+      const record = await loadGoogleCalendarRecord(input.calendar_id, context.env)
       if (!record) {
-        return createNotFoundError(`Calendar ${input.calendar_id} is not linked`)
+        return createNotFoundError(`Calendar ${input.calendar_id} is not available`)
       }
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
       await removeCalendarWatch(client, record)
+
+      await emitGoogleEvent(
+        context.appInstallationId,
+        'calendar.deleted',
+        {
+          calendar: {
+            calendar_id: input.calendar_id,
+            summary: record.summary || input.calendar_id,
+            primary: Boolean(record.primary),
+            timezone: null,
+            description: null,
+          },
+          sync: { trigger: 'tool' },
+        },
+        `tool:${input.calendar_id}`,
+        'tool',
+      )
 
       return createSuccessResponse({
         calendar_id: input.calendar_id,

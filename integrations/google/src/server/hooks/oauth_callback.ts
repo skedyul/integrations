@@ -1,16 +1,12 @@
 import { setup } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import {
-  createOAuth2Client,
   exchangeCodeForTokens,
   fetchGoogleAccountEmail,
   requireGoogleOAuthConfig,
   tokenSetToInstallEnv,
 } from '../../lib/google_client'
 import { buildOAuthRedirectUri } from '../../lib/google_install_env'
-import { withInstallationScope } from '../../lib/installation_scope'
-import { listGoogleCalendars } from '../../services/calendar/client'
-import { upsertLinkedGoogleCalendars } from '../../lib/seed-google-calendars'
 
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
@@ -79,34 +75,10 @@ export default async function oauthCallback(
     )
     const email = await fetchGoogleAccountEmail(tokens.accessToken)
 
-    const authClient = createOAuth2Client({
-      ...oauthConfig,
-      redirectUri,
-    })
-    authClient.setCredentials({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-      expiry_date: tokens.expiryDate ?? undefined,
-    })
-
-    await withInstallationScope(appInstallationId, async () => {
-      const calendars = await listGoogleCalendars(authClient)
-      await upsertLinkedGoogleCalendars({
-        calendars,
-        appInstallationId,
-        trigger: 'install',
-        emitEvents: false,
-      })
-
-      ctx.log.info(
-        `[Google OAuth] Seeded ${calendars.length} calendar records without emitting events`,
-      )
-
-      await setup.complete('connect_google')
-      if (typeof setup.reconcile === 'function') {
-        await setup.reconcile()
-      }
-    })
+    await setup.complete('connect_google')
+    if (typeof setup.reconcile === 'function') {
+      await setup.reconcile()
+    }
 
     return {
       appInstallationId,

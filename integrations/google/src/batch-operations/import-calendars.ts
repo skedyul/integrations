@@ -1,10 +1,7 @@
 import { defineBatchOperation, type BatchOperationContext } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import type { GoogleInstallEnv } from '../lib/google_install_env'
-import {
-  toCalendarEntityPayload,
-  upsertLinkedGoogleCalendars,
-} from '../lib/seed-google-calendars'
+import { toCalendarEntityPayload } from '../lib/seed-google-calendars'
 import { listGoogleCalendars, type GoogleCalendarSummary } from '../services/calendar/client'
 
 interface ImportCalendarsState {
@@ -26,12 +23,6 @@ export default defineBatchOperation({
   setup: async (ctx: BatchOperationContext) => {
     const { client } = await getAuthenticatedOAuthClient(ctx.env as GoogleInstallEnv)
     const calendars = await listGoogleCalendars(client)
-    await upsertLinkedGoogleCalendars({
-      calendars,
-      appInstallationId: ctx.appInstallationId,
-      trigger: 'import',
-      emitEvents: false,
-    })
 
     ctx.log.info(`Prepared ${calendars.length} Google calendars for CRM import`)
     return {
