@@ -110,7 +110,7 @@ export default defineBatchOperation({
 
     if (!state.calendarsEmitted && cascadeEntities.has('calendar')) {
       itemsByEntity.calendar = state.calendars.map((record) => ({
-        calendar: toCalendarEntityPayload(toSummary(record)),
+        calendar: toCalendarEntityPayload(toSummary(record), record),
       }))
       state.calendarsEmitted = true
     } else if (!state.calendarsEmitted) {

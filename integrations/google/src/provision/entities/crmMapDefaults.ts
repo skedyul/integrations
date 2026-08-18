@@ -15,6 +15,15 @@ export const calendarCrmMapDefaults: EntityCrmMapDefaults = {
     primary: 'primary',
     timezone: 'timezone',
     description: 'description',
+    sync_enabled: 'sync_enabled',
+    sync_direction: 'sync_direction',
+    external_read_only: 'external_read_only',
+    sync_token: 'sync_token',
+    watch_channel_id: 'watch_channel_id',
+    watch_resource_id: 'watch_resource_id',
+    watch_expiration: 'watch_expiration',
+    watch_token: 'watch_token',
+    last_synced_at: 'last_synced_at',
   },
 }
 

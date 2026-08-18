@@ -14,7 +14,7 @@ export default async function uninstall(
   ctx.log.info('[Google Uninstall] Starting uninstall cleanup')
 
   const env = ctx.env as GoogleInstallEnv
-  const calendars = await instance.list('google_calendar', { limit: 250 })
+  const calendars = await instance.list('calendar', { limit: 250 })
 
   try {
     const { client } = await getAuthenticatedOAuthClient(env)
@@ -27,7 +27,7 @@ export default async function uninstall(
         })
       }
 
-      await instance.update('google_calendar', record.id, {
+      await instance.update('calendar', record.id, {
         sync_enabled: false,
         watch_channel_id: null,
         watch_resource_id: null,

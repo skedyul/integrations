@@ -16,7 +16,7 @@ export default defineBatchOperation({
   handle: 'import_calendars',
   label: 'Import Calendars',
   description:
-    'Import Google calendars into linked sync records and upsert CRM calendar rows when the map is configured.',
+    'Import Google calendars into the mapped workplace calendar model, including sync and watch fields.',
   entity: 'calendar',
   cascade: [{ entity: 'calendar', order: 1, wave: 'page' }],
   maxConcurrent: 1,

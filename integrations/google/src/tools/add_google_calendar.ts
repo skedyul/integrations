@@ -57,15 +57,15 @@ export const addGoogleCalendarRegistry: ToolDefinition<
       let recordId: string
       if (existing) {
         recordId = existing.id
-        await instance.update('google_calendar', recordId, {
+        await instance.update('calendar', recordId, {
           summary: input.summary ?? existing.summary ?? input.calendar_id,
           sync_enabled: input.sync_enabled,
           sync_direction: syncDirection,
           external_read_only: input.external_read_only,
         })
       } else {
-        const created = await instance.create('google_calendar', {
-          calendar_id: input.calendar_id,
+        const created = await instance.create('calendar', {
+          google_calendar_id: input.calendar_id,
           summary: input.summary ?? input.calendar_id,
           sync_enabled: input.sync_enabled,
           sync_direction: syncDirection,
