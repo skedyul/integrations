@@ -1,6 +1,5 @@
 import { webhook } from 'skedyul'
 import type { OAuth2Client } from 'google-auth-library'
-import { instance } from 'skedyul'
 import type { GoogleCalendarRecord } from '../events/types'
 import {
   startCalendarWatch,
@@ -20,6 +19,10 @@ export async function ensureInstallCalendarPushWebhook(): Promise<string> {
   return created.url
 }
 
+/**
+ * Register a Google push channel. The channel token is the Google calendar id
+ * so calendar_push can start an import without reading CRM or an internal model.
+ */
 export async function ensureCalendarWatch(
   auth: OAuth2Client,
   record: GoogleCalendarRecord,
@@ -45,13 +48,7 @@ export async function ensureCalendarWatch(
   const watch = await startCalendarWatch(auth, {
     calendarId: record.calendar_id,
     webhookUrl,
-  })
-
-  await instance.update('calendar', record.id, {
-    watch_channel_id: watch.channelId,
-    watch_resource_id: watch.resourceId,
-    watch_expiration: watch.expiration,
-    watch_token: watch.token,
+    token: record.calendar_id,
   })
 
   return {
@@ -73,14 +70,6 @@ export async function removeCalendarWatch(
       resourceId: record.watch_resource_id,
     })
   }
-
-  await instance.update('calendar', record.id, {
-    watch_channel_id: null,
-    watch_resource_id: null,
-    watch_expiration: null,
-    watch_token: null,
-    sync_enabled: false,
-  })
 }
 
 export function assertCalendarWritable(record: GoogleCalendarRecord): void {

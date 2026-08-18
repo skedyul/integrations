@@ -1,51 +1,28 @@
-import { instance } from 'skedyul'
 import type { GoogleCalendarRecord } from '../../events/types'
-import {
-  asGoogleCalendarRecord,
-  CALENDAR_ENTITY_HANDLE,
-  toCalendarWritePayload,
-} from '../../lib/calendar-record'
+import type { GoogleInstallEnv } from '../../lib/google_install_env'
+import { recordFromGoogleSummary } from '../../lib/calendar-record'
+import { getAuthenticatedOAuthClient } from '../../lib/google_client'
+import { listGoogleCalendars } from './client'
+
+export async function loadGoogleCalendarsFromGoogle(
+  env: GoogleInstallEnv,
+): Promise<GoogleCalendarRecord[]> {
+  const { client } = await getAuthenticatedOAuthClient(env)
+  const calendars = await listGoogleCalendars(client)
+  return calendars.map((calendar) => recordFromGoogleSummary(calendar))
+}
 
 export async function loadGoogleCalendarRecord(
   calendarId: string,
+  env: GoogleInstallEnv,
 ): Promise<GoogleCalendarRecord | null> {
-  const records = await instance.list(CALENDAR_ENTITY_HANDLE, {
-    filter: { google_calendar_id: { eq: calendarId } },
-    limit: 1,
-  })
-
-  const record = records.data[0] as Record<string, unknown> | undefined
-  return record ? asGoogleCalendarRecord(record) : null
+  const records = await loadGoogleCalendarsFromGoogle(env)
+  return records.find((record) => record.calendar_id === calendarId) ?? null
 }
 
-export async function loadLinkedGoogleCalendars(): Promise<GoogleCalendarRecord[]> {
-  const records = await instance.list(CALENDAR_ENTITY_HANDLE, {
-    filter: { sync_enabled: { eq: true } },
-    limit: 250,
-  })
-
-  return (records.data as Record<string, unknown>[]).map(asGoogleCalendarRecord)
-}
-
-export async function loadGoogleCalendarRecordByWatchChannel(
-  channelId: string,
-): Promise<GoogleCalendarRecord | null> {
-  const records = await instance.list(CALENDAR_ENTITY_HANDLE, {
-    filter: { watch_channel_id: { eq: channelId } },
-    limit: 1,
-  })
-
-  const record = records.data[0] as Record<string, unknown> | undefined
-  return record ? asGoogleCalendarRecord(record) : null
-}
-
-export async function persistCalendarSyncToken(
-  recordId: string,
-  patch: { sync_token?: string | null; last_synced_at?: string },
-): Promise<void> {
-  await instance.update(
-    CALENDAR_ENTITY_HANDLE,
-    recordId,
-    toCalendarWritePayload(patch),
-  )
+/** Google Calendar list for this install. Sync-enabled flags are CRM write-only. */
+export async function loadLinkedGoogleCalendars(
+  env: GoogleInstallEnv,
+): Promise<GoogleCalendarRecord[]> {
+  return loadGoogleCalendarsFromGoogle(env)
 }

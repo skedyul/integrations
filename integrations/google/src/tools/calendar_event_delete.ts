@@ -48,7 +48,7 @@ export const calendarEventDeleteRegistry: ToolDefinition<
     }
 
     try {
-      const record = await loadGoogleCalendarRecord(input.calendar_id)
+      const record = await loadGoogleCalendarRecord(input.calendar_id, context.env)
       if (!record) {
         return createNotFoundError(`Calendar ${input.calendar_id} is not linked`)
       }

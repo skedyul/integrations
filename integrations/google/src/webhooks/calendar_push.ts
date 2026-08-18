@@ -4,7 +4,7 @@ import {
   StartAppBatchOperationError,
   startAppBatchOperation,
 } from '../lib/start-app-batch-operation'
-import { loadGoogleCalendarRecordByWatchChannel } from '../services/calendar/sync'
+import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import { getHeaderValue } from './lib/helpers'
 
 const calendarPushHandler: WebhookHandler = async (request, context): Promise<WebhookResponse> => {
@@ -18,20 +18,20 @@ const calendarPushHandler: WebhookHandler = async (request, context): Promise<We
 
   const channelId = getHeaderValue(request.headers, 'x-goog-channel-id')
   const resourceState = getHeaderValue(request.headers, 'x-goog-resource-state')
-  const channelToken = getHeaderValue(request.headers, 'x-goog-channel-token')
+  const calendarId = getHeaderValue(request.headers, 'x-goog-channel-token')
 
   if (!channelId) {
     return { status: 400, body: { error: 'Missing X-Goog-Channel-ID header' } }
   }
 
-  const record = await loadGoogleCalendarRecordByWatchChannel(channelId)
-  if (!record) {
-    console.warn(`[Google Webhook] No calendar record found for channel ${channelId}`)
-    return { status: 404, body: { error: 'Unknown calendar watch channel' } }
+  if (!calendarId) {
+    return { status: 400, body: { error: 'Missing X-Goog-Channel-Token header' } }
   }
 
-  if (record.watch_token && channelToken !== record.watch_token) {
-    return { status: 401, body: { error: 'Invalid watch channel token' } }
+  const record = await loadGoogleCalendarRecord(calendarId, context.env)
+  if (!record) {
+    console.warn(`[Google Webhook] No Google calendar found for token ${calendarId}`)
+    return { status: 404, body: { error: 'Unknown Google calendar' } }
   }
 
   if (resourceState === 'sync') {

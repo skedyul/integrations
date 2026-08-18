@@ -4,7 +4,7 @@ export const connectGoogleStep = defineSetupStep({
   handle: 'connect_google',
   label: 'Connect Google account',
   description:
-    'Authorize Google Calendar access. Connect only stores tokens and quietly seeds linked calendars — it does not import history or start live sync.',
+    'Authorize Google Calendar access. Connect only stores tokens — it does not import history or start live sync.',
   kind: 'app',
   capabilities: ['google.connected'],
   actionTool: 'reconnect_google',

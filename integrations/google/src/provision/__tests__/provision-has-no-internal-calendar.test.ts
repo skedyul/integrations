@@ -14,4 +14,23 @@ describe('Google provision', () => {
     expect(source).not.toContain('models:')
     expect(source).not.toContain("from './crm/models")
   })
+
+  it('does not bind app pages to a calendar model', () => {
+    const linked = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '../pages/calendars/linked/page.ts',
+      ),
+      'utf8',
+    )
+    const overview = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '../pages/calendars/[google_calendar_id]/overview/page.ts',
+      ),
+      'utf8',
+    )
+    expect(linked).not.toContain("model: 'calendar'")
+    expect(overview).not.toContain("model: 'calendar'")
+  })
 })

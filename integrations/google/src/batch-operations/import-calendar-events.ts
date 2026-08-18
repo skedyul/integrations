@@ -10,12 +10,11 @@ import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import {
   loadGoogleCalendarRecord,
   loadLinkedGoogleCalendars,
-  persistCalendarSyncToken,
 } from '../services/calendar/sync'
 import type { GoogleCalendarRecord } from '../events/types'
 
 interface ImportCalendarEventsState {
-  calendars: Array<GoogleCalendarRecord & { time_zone?: string | null; description?: string | null }>
+  calendars: GoogleCalendarRecord[]
   calendarIndex: number
   pageToken?: string
   nextSyncToken?: string | null
@@ -44,21 +43,16 @@ function readStringInput(
 
 async function resolveImportCalendars(
   input: Record<string, unknown> | undefined,
+  env: GoogleInstallEnv,
 ): Promise<GoogleCalendarRecord[]> {
   const calendarId = readStringInput(input, 'calendar_id')
   if (!calendarId) {
-    return loadLinkedGoogleCalendars()
+    return loadLinkedGoogleCalendars(env)
   }
 
-  const linked = await loadLinkedGoogleCalendars()
-  const matched = linked.filter((record) => record.calendar_id === calendarId)
-  if (matched.length > 0) {
-    return matched
-  }
-
-  const record = await loadGoogleCalendarRecord(calendarId)
+  const record = await loadGoogleCalendarRecord(calendarId, env)
   if (!record) {
-    throw new Error(`Calendar ${calendarId} is not linked`)
+    throw new Error(`Calendar ${calendarId} is not available on the connected Google account`)
   }
   return [record]
 }
@@ -67,7 +61,7 @@ export default defineBatchOperation({
   handle: 'import_calendar_events',
   label: 'Import Calendar Events',
   description:
-    'Import events from sync-enabled Google calendars and cascade the parent calendar when its CRM map is configured.',
+    'Import events from Google calendars and cascade the parent calendar when its CRM map is configured.',
   entity: 'calendar_event',
   cascade: [
     { entity: 'calendar', order: 1, wave: 'setup' },
@@ -78,10 +72,10 @@ export default defineBatchOperation({
   icon: 'calendar-days',
 
   setup: async (ctx: BatchOperationContext) => {
-    const calendars = await resolveImportCalendars(ctx.input)
+    const calendars = await resolveImportCalendars(ctx.input, ctx.env as GoogleInstallEnv)
     if (calendars.length === 0) {
       throw new Error(
-        'No sync-enabled calendars found. Import calendars and enable sync first.',
+        'No Google calendars found. Connect a Google account and import calendars first.',
       )
     }
 
@@ -148,7 +142,6 @@ export default defineBatchOperation({
         throw error
       }
 
-      await persistCalendarSyncToken(calendar.id, { sync_token: null })
       state.calendars[state.calendarIndex] = {
         ...calendar,
         sync_token: null,
@@ -190,10 +183,25 @@ export default defineBatchOperation({
     if (page.nextPageToken) {
       state.pageToken = page.nextPageToken
     } else {
-      await persistCalendarSyncToken(calendar.id, {
-        sync_token: state.nextSyncToken ?? calendar.sync_token ?? null,
-        last_synced_at: new Date().toISOString(),
-      })
+      const lastSyncedAt = new Date().toISOString()
+      const nextSyncToken = state.nextSyncToken ?? calendar.sync_token ?? null
+      state.calendars[state.calendarIndex] = {
+        ...calendar,
+        sync_token: nextSyncToken,
+        last_synced_at: lastSyncedAt,
+      }
+      if (cascadeEntities.has('calendar')) {
+        itemsByEntity.calendar = [
+          ...(itemsByEntity.calendar ?? []),
+          {
+            calendar: toCalendarEntityPayload(toSummary(calendar), {
+              ...calendar,
+              sync_token: nextSyncToken,
+              last_synced_at: lastSyncedAt,
+            }),
+          },
+        ]
+      }
       state.pageToken = undefined
       state.nextSyncToken = undefined
       state.calendarIndex += 1
