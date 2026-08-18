@@ -6,6 +6,6 @@ export default definePage({
   type: 'collection',
   path: '/calendars/linked',
   navigation: false,
-  model: 'google_calendar',
+  model: 'calendar',
   defaultView: 'table',
 })

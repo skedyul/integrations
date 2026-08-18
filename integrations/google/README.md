@@ -9,7 +9,7 @@ Future Google services (Gmail, Drive) are stubbed under `src/services/` but not 
 - OAuth 2.0 install flow with offline refresh tokens. Connect does not import history, emit events, or start watches
 - Reconnect from **Account** or the Setup checklist
 - Full Google Calendar support: list calendars, list/get/create/update/delete events, free/busy queries
-- History and incremental pull go through one `import_calendars` / `import_calendar_events` batch job (sync-token aware). Never emit one app event per listed row
+- History and incremental pull go through one `import_calendars` / `import_calendar_events` batch job (sync-token aware, stored on the mapped calendar). Never emit one app event per listed row
 - Optional live Google push: one ping starts one batch job after the user enables watches
 - Typed app events for later single changes (`app.google.calendar.created/updated/deleted`)
 - Install-time CRM maps for `calendar` and `calendar_event`, including an event → calendar relationship
@@ -123,7 +123,7 @@ pnpm build
 - One Google account per installation (Meta-style)
 - Connect does not register `calendar_push` or start watches. Live push is opt-in and starts one batch job per Google ping
 - Multi-record pulls (Import, `calendar_sync`, push) must start **0 or 1** platform batch jobs. Never `for (event of events) emit()`
-- Internal `google_calendar` model stores sync/watch state per linked calendar (not a workplace CRM map target)
+- Per-install calendar identity and sync/watch state live on the workplace `calendar` CRM map. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
 - CRM-facing `calendar` and `calendar_event` entities are mapped per install; events relate to calendars so workplace Calendar LIST view can load events from multiple calendars in one query
 - Live `calendar.event.*` workflows stay for a later 1:1 payload, not for pull/history
 - CRM → Google two-way sync is not automatic; write tools exist for agents/manual calls

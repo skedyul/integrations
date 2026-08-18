@@ -1,7 +1,7 @@
 import type { ProvisionConfig } from 'skedyul'
 
 import env from './env'
-import { models, relationships } from './crm'
+import { relationships } from './crm'
 import { calendar, calendarEvent } from './entities'
 import * as pages from './pages'
 import navigation from './pages/navigation'
@@ -11,7 +11,6 @@ import * as workflows from './workflows'
 const config: ProvisionConfig = {
   env,
   navigation,
-  models: Object.values(models),
   entities: [calendar, calendarEvent],
   setup,
   workflows: Object.values(workflows),

@@ -1,6 +1,11 @@
 import { instance } from 'skedyul'
 import type { GoogleCalendarRecord, GoogleSyncTrigger } from '../events/types'
 import type { GoogleCalendarSummary } from '../services/calendar/client'
+import {
+  asGoogleCalendarRecord,
+  CALENDAR_ENTITY_HANDLE,
+  toCalendarWritePayload,
+} from './calendar-record'
 import { emitGoogleEvent } from './emit-google-event'
 
 export interface SeededGoogleCalendar {
@@ -23,19 +28,19 @@ export async function upsertLinkedGoogleCalendars(options: {
   let primaryCalendarId: string | null = null
 
   for (const calendar of options.calendars) {
-    const existing = await instance.list('google_calendar', {
-      filter: { calendar_id: { eq: calendar.calendar_id } },
+    const existing = await instance.list(CALENDAR_ENTITY_HANDLE, {
+      filter: { google_calendar_id: { eq: calendar.calendar_id } },
       limit: 1,
     })
 
-    const payload = {
+    const payload = toCalendarWritePayload({
       calendar_id: calendar.calendar_id,
       summary: calendar.summary,
       primary: calendar.primary,
       sync_enabled: calendar.primary,
       sync_direction: 'both',
       external_read_only: false,
-    }
+    })
 
     if (calendar.primary) {
       primaryCalendarId = calendar.calendar_id
@@ -45,11 +50,17 @@ export async function upsertLinkedGoogleCalendars(options: {
     let change: 'created' | 'updated'
 
     if (existing.data.length > 0) {
-      const current = existing.data[0] as unknown as GoogleCalendarRecord
-      await instance.update('google_calendar', current.id, {
-        summary: calendar.summary,
-        primary: calendar.primary,
-      })
+      const current = asGoogleCalendarRecord(
+        existing.data[0] as Record<string, unknown>,
+      )
+      await instance.update(
+        CALENDAR_ENTITY_HANDLE,
+        current.id,
+        toCalendarWritePayload({
+          summary: calendar.summary,
+          primary: calendar.primary,
+        }),
+      )
       record = {
         ...current,
         summary: calendar.summary,
@@ -58,12 +69,13 @@ export async function upsertLinkedGoogleCalendars(options: {
       change = 'updated'
     } else {
       const created = (await instance.create(
-        'google_calendar',
+        CALENDAR_ENTITY_HANDLE,
         payload,
-      )) as unknown as GoogleCalendarRecord
+      )) as unknown as Record<string, unknown>
       record = {
-        ...created,
+        ...asGoogleCalendarRecord(created),
         calendar_id: calendar.calendar_id,
+        google_calendar_id: calendar.calendar_id,
         summary: calendar.summary,
         primary: calendar.primary,
         sync_enabled: calendar.primary,
@@ -104,12 +116,28 @@ export async function upsertLinkedGoogleCalendars(options: {
   }
 }
 
-export function toCalendarEntityPayload(calendar: GoogleCalendarSummary) {
+export function toCalendarEntityPayload(
+  calendar: GoogleCalendarSummary,
+  extras?: Partial<GoogleCalendarRecord>,
+) {
   return {
     google_calendar_id: calendar.calendar_id,
     summary: calendar.summary,
     primary: calendar.primary,
     timezone: calendar.time_zone,
     description: calendar.description,
+    ...(extras?.sync_enabled !== undefined
+      ? { sync_enabled: extras.sync_enabled }
+      : {}),
+    ...(extras?.sync_direction !== undefined
+      ? { sync_direction: extras.sync_direction }
+      : {}),
+    ...(extras?.external_read_only !== undefined
+      ? { external_read_only: extras.external_read_only }
+      : {}),
+    ...(extras?.sync_token !== undefined ? { sync_token: extras.sync_token } : {}),
+    ...(extras?.last_synced_at !== undefined
+      ? { last_synced_at: extras.last_synced_at }
+      : {}),
   }
 }

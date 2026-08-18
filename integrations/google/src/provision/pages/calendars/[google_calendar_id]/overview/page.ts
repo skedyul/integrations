@@ -5,11 +5,11 @@ export default definePage({
   label: 'Overview',
   type: 'instance',
   path: '/calendars/linked/[google_calendar_id]/overview',
-  model: 'google_calendar',
+  model: 'calendar',
   navigation: false,
   context: {
-    google_calendar: {
-      model: 'google_calendar',
+    calendar: {
+      model: 'calendar',
       mode: 'route',
     },
   },
@@ -31,7 +31,7 @@ export default definePage({
             col: 0,
             label: 'Calendar Name',
             leftIcon: 'Calendar',
-            value: '{{ google_calendar.summary }}',
+            value: '{{ calendar.summary }}',
             disabled: true,
           },
           {
@@ -41,7 +41,7 @@ export default definePage({
             col: 0,
             label: 'Calendar ID',
             leftIcon: 'Hash',
-            value: '{{ google_calendar.calendar_id }}',
+            value: '{{ calendar.google_calendar_id }}',
             disabled: true,
           },
           {
@@ -51,7 +51,7 @@ export default definePage({
             col: 0,
             label: 'Sync Enabled',
             leftIcon: 'CalendarSync',
-            value: '{{ google_calendar.sync_enabled }}',
+            value: '{{ calendar.sync_enabled }}',
             disabled: true,
           },
           {
@@ -61,7 +61,7 @@ export default definePage({
             col: 0,
             label: 'Sync Direction',
             leftIcon: 'ArrowLeftRight',
-            value: '{{ google_calendar.sync_direction }}',
+            value: '{{ calendar.sync_direction }}',
             disabled: true,
           },
           {
@@ -71,7 +71,7 @@ export default definePage({
             col: 0,
             label: 'Last Synced At',
             leftIcon: 'Clock',
-            value: '{{ google_calendar.last_synced_at }}',
+            value: '{{ calendar.last_synced_at }}',
             disabled: true,
           },
         ],

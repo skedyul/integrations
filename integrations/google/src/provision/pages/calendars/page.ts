@@ -22,7 +22,7 @@ export default definePage({
       header: {
         title: 'Import Calendars',
         description:
-          'History lives here. Connect does not import. Start one calendar import batch after the CRM map is ready. Linked sync-state records stay on the Linked calendars page.',
+          'History lives here. Connect does not import. Start one calendar import batch after the CRM map is ready. Sync and watch state live on the mapped workplace calendar model.',
       },
       form: {
         id: 'calendar-import-form',
@@ -37,7 +37,7 @@ export default definePage({
               operationHandle: 'import_calendars',
               title: 'Calendar Import',
               description:
-                'List Google calendars, link them for sync, and upsert CRM calendar records when the map is ready',
+                'List Google calendars and upsert the mapped workplace calendar model, including sync and watch fields',
               buttonLabel: 'Start Import',
               icon: 'Calendar',
             },
@@ -74,7 +74,7 @@ export default definePage({
             props: {
               title: 'How calendar history works',
               description:
-                'Connect only authorizes Google. Import Calendars starts one batch job that upserts CRM rows. Live wiring is for later single changes, not backfill. Review linked watch/sync state at /calendars/linked.',
+                'Connect only authorizes Google. Import Calendars starts one batch job that upserts CRM rows, including sync and watch fields. Live wiring is for later single changes, not backfill.',
               icon: 'Info',
             },
           },

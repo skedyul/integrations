@@ -47,7 +47,7 @@ export async function ensureCalendarWatch(
     webhookUrl,
   })
 
-  await instance.update('google_calendar', record.id, {
+  await instance.update('calendar', record.id, {
     watch_channel_id: watch.channelId,
     watch_resource_id: watch.resourceId,
     watch_expiration: watch.expiration,
@@ -74,7 +74,7 @@ export async function removeCalendarWatch(
     })
   }
 
-  await instance.update('google_calendar', record.id, {
+  await instance.update('calendar', record.id, {
     watch_channel_id: null,
     watch_resource_id: null,
     watch_expiration: null,

@@ -90,6 +90,7 @@ export type GoogleEventEmitPayload<T extends GoogleEventName = GoogleEventName> 
 export interface GoogleCalendarRecord {
   id: string
   calendar_id: string
+  google_calendar_id?: string | null
   summary?: string | null
   primary?: boolean | null
   sync_enabled?: boolean | null
