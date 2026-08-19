@@ -30,7 +30,7 @@ export const calendarCrmMapDefaults: EntityCrmMapDefaults = {
 export const calendarEventCrmMapDefaults: EntityCrmMapDefaults = {
   modelHandle: 'event',
   matchFieldHandle: 'google_event_id',
-  matchRuleEntityPaths: ['google_event_id', 'calendar_id'],
+  matchRuleEntityPaths: ['google_event_id'],
   fieldHandles: {
     google_event_id: 'google_event_id',
     calendar_id: 'google_calendar_id',

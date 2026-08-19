@@ -25,7 +25,6 @@ export default defineEntity({
       handle: 'calendar_id',
       label: 'Calendar ID',
       type: 'string',
-      isUnique: true,
       required: true,
     },
     { handle: 'summary', label: 'Title', type: 'string' },
@@ -42,6 +41,7 @@ export default defineEntity({
       handle: 'recurrence',
       label: 'Recurrence Rules',
       type: 'object',
+      // 1.7.26 types omit definition; runtime + schema keep the handle.
       ...({ definition: 'calendar/recurrence' } as { definition: string }),
     },
     {

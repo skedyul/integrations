@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import calendar from '../calendar'
+import calendarEvent from '../calendar-event'
 import {
   calendarCrmMapDefaults,
   calendarEventCrmMapDefaults,
@@ -23,11 +24,34 @@ describe('crmMapDefaults', () => {
     expect(calendarEventCrmMapDefaults.matchFieldHandle).toBe('google_event_id')
     expect(calendarEventCrmMapDefaults.matchRuleEntityPaths).toEqual([
       'google_event_id',
-      'calendar_id',
     ])
     expect(calendarEventCrmMapDefaults.relationshipHandles?.calendar).toBe(
       'calendar',
     )
+  })
+})
+
+describe('calendar event entity', () => {
+  it('does not treat calendar_id as an upsert identity', () => {
+    const calendarId = calendarEvent.fields.find((field) => field.handle === 'calendar_id')
+    expect(calendarId?.isUnique).toBeUndefined()
+    expect(calendarId?.required).toBe(true)
+  })
+
+  it('declares global iCal recurrence definitions', () => {
+    const byHandle = Object.fromEntries(
+      calendarEvent.fields.map((field) => [field.handle, field]),
+    )
+    expect(byHandle.recurrence).toMatchObject({
+      type: 'object',
+      definition: 'calendar/recurrence',
+    })
+    expect(byHandle.recurring_event_id).toMatchObject({
+      definition: 'calendar/series_id',
+    })
+    expect(byHandle.original_start).toMatchObject({
+      definition: 'calendar/original_start',
+    })
   })
 })
 

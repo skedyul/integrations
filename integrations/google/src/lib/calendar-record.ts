@@ -40,6 +40,42 @@ export function recordFromGoogleSummary(
   }
 }
 
+/** Overlay CRM sync flags onto Google-listed calendars by calendar id. */
+export function overlayCrmCalendarState(
+  googleCalendars: GoogleCalendarRecord[],
+  crmCalendars: GoogleCalendarRecord[],
+): GoogleCalendarRecord[] {
+  const crmById = new Map(
+    crmCalendars
+      .filter((calendar) => calendar.calendar_id.length > 0)
+      .map((calendar) => [calendar.calendar_id, calendar]),
+  )
+
+  return googleCalendars.map((google) => {
+    const crm = crmById.get(google.calendar_id)
+    if (!crm) return google
+    return {
+      ...google,
+      id: crm.id || google.id,
+      sync_enabled: crm.sync_enabled ?? google.sync_enabled,
+      sync_direction: crm.sync_direction ?? google.sync_direction,
+      external_read_only: crm.external_read_only ?? google.external_read_only,
+      sync_token: crm.sync_token ?? google.sync_token,
+      watch_channel_id: crm.watch_channel_id ?? google.watch_channel_id,
+      watch_resource_id: crm.watch_resource_id ?? google.watch_resource_id,
+      watch_expiration: crm.watch_expiration ?? google.watch_expiration,
+      watch_token: crm.watch_token ?? google.watch_token,
+      last_synced_at: crm.last_synced_at ?? google.last_synced_at,
+    }
+  })
+}
+
+export function filterSyncEnabledCalendars(
+  calendars: GoogleCalendarRecord[],
+): GoogleCalendarRecord[] {
+  return calendars.filter((calendar) => calendar.sync_enabled === true)
+}
+
 export function asGoogleCalendarRecord(
   row: Record<string, unknown>,
 ): GoogleCalendarRecord {
