@@ -61,7 +61,7 @@ export default defineBatchOperation({
   handle: 'import_calendar_events',
   label: 'Import Calendar Events',
   description:
-    'Import events from Google calendars and cascade the parent calendar when its CRM map is configured.',
+    'Import events from sync-enabled Google calendars and cascade the parent calendar when its CRM map is configured.',
   entity: 'calendar_event',
   cascade: [
     { entity: 'calendar', order: 1, wave: 'setup' },

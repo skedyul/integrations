@@ -1,5 +1,10 @@
 import { describe, expect, it } from '@jest/globals'
-import { asGoogleCalendarRecord, recordFromGoogleSummary } from '../calendar-record'
+import {
+  asGoogleCalendarRecord,
+  filterSyncEnabledCalendars,
+  overlayCrmCalendarState,
+  recordFromGoogleSummary,
+} from '../calendar-record'
 
 describe('asGoogleCalendarRecord', () => {
   it('reads entity handles after CRM-map reverse translation', () => {
@@ -34,6 +39,41 @@ describe('asGoogleCalendarRecord', () => {
       calendar_id: 'work@group.calendar.google.com',
       summary: 'Work',
     })
+  })
+})
+
+describe('overlayCrmCalendarState', () => {
+  it('applies CRM sync_enabled so holiday calendars stay off', () => {
+    const merged = overlayCrmCalendarState(
+      [
+        {
+          id: 'primary',
+          calendar_id: 'avin@skedyul.it',
+          sync_enabled: true,
+        },
+        {
+          id: 'holidays',
+          calendar_id: 'en.nz#holiday@group.v.calendar.google.com',
+          sync_enabled: false,
+        },
+      ],
+      [
+        {
+          id: 'ins_personal',
+          calendar_id: 'avin@skedyul.it',
+          sync_enabled: true,
+        },
+        {
+          id: 'ins_holidays',
+          calendar_id: 'en.nz#holiday@group.v.calendar.google.com',
+          sync_enabled: false,
+        },
+      ],
+    )
+
+    expect(filterSyncEnabledCalendars(merged).map((calendar) => calendar.calendar_id)).toEqual([
+      'avin@skedyul.it',
+    ])
   })
 })
 

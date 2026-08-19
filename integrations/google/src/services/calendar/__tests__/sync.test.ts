@@ -10,7 +10,7 @@ describe('calendar sync helpers', () => {
     expect('emitGoogleEvent' in sync).toBe(false)
   })
 
-  it('loads calendars from the Google API, not CRM or instance.*', () => {
+  it('loads calendars from the Google API and overlays CRM sync_enabled', () => {
     expect(typeof sync.loadGoogleCalendarRecord).toBe('function')
     expect(typeof sync.loadLinkedGoogleCalendars).toBe('function')
     expect(typeof sync.loadGoogleCalendarsFromGoogle).toBe('function')
@@ -31,5 +31,7 @@ describe('sync.ts source', () => {
     expect(source).not.toContain('instance.list')
     expect(source).not.toContain('instance.create')
     expect(source).not.toContain('instance.update')
+    expect(source).toContain('listCrmCalendarRecords')
+    expect(source).toContain('filterSyncEnabledCalendars')
   })
 })
