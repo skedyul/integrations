@@ -66,7 +66,8 @@ Phone number provisioning requires regulatory compliance approval:
 
 | Tool | Description |
 |------|-------------|
-| `send_sms` | Send an SMS message to a subscriber |
+| `send_sms` | Send an SMS message to a subscriber. Rejects invalid recipient numbers before calling Twilio. |
+| `send_sms_batch` | Send pre-rendered SMS to many recipients via Twilio Bulk Messaging. Invalid E.164 numbers are dropped from the Twilio request (`rejectedCount`); valid recipients are still sent. |
 | `submit_compliance_document` | Submit business documents for regulatory compliance |
 | `check_compliance_status` | Check the status of a compliance submission |
 | `submit_new_phone_number` | Purchase a new Twilio phone number |
@@ -237,6 +238,10 @@ skedyul dev serve --workplace my-test-clinic --tunnel-url https://your-tunnel.ng
 ### "Compliance must be approved"
 
 Phone numbers require an approved compliance record. Submit documents and wait for Twilio approval.
+
+### Bulk send failed because of one invalid number
+
+`send_sms_batch` validates each recipient with libphonenumber before calling Twilio. Invalid numbers (for example `+616584182127`) are excluded from the bulk POST so they cannot fail the rest of the chunk.
 
 ### SMS not being received
 
