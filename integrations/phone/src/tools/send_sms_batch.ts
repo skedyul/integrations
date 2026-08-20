@@ -16,6 +16,7 @@ import {
   parseCostPerSmsCents,
   segmentsToCostCents,
 } from '../lib/sms_segments'
+import { partitionRecipients } from '../lib/validate_recipient_address'
 
 const TWILIO_BULK_MESSAGES_URL = 'https://comms.twilio.com/v1/Messages'
 const MAX_RECIPIENTS = 10_000
@@ -66,6 +67,7 @@ type MessageBulkSendOutput = z.infer<typeof MessageBulkSendOutputSchema>
 function buildEstimateBilling(
   input: MessageBulkSendInput,
   pricePerSegmentCents: number,
+  recipients: MessageBulkSendInput['recipients'],
 ) {
   if (input.estimateSummary) {
     const {
@@ -112,7 +114,7 @@ function buildEstimateBilling(
     }
   }
 
-  const segmentCounts = input.recipients.map(
+  const segmentCounts = recipients.map(
     (recipient) => countSmsSegments(recipient.renderedBody).segments,
   )
   const totalSegments = segmentCounts.reduce((sum, value) => sum + value, 0)
@@ -131,13 +133,13 @@ function buildEstimateBilling(
       costCentsHigh: costCents,
       costCentsExpected: costCents,
       currency: 'AUD',
-      deliverableCount: input.recipients.length,
+      deliverableCount: recipients.length,
       estimation: createEstimation({
-        deliverableCount: input.recipients.length,
+        deliverableCount: recipients.length,
         cost,
       }),
     },
-    acceptedCount: input.recipients.length,
+    acceptedCount: recipients.length,
   }
 }
 
@@ -167,22 +169,27 @@ export const sendSmsBatchRegistry: ToolDefinition<
       )
     }
 
-    const invalidRecipient = input.recipients.find(
-      (r) => !r.address?.trim() || !r.renderedBody?.trim(),
-    )
-    if (invalidRecipient) {
+    const { valid, invalid } = partitionRecipients(input.recipients)
+    if (valid.length === 0) {
       return createValidationError(
-        'Cannot send SMS batch: each recipient must have a non-empty address and renderedBody',
+        'Cannot send SMS batch: no recipients have a valid phone number and message body',
       )
     }
 
+    const rejectedCount = invalid.length
+
     if (context.mode === 'estimate') {
       const pricePerSegmentCents = parseCostPerSmsCents(context.env.COST_PER_SMS)
-      const { billing, acceptedCount } = buildEstimateBilling(input, pricePerSegmentCents)
+      const { billing, acceptedCount } = buildEstimateBilling(
+        input,
+        pricePerSegmentCents,
+        valid,
+      )
       return createSuccessResponse(
         {
           status: 'accepted' as const,
           acceptedCount,
+          rejectedCount,
         },
         { billing },
       )
@@ -193,9 +200,10 @@ export const sendSmsBatchRegistry: ToolDefinition<
         {
           status: 'accepted' as const,
           externalChunkId: createMockExternalChunkId(),
-          acceptedCount: input.recipients.length,
+          acceptedCount: valid.length,
+          rejectedCount,
         },
-        { billing: { credits: input.recipients.length } },
+        { billing: { credits: valid.length } },
       )
     }
 
@@ -217,7 +225,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
         // Twilio Bulk Messaging requires a default filter on every template variable.
         text: "{{ body | default: '' }}",
       },
-      to: input.recipients.map((recipient) => ({
+      to: valid.map((recipient) => ({
         address: recipient.address.trim(),
         channel: 'PHONE',
         variables: {
@@ -274,9 +282,10 @@ export const sendSmsBatchRegistry: ToolDefinition<
         {
           status: 'accepted' as const,
           externalChunkId: response.externalChunkId,
-          acceptedCount: input.recipients.length,
+          acceptedCount: valid.length,
+          rejectedCount,
         },
-        { billing: { credits: input.recipients.length } },
+        { billing: { credits: valid.length } },
       )
     } catch (err) {
       return createPhoneError(err instanceof Error ? err.message : 'Failed to send SMS batch')

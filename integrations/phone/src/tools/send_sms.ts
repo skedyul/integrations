@@ -13,6 +13,7 @@ import {
   isMockOutboundMessagesEnabled,
 } from '../lib/mock_outbound'
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
+import { isValidRecipientAddress } from '../lib/validate_recipient_address'
 
 /**
  * Send an SMS message via Twilio.
@@ -25,10 +26,9 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,
   handler: async (input, context) => {
-    // Validate that we have a valid recipient phone number
-    if (!input.subscription.identifierValue?.trim()) {
+    if (!isValidRecipientAddress(input.subscription.identifierValue ?? '')) {
       return createValidationError(
-        'Cannot send SMS: subscription.identifierValue (recipient phone number) is empty or missing',
+        'Cannot send SMS: subscription.identifierValue is not a valid phone number',
       )
     }
 
