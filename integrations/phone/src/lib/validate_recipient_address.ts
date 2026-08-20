@@ -1,4 +1,10 @@
-import { parsePhoneNumber } from 'libphonenumber-js'
+import { createRequire } from 'node:module'
+import type { parsePhoneNumberFromString as ParsePhoneNumberFromString } from 'libphonenumber-js'
+
+const require = createRequire(import.meta.url)
+const { parsePhoneNumberFromString } = require('libphonenumber-js') as {
+  parsePhoneNumberFromString: typeof ParsePhoneNumberFromString
+}
 
 export type RecipientAddressInput = {
   address: string
@@ -8,13 +14,7 @@ export type RecipientAddressInput = {
 export function isValidRecipientAddress(value: string): boolean {
   const trimmed = value.trim()
   if (!trimmed) return false
-
-  try {
-    const parsed = parsePhoneNumber(trimmed)
-    return parsed.isValid()
-  } catch {
-    return false
-  }
+  return parsePhoneNumberFromString(trimmed)?.isValid() === true
 }
 
 export function isSendableRecipient(recipient: RecipientAddressInput): boolean {
