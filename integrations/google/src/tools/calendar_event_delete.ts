@@ -18,10 +18,13 @@ import {
   createSuccessResponse,
   createValidationError,
 } from '../lib/response'
+import { shouldEmitGoogleAppEvent } from '../lib/calendar_event_sync'
 
 const CalendarEventDeleteInputSchema = z.object({
   calendar_id: z.string().min(1),
   event_id: z.string().min(1),
+  emit_app_event: z.boolean().optional(),
+  sync_origin: z.enum(['skedyul', 'google']).optional(),
 })
 
 const CalendarEventDeleteOutputSchema = z.object({
@@ -64,21 +67,23 @@ export const calendarEventDeleteRegistry: ToolDefinition<
 
       await deleteGoogleCalendarEvent(client, input.calendar_id, input.event_id)
 
-      await createGoogleEvent(
-        'calendar.event.deleted',
-        {
-          calendar: {
-            calendar_id: input.calendar_id,
-            summary: record.summary || input.calendar_id,
+      if (shouldEmitGoogleAppEvent(input)) {
+        await createGoogleEvent(
+          'calendar.event.deleted',
+          {
+            calendar: {
+              calendar_id: input.calendar_id,
+              summary: record.summary || input.calendar_id,
+            },
+            event: normalized,
+            sync: {
+              direction: record.sync_direction ?? 'both',
+              trigger: 'tool',
+            },
           },
-          event: normalized,
-          sync: {
-            direction: record.sync_direction ?? 'both',
-            trigger: 'tool',
-          },
-        },
-        { trigger: 'tool' },
-      )
+          { trigger: 'tool' },
+        )
+      }
 
       return createSuccessResponse({
         calendar_id: input.calendar_id,

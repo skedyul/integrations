@@ -1,0 +1,223 @@
+name: Sync Google Calendar Event To Google
+handle: sync-google-calendar-event-to-google
+description: "Push CRM calendar event creates/updates/deletes to Google via install CRM maps"
+
+variables: {}
+
+inputs:
+  data:
+    type: "@crm/event/*"
+    label: Calendar event
+    description: CRM instance payload for the mapped calendar event model
+    required: true
+
+outputs:
+  google-event-id:
+    type: string
+    description: Google Calendar event id after create or update
+    value: "{{ steps.create-event.outputs.response.data.event.google_event_id | default: steps.update-event.outputs.response.data.event.google_event_id | default: steps.unformat-event.outputs.response.data.google_event_id }}"
+
+steps:
+  unformat-event:
+    type: task
+    name: Unformat CRM event for Google
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | google: 'present', 'calendar_event' }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {{ inputs.data.record | google: "unformat", "calendar_event" | json }}
+
+  load-calendar:
+    needs: [unformat-event]
+    type: task
+    name: Load related calendar
+    timeout: 1 minute
+    if: "{{ steps.unformat-event.outputs.response.data.calendar != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.find
+    inputs:
+      id: "{{ steps.unformat-event.outputs.response.data.calendar }}"
+
+  unformat-calendar:
+    needs: [load-calendar]
+    on-parent-skip: run
+    type: task
+    name: Unformat related calendar
+    timeout: 30 seconds
+    if: "{{ steps.load-calendar.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {{ steps.load-calendar.outputs.response.data | google: "unformat", "calendar" | json }}
+
+  resolve-calendar:
+    needs: [unformat-event, unformat-calendar]
+    on-parent-skip: run
+    type: task
+    name: Resolve Google calendar id and sync policy
+    timeout: 30 seconds
+    if: "{{ steps.unformat-event.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign event = steps.unformat-event.outputs.response.data -%}
+        {%- assign calendar = steps.unformat-calendar.outputs.response.data -%}
+        {%- assign calendar_id = event.calendar_id -%}
+        {%- if calendar_id == blank -%}{%- assign calendar_id = calendar.google_calendar_id -%}{%- endif -%}
+        {%- assign read_only = false -%}
+        {%- if calendar.external_read_only == true or calendar.external_read_only == 'true' -%}
+          {%- assign read_only = true -%}
+        {%- endif -%}
+        {%- assign skip_outbound = false -%}
+        {%- if calendar.sync_direction == 'pull' or read_only -%}
+          {%- assign skip_outbound = true -%}
+        {%- endif -%}
+        {
+          "calendar_id": {{ calendar_id | json }},
+          "sync_direction": {{ calendar.sync_direction | json }},
+          "external_read_only": {{ calendar.external_read_only | json }},
+          "skip_outbound": {{ skip_outbound | json }}
+        }
+
+  decide-action:
+    needs: [resolve-calendar]
+    type: task
+    name: Choose create, update, or delete
+    timeout: 30 seconds
+    if: "{{ steps.resolve-calendar.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign event = steps.unformat-event.outputs.response.data -%}
+        {%- assign calendar = steps.resolve-calendar.outputs.response.data -%}
+        {%- assign action = 'skip' -%}
+        {%- if calendar.calendar_id != blank and calendar.skip_outbound != true -%}
+          {%- if event.google_event_id != blank -%}
+            {%- if context.event.type == 'instance.deleted' -%}
+              {%- assign action = 'delete' -%}
+            {%- elsif event.status == 'cancelled' -%}
+              {%- assign action = 'delete' -%}
+            {%- else -%}
+              {%- assign action = 'update' -%}
+            {%- endif -%}
+          {%- elsif context.event.type != 'instance.deleted' and event.summary != blank and event.start != blank and event.end != blank -%}
+            {%- assign action = 'create' -%}
+          {%- endif -%}
+        {%- endif -%}
+        { "action": {{ action | json }} }
+
+  delete-event:
+    needs: [decide-action]
+    type: task
+    name: Delete Google Calendar event
+    timeout: 2 minutes
+    if: "{{ steps.decide-action.outputs.response.data.action == 'delete' }}"
+    service:
+      name: skedyul/app
+      cmd: tool.call
+      options:
+        app: google
+        toolName: calendar_event_delete
+        timeout: 120000
+    inputs:
+      calendar_id: "{{ steps.resolve-calendar.outputs.response.data.calendar_id }}"
+      event_id: "{{ steps.unformat-event.outputs.response.data.google_event_id }}"
+      sync_origin: skedyul
+      emit_app_event: false
+
+  update-event:
+    needs: [decide-action]
+    type: task
+    name: Update Google Calendar event
+    timeout: 2 minutes
+    if: "{{ steps.decide-action.outputs.response.data.action == 'update' }}"
+    service:
+      name: skedyul/app
+      cmd: tool.call
+      options:
+        app: google
+        toolName: calendar_event_update
+        timeout: 120000
+    inputs:
+      calendar_id: "{{ steps.resolve-calendar.outputs.response.data.calendar_id }}"
+      event_id: "{{ steps.unformat-event.outputs.response.data.google_event_id }}"
+      summary: "{{ steps.unformat-event.outputs.response.data.summary }}"
+      description: "{{ steps.unformat-event.outputs.response.data.description }}"
+      location: "{{ steps.unformat-event.outputs.response.data.location }}"
+      start: "{{ steps.unformat-event.outputs.response.data.start }}"
+      end: "{{ steps.unformat-event.outputs.response.data.end }}"
+      timezone: "{{ steps.unformat-event.outputs.response.data.timezone }}"
+      all_day: "{{ steps.unformat-event.outputs.response.data.all_day }}"
+      recurrence: "{{ steps.unformat-event.outputs.response.data.recurrence }}"
+      sync_origin: skedyul
+      emit_app_event: false
+      skedyul_instance_id: "{{ inputs.data.record.id }}"
+
+  create-event:
+    needs: [decide-action]
+    type: task
+    name: Create Google Calendar event
+    timeout: 2 minutes
+    if: "{{ steps.decide-action.outputs.response.data.action == 'create' }}"
+    service:
+      name: skedyul/app
+      cmd: tool.call
+      options:
+        app: google
+        toolName: calendar_event_create
+        timeout: 120000
+    inputs:
+      calendar_id: "{{ steps.resolve-calendar.outputs.response.data.calendar_id }}"
+      summary: "{{ steps.unformat-event.outputs.response.data.summary }}"
+      description: "{{ steps.unformat-event.outputs.response.data.description }}"
+      location: "{{ steps.unformat-event.outputs.response.data.location }}"
+      start: "{{ steps.unformat-event.outputs.response.data.start }}"
+      end: "{{ steps.unformat-event.outputs.response.data.end }}"
+      timezone: "{{ steps.unformat-event.outputs.response.data.timezone }}"
+      all_day: "{{ steps.unformat-event.outputs.response.data.all_day }}"
+      recurrence: "{{ steps.unformat-event.outputs.response.data.recurrence }}"
+      sync_origin: skedyul
+      emit_app_event: false
+      skedyul_instance_id: "{{ inputs.data.record.id }}"
+
+  format-created:
+    needs: [create-event]
+    type: task
+    name: Format created Google ids for CRM write-back
+    timeout: 30 seconds
+    if: "{{ steps.create-event.outputs.response.data.event.google_event_id != blank and inputs.data.record.id != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign created = steps.create-event.outputs.response.data.event -%}
+        {{ created | google: "format", "calendar_event" | json }}
+
+  write-back-ids:
+    needs: [format-created]
+    type: task
+    name: Write Google event id back to CRM
+    timeout: 2 minutes
+    if: "{{ steps.format-created.outputs.response.data != blank and inputs.data.record.id != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.update
+    inputs:
+      instanceId: "{{ inputs.data.record.id }}"
+      data: "{{ steps.format-created.outputs.response.data }}"

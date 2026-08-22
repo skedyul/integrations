@@ -54,3 +54,5 @@ export const calendarEventTypes: GoogleAppEventDefinition[] = [
 /** Bundled sync workflow handles (created on Google app install). */
 export const calendarWorkflowHandle = 'sync-google-calendar-from-webhook'
 export const calendarEventWorkflowHandle = 'sync-google-calendar-event-from-webhook'
+export const calendarEventOutboundWorkflowHandle =
+  'sync-google-calendar-event-to-google'

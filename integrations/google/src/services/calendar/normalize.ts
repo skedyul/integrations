@@ -1,5 +1,6 @@
 import type { calendar_v3 } from 'googleapis'
 import type { GoogleEventEntity } from '../../events/types'
+import { readSkedyulExtendedProperties } from '../../lib/calendar_event_sync'
 
 function readDateTime(
   value: calendar_v3.Schema$EventDateTime | undefined | null,
@@ -27,6 +28,8 @@ export function normalizeGoogleCalendarEvent(
 
   const originalStart = readDateTime(event.originalStartTime)
 
+  const skedyul = readSkedyulExtendedProperties(event.extendedProperties?.private)
+
   return {
     google_event_id: event.id || '',
     status: event.status || 'confirmed',
@@ -47,6 +50,12 @@ export function normalizeGoogleCalendarEvent(
     html_link: event.htmlLink ?? null,
     updated_at: event.updated ?? null,
     etag: event.etag ?? null,
+    ...(skedyul.origin || skedyul.skedyul_instance_id
+      ? {
+          origin: skedyul.origin,
+          skedyul_instance_id: skedyul.skedyul_instance_id,
+        }
+      : {}),
   }
 }
 
