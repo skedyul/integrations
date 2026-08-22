@@ -28,7 +28,8 @@ src/
 │   └── hooks/
 │       ├── install.ts          # Install handler (auto-provisions address)
 │       └── provision.ts        # Provision handler
-└── registries.ts               # Tool + webhook exports
+├── registries.ts               # Tool + webhook exports
+└── provision/                  # CRM, channels, pages, workflows
 ```
 
 ## Tools
@@ -49,6 +50,20 @@ src/
 - **Signature Verification**: Validates Mailgun webhook signatures
 - **Attachment Processing**: `receiveMessage` → download/upload via `file.upload` → `attachFilesToMessage` (emits `thread.attachment.received`)
 - **Contact Association**: Links emails to contacts via email address
+
+## Workflows
+
+| Workflow | Description |
+|----------|-------------|
+| `transcribe-m4a-attachment` | Reads an inbound email `.m4a` attachment, transcribes it with `skedyul/ai` `object.generate` (`mode: audio`), and returns `{ success: true/false }` |
+
+Subscribe the workplace trigger to `thread.attachment.received` and map:
+
+- `file-id` ← `data.attachment.fileId`
+- `attachment-name` ← `data.attachment.name` (skips the transcribe step unless the name contains `.m4a`)
+- optional `thread-id` / `message-id` from `resource.id` / `data.message.id`
+
+Condition example: `{{ data.attachment.name contains '.m4a' or data.attachment.mimeType contains 'm4a' }}`
 
 ## Models
 
