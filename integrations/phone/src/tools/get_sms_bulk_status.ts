@@ -9,8 +9,11 @@ import {
   isMockOutboundMessagesEnabled,
 } from '../lib/mock_outbound'
 import { withTwilioAuth } from '../lib/twilio_client'
-
-const TWILIO_BULK_MESSAGES_URL = 'https://comms.twilio.com/v1/Messages'
+import {
+  TWILIO_BULK_MESSAGES_URL,
+  buildBulkMessagesPageUrl,
+  resolveBulkMessagesNextPageUrl,
+} from '../lib/bulk_messages_pagination'
 
 const MessageBulkStatusInputSchema = z.object({
   channel: z.object({
@@ -173,14 +176,23 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
         )) as TwilioOperationResponse
 
         const messages: MessageBulkStatusOutput['messages'] = []
-        let pageUrl: string | null =
-          `${TWILIO_BULK_MESSAGES_URL}?operation_id=${encodeURIComponent(externalChunkId)}`
+        let pageUrl: string | null = buildBulkMessagesPageUrl({
+          operationId: externalChunkId,
+        })
 
         while (pageUrl) {
-          const body = (await fetchJson(pageUrl, authHeader)) as {
+          let body: {
             messages?: TwilioBulkMessageRecord[]
             pagination?: { next?: string | null }
             meta?: { next_page_url?: string | null }
+          }
+          try {
+            body = (await fetchJson(pageUrl, authHeader)) as typeof body
+          } catch (error) {
+            if (messages.length > 0) {
+              break
+            }
+            throw error
           }
 
           for (const record of body.messages ?? []) {
@@ -195,8 +207,11 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
             })
           }
 
-          pageUrl =
-            body.pagination?.next ?? body.meta?.next_page_url ?? null
+          pageUrl = resolveBulkMessagesNextPageUrl({
+            operationId: externalChunkId,
+            paginationNext: body.pagination?.next,
+            nextPageUrl: body.meta?.next_page_url,
+          })
         }
 
         const status = (operation.status ?? 'UNKNOWN').toUpperCase()
