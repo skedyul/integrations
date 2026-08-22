@@ -10,7 +10,6 @@ import env from './env'
 import { models, relationships } from './crm'
 import * as channels from './channels'
 import * as pages from './pages'
-import * as workflows from './workflows'
 import navigation from './pages/navigation'
 
 const config: ProvisionConfig = {
@@ -19,7 +18,6 @@ const config: ProvisionConfig = {
   models: Object.values(models),
   channels: Object.values(channels),
   pages: Object.values(pages),
-  workflows: Object.values(workflows),
   relationships,
 }
 
