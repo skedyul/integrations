@@ -29,11 +29,14 @@ export const setupCalendarEventsStep = defineSetupStep({
   handle: 'setup_calendar_events',
   label: 'Set up calendar events',
   description:
-    'Map Google Calendar events to your CRM, then use Import on the Events hub for history. Live event wiring is for later single changes, not pull sync.',
+    'Map Google Calendar events to your CRM, then use Import on the Events hub for history. Live inbound wiring is for later single Google changes; outbound CRM → Google uses the bundled two-way workflow.',
   kind: 'crm',
   requires: ['setup_calendars'],
   entities: ['calendar_event'],
-  workflowHandles: ['sync-google-calendar-event-from-webhook'],
+  workflowHandles: [
+    'sync-google-calendar-event-from-webhook',
+    'sync-google-calendar-event-to-google',
+  ],
   listenToCrm: true,
   capabilities: ['crm.calendar_event', 'realtime.calendar_event'],
   href: '/events',

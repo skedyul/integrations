@@ -22,6 +22,7 @@ export interface GoogleCalendarEventInput {
   all_day?: boolean
   attendees?: string[]
   recurrence?: string[]
+  extendedProperties?: { private?: Record<string, string> }
 }
 
 export interface GoogleFreeBusyInterval {
@@ -157,6 +158,7 @@ export async function createGoogleCalendarEvent(
         end: buildEventDateTime(input, 'end'),
         attendees: input.attendees?.map((email) => ({ email })),
         recurrence: input.recurrence,
+        extendedProperties: input.extendedProperties,
       },
     })
 
@@ -189,6 +191,7 @@ export async function updateGoogleCalendarEvent(
         end: buildEventDateTime(input, 'end'),
         attendees: input.attendees?.map((email) => ({ email })),
         recurrence: input.recurrence,
+        extendedProperties: input.extendedProperties,
       },
     })
 

@@ -78,6 +78,8 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 `sync-google-calendar-event-from-webhook` upserts the parent calendar first, then the event (with the calendar relationship) via `| google: "format", "calendar_event"`.
 
+`sync-google-calendar-event-to-google` listens to `@crm/event/*` (resolved to the mapped workplace model at install), unformats the CRM record with `| google: "unformat", "calendar_event"`, and creates/updates/deletes the Google event. Writes are tagged `sync_origin: skedyul` so they do not emit `app.google.calendar.event.*` (no inbound echo / duplicate CRM rows). Platform CRM events carry `meta.origin.appHandle`; outbound subscriptions skip writes that originated from this install.
+
 ## Tools
 
 ### Connection / setup
@@ -126,5 +128,5 @@ pnpm build
 - Per-install calendar identity lives on the workplace `calendar` CRM map after Import. Tools, watches, and batch jobs list calendars from the Google API — they do not call `instance.*` on `calendar`. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
 - CRM-facing `calendar` and `calendar_event` entities are mapped per install; events relate to calendars so workplace Calendar LIST view can load events from multiple calendars in one query
 - Live `calendar.event.*` workflows stay for a later 1:1 payload, not for pull/history
-- CRM → Google two-way sync is not automatic; write tools exist for agents/manual calls
+- CRM → Google two-way sync is the bundled `sync-google-calendar-event-to-google` workflow (calendar drag, spreadsheet, and form writes share the same `instance.*` path). Recurring occurrence-vs-series Google edits are out of scope; stored master/exception rows sync by their Google event id.
 - Gmail and Drive modules exist as stubs only (`src/services/gmail`, `src/services/drive`)

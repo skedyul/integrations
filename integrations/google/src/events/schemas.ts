@@ -39,6 +39,8 @@ export const GoogleEventEntitySchema = z
     html_link: nullableString,
     updated_at: nullableString,
     etag: nullableString,
+    origin: nullableString.optional(),
+    skedyul_instance_id: nullableString.optional(),
   })
   .strict()
 

@@ -42,6 +42,23 @@ describe('normalizeGoogleCalendarEvent', () => {
     })
   })
 
+  it('surfaces Skedyul origin from private extended properties', () => {
+    const normalized = normalizeGoogleCalendarEvent({
+      id: 'evt_origin',
+      status: 'confirmed',
+      start: { dateTime: '2026-08-22T09:00:00.000Z' },
+      end: { dateTime: '2026-08-22T10:00:00.000Z' },
+      extendedProperties: {
+        private: {
+          skedyulOrigin: 'skedyul',
+          skedyulInstanceId: 'ins_1',
+        },
+      },
+    })
+    expect(normalized.origin).toBe('skedyul')
+    expect(normalized.skedyul_instance_id).toBe('ins_1')
+  })
+
   it('normalizes all-day events', () => {
     const event: calendar_v3.Schema$Event = {
       id: 'evt_2',

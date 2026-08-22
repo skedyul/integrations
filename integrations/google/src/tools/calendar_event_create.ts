@@ -15,6 +15,10 @@ import {
   createSuccessResponse,
   createValidationError,
 } from '../lib/response'
+import {
+  buildGoogleEventExtendedProperties,
+  shouldEmitGoogleAppEvent,
+} from '../lib/calendar_event_sync'
 
 const CalendarEventCreateInputSchema = z.object({
   calendar_id: z.string().min(1),
@@ -24,9 +28,22 @@ const CalendarEventCreateInputSchema = z.object({
   start: z.string().min(1),
   end: z.string().min(1),
   timezone: z.string().optional(),
-  all_day: z.boolean().optional(),
+  all_day: z
+    .union([
+      z.boolean(),
+      z.enum(['true', 'false']).transform((value) => value === 'true'),
+    ])
+    .optional(),
   attendees: z.array(z.string().email()).optional(),
-  recurrence: z.array(z.string()).optional(),
+  recurrence: z
+    .union([
+      z.array(z.string()),
+      z.object({ lines: z.array(z.string()) }).transform((value) => value.lines),
+    ])
+    .optional(),
+  emit_app_event: z.boolean().optional(),
+  sync_origin: z.enum(['skedyul', 'google']).optional(),
+  skedyul_instance_id: z.string().optional(),
 })
 
 const CalendarEventCreateOutputSchema = z.object({
@@ -81,24 +98,29 @@ export const calendarEventCreateRegistry: ToolDefinition<
       assertCalendarWritable(record)
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
-      const created = await createGoogleCalendarEvent(client, input.calendar_id, input)
+      const created = await createGoogleCalendarEvent(client, input.calendar_id, {
+        ...input,
+        extendedProperties: buildGoogleEventExtendedProperties(input),
+      })
       const normalized = normalizeGoogleCalendarEvent(created)
 
-      await createGoogleEvent(
-        'calendar.event.created',
-        {
-          calendar: {
-            calendar_id: input.calendar_id,
-            summary: record.summary || input.calendar_id,
+      if (shouldEmitGoogleAppEvent(input)) {
+        await createGoogleEvent(
+          'calendar.event.created',
+          {
+            calendar: {
+              calendar_id: input.calendar_id,
+              summary: record.summary || input.calendar_id,
+            },
+            event: normalized,
+            sync: {
+              direction: record.sync_direction ?? 'both',
+              trigger: 'tool',
+            },
           },
-          event: normalized,
-          sync: {
-            direction: record.sync_direction ?? 'both',
-            trigger: 'tool',
-          },
-        },
-        { trigger: 'tool' },
-      )
+          { trigger: 'tool' },
+        )
+      }
 
       return createSuccessResponse({ event: normalized })
     } catch (error) {

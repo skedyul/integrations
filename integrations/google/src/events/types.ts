@@ -35,6 +35,8 @@ export interface GoogleEventEntity {
   html_link: string | null
   updated_at: string | null
   etag: string | null
+  origin?: string | null
+  skedyul_instance_id?: string | null
 }
 
 export interface GoogleEventSyncContext {
