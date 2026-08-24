@@ -7,6 +7,8 @@ export type GoogleAppEventDefinition = {
   label: string
   description: string
   icon: string
+  sourceType?: string
+  recommendedWorkflowHandle?: string
 }
 
 export const calendarTypes: GoogleAppEventDefinition[] = [
@@ -48,6 +50,15 @@ export const calendarEventTypes: GoogleAppEventDefinition[] = [
     label: 'Calendar event deleted',
     description: 'A Google Calendar event was deleted or cancelled',
     icon: 'CalendarX',
+  },
+  {
+    type: 'instance.updated',
+    label: 'CRM event updated',
+    description:
+      'A mapped workplace event changed. Unformat through the install map and patch Google.',
+    icon: 'Pencil',
+    sourceType: 'CRM',
+    recommendedWorkflowHandle: 'push-calendar-event-rename-to-google',
   },
 ]
 
