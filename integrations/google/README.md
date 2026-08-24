@@ -78,7 +78,7 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 `sync-google-calendar-event-from-webhook` upserts the parent calendar first, then the event (with the calendar relationship) via `| google: "format", "calendar_event"`.
 
-`push-calendar-event-rename-to-google` listens for CRM `calendar_event` title changes (`@crm/calendar_event/updated`), unformats the record with `| google: "unformat", "calendar_event"`, and patches Google via `calendar_event_update`. Setup provisions an origin skip so Google-originated upserts do not loop.
+`push-calendar-event-rename-to-google` listens for CRM title changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update`. Setup provisions an origin skip so Google-originated upserts do not loop.
 
 ## Tools
 

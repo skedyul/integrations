@@ -11,13 +11,15 @@ const yamlPath = join(
 describe('push-calendar-event-rename-to-google', () => {
   const yaml = readFileSync(yamlPath, 'utf8')
 
-  it('subscribes to CRM calendar_event updates, not Google inbound events', () => {
-    expect(yaml).toContain('type: "@crm/calendar_event/updated"')
+  it('subscribes to any mapped CRM model update, not Google inbound events', () => {
+    expect(yaml).toContain('type: "@crm/*/updated"')
+    expect(yaml).not.toContain('@crm/calendar_event/updated')
     expect(yaml).not.toContain('@app/google/calendar/event')
   })
 
-  it('unformats the CRM row and patches Google with the new title only', () => {
-    expect(yaml).toContain('google: "unformat", "calendar_event"')
+  it('unformats the CRM row via the trigger-selected model and patches Google with the new title only', () => {
+    expect(yaml).toContain('google: "unformat", inputs.data.model')
+    expect(yaml).toContain("'present', inputs.data.model")
     expect(yaml).toContain('toolName: calendar_event_update')
     expect(yaml).toContain('summary: "{{ steps.build-update.outputs.response.data.summary }}"')
     expect(yaml).not.toContain('instance.upsertMany')

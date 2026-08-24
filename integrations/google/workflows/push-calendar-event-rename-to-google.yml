@@ -1,14 +1,14 @@
 name: Push Calendar Event Rename to Google
 handle: push-calendar-event-rename-to-google
-description: "When a mapped calendar event title changes in CRM, patch the Google Calendar event summary. Skips Google-originated writes so import and inbound sync do not loop."
+description: "When a mapped CRM record title changes, unformat through the install map and patch the Google Calendar event summary. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
 inputs:
   data:
-    type: "@crm/calendar_event/updated"
-    label: Calendar event
-    description: Workplace calendar_event instance.updated payload (before/after/changedFields)
+    type: "@crm/*/updated"
+    label: CRM record
+    description: Workplace instance.updated payload for the model bound on the trigger (before/after/changedFields)
     required: true
 
 outputs:
@@ -25,17 +25,17 @@ steps:
   build-update:
     type: task
     name: Build Google event patch
-    description: Unformat the CRM record through the calendar_event map and keep title-only patches
+    description: Unformat the CRM record through the map for the trigger-selected model and keep title-only patches
     timeout: 30 seconds
-    if: "{{ 'model_handle' | google: 'present', 'calendar_event' }}"
+    if: "{{ 'model_handle' | google: 'present', inputs.data.model }}"
     service:
       name: skedyul/tools
       cmd: liquid.render
     inputs:
       outputFormat: json
       template: |
-        {%- assign before = inputs.data.before | google: "unformat", "calendar_event" -%}
-        {%- assign after = inputs.data.after | google: "unformat", "calendar_event" -%}
+        {%- assign before = inputs.data.before | google: "unformat", inputs.data.model -%}
+        {%- assign after = inputs.data.after | google: "unformat", inputs.data.model -%}
         {%- assign before_summary = before.summary -%}
         {%- assign after_summary = after.summary -%}
         {%- if before_summary[0] != blank and before_summary[1] == blank -%}
