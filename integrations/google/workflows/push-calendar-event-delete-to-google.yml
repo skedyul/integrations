@@ -1,0 +1,70 @@
+name: Push Calendar Event Delete to Google
+handle: push-calendar-event-delete-to-google
+description: "When a mapped CRM record is deleted, unformat through the install map and delete the corresponding Google Calendar event. Skips Google-originated writes so import and inbound sync do not loop."
+
+variables: {}
+
+inputs:
+  data:
+    type: "@crm/*/deleted"
+    label: CRM record
+    description: Workplace instance.deleted payload for the model bound on the trigger
+    required: true
+
+outputs:
+  google-event-id:
+    type: string
+    description: Google event id that was deleted
+    value: "{{ steps.build-delete.outputs.response.data.event_id }}"
+  deleted:
+    type: boolean
+    description: Whether the event was successfully deleted
+    value: "{{ steps.delete-google.outputs.response.data.deleted }}"
+
+steps:
+  build-delete:
+    type: task
+    name: Build Google event delete request
+    description: Unformat the CRM record through the map to get Google event identifiers
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | google: 'present', inputs.data.model }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign record = inputs.data.record | google: "unformat", inputs.data.model -%}
+        {%- assign event_id = record.google_event_id -%}
+        {%- if event_id[0] != blank and event_id[1] == blank -%}
+        {%- assign event_id = event_id[0] -%}
+        {%- endif -%}
+        {%- assign calendar_id = record.calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if event_id != blank and calendar_id != blank -%}
+        {
+          "calendar_id": {{ calendar_id | json }},
+          "event_id": {{ event_id | json }}
+        }
+        {%- else -%}
+        {}
+        {%- endif -%}
+
+  delete-google:
+    needs: [build-delete]
+    type: task
+    name: Delete Google Calendar event
+    description: Delete the Google Calendar event via calendar_event_delete
+    timeout: 2 minutes
+    if: "{{ steps.build-delete.outputs.response.data.event_id != blank }}"
+    service:
+      name: skedyul/app
+      cmd: tool.call
+      options:
+        app: google
+        toolName: calendar_event_delete
+    inputs:
+      calendar_id: "{{ steps.build-delete.outputs.response.data.calendar_id }}"
+      event_id: "{{ steps.build-delete.outputs.response.data.event_id }}"

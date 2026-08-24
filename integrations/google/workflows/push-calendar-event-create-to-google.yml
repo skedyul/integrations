@@ -1,0 +1,78 @@
+name: Push Calendar Event Create to Google
+handle: push-calendar-event-create-to-google
+description: "When a mapped CRM record is created, unformat through the install map and create a new Google Calendar event. Skips Google-originated writes so import and inbound sync do not loop."
+
+variables: {}
+
+inputs:
+  data:
+    type: "@crm/*/created"
+    label: CRM record
+    description: Workplace instance.created payload for the model bound on the trigger
+    required: true
+
+outputs:
+  google-event-id:
+    type: string
+    description: Google event id that was created
+    value: "{{ steps.create-google.outputs.response.data.event.google_event_id }}"
+  summary:
+    type: string
+    description: Title on the Google event after creation
+    value: "{{ steps.create-google.outputs.response.data.event.summary }}"
+
+steps:
+  build-create:
+    type: task
+    name: Build Google event data
+    description: Unformat the CRM record through the map for the trigger-selected model
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | google: 'present', inputs.data.model }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign record = inputs.data.record | google: "unformat", inputs.data.model -%}
+        {%- assign calendar_id = record.calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id != blank and record.summary != blank -%}
+        {
+          "calendar_id": {{ calendar_id | json }},
+          "summary": {{ record.summary | json }},
+          "description": {{ record.description | default: "" | json }},
+          "location": {{ record.location | default: "" | json }},
+          "start": {{ record.start | json }},
+          "end": {{ record.end | json }},
+          "timezone": {{ record.timezone | default: "" | json }},
+          "all_day": {{ record.all_day | default: false | json }}
+        }
+        {%- else -%}
+        {}
+        {%- endif -%}
+
+  create-google:
+    needs: [build-create]
+    type: task
+    name: Create Google Calendar event
+    description: Create a new Google Calendar event via calendar_event_create
+    timeout: 2 minutes
+    if: "{{ steps.build-create.outputs.response.data.calendar_id != blank }}"
+    service:
+      name: skedyul/app
+      cmd: tool.call
+      options:
+        app: google
+        toolName: calendar_event_create
+    inputs:
+      calendar_id: "{{ steps.build-create.outputs.response.data.calendar_id }}"
+      summary: "{{ steps.build-create.outputs.response.data.summary }}"
+      description: "{{ steps.build-create.outputs.response.data.description }}"
+      location: "{{ steps.build-create.outputs.response.data.location }}"
+      start: "{{ steps.build-create.outputs.response.data.start }}"
+      end: "{{ steps.build-create.outputs.response.data.end }}"
+      timezone: "{{ steps.build-create.outputs.response.data.timezone }}"
+      all_day: "{{ steps.build-create.outputs.response.data.all_day }}"
