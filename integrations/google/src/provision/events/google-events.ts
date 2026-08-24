@@ -58,12 +58,12 @@ export const calendarEventTypes: GoogleAppEventDefinition[] = [
       'A mapped workplace event changed. Unformat through the install map and patch Google.',
     icon: 'Pencil',
     sourceType: 'CRM',
-    recommendedWorkflowHandle: 'push-calendar-event-rename-to-google',
+    recommendedWorkflowHandle: 'push-calendar-event-update-to-google',
   },
 ]
 
 /** Bundled sync workflow handles (created on Google app install). */
 export const calendarWorkflowHandle = 'sync-google-calendar-from-webhook'
 export const calendarEventWorkflowHandle = 'sync-google-calendar-event-from-webhook'
-export const calendarEventRenameWorkflowHandle =
-  'push-calendar-event-rename-to-google'
+export const calendarEventUpdateWorkflowHandle =
+  'push-calendar-event-update-to-google'

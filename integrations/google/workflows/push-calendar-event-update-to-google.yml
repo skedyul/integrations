@@ -1,6 +1,6 @@
-name: Push Calendar Event Rename to Google
-handle: push-calendar-event-rename-to-google
-description: "When a mapped CRM record title changes, unformat through the install map and patch the Google Calendar event summary. Skips Google-originated writes so import and inbound sync do not loop."
+name: Push Calendar Event Update to Google
+handle: push-calendar-event-update-to-google
+description: "When a mapped CRM record changes, unformat through the install map and patch the Google Calendar event. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
@@ -18,14 +18,14 @@ outputs:
     value: "{{ steps.push-google.outputs.response.data.event.google_event_id }}"
   summary:
     type: string
-    description: Title written to Google
+    description: Title on the Google event after the patch
     value: "{{ steps.push-google.outputs.response.data.event.summary }}"
 
 steps:
   build-update:
     type: task
     name: Build Google event patch
-    description: Unformat the CRM record through the map for the trigger-selected model and keep title-only patches
+    description: Unformat the CRM record through the map for the trigger-selected model
     timeout: 30 seconds
     if: "{{ 'model_handle' | google: 'present', inputs.data.model }}"
     service:
@@ -36,14 +36,6 @@ steps:
       template: |
         {%- assign before = inputs.data.before | google: "unformat", inputs.data.model -%}
         {%- assign after = inputs.data.after | google: "unformat", inputs.data.model -%}
-        {%- assign before_summary = before.summary -%}
-        {%- assign after_summary = after.summary -%}
-        {%- if before_summary[0] != blank and before_summary[1] == blank -%}
-        {%- assign before_summary = before_summary[0] -%}
-        {%- endif -%}
-        {%- if after_summary[0] != blank and after_summary[1] == blank -%}
-        {%- assign after_summary = after_summary[0] -%}
-        {%- endif -%}
         {%- assign event_id = after.google_event_id -%}
         {%- if event_id[0] != blank and event_id[1] == blank -%}
         {%- assign event_id = event_id[0] -%}
@@ -52,11 +44,12 @@ steps:
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
-        {%- if after_summary != blank and event_id != blank and calendar_id != blank and after_summary != before_summary -%}
+        {%- if event_id != blank and calendar_id != blank -%}
         {
           "calendar_id": {{ calendar_id | json }},
           "event_id": {{ event_id | json }},
-          "summary": {{ after_summary | json }}
+          "before": {{ before | json }},
+          "after": {{ after | json }}
         }
         {%- else -%}
         {}
@@ -66,7 +59,7 @@ steps:
     needs: [build-update]
     type: task
     name: Update Google Calendar event
-    description: Patch the Google event title via calendar_event_update
+    description: Patch mapped Google event fields via calendar_event_update
     timeout: 2 minutes
     if: "{{ steps.build-update.outputs.response.data.event_id != blank }}"
     service:
@@ -78,4 +71,5 @@ steps:
     inputs:
       calendar_id: "{{ steps.build-update.outputs.response.data.calendar_id }}"
       event_id: "{{ steps.build-update.outputs.response.data.event_id }}"
-      summary: "{{ steps.build-update.outputs.response.data.summary }}"
+      before: "{{ steps.build-update.outputs.response.data.before | json }}"
+      after: "{{ steps.build-update.outputs.response.data.after | json }}"

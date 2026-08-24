@@ -77,7 +77,7 @@ export default definePage({
             props: {
               title: 'How calendar event history works',
               description:
-                'Import Calendar Events (or calendar_sync / a live Google push ping) starts one import_calendar_events batch. That job pages Google and upserts CRM rows. Do not wire live events to backfill history. Renaming a mapped event title in CRM runs push-calendar-event-rename-to-google, which patches Google. On a workplace Event list, set Calendar view section to the calendar relationship so events from every synced calendar appear together.',
+                'Import Calendar Events (or calendar_sync / a live Google push ping) starts one import_calendar_events batch. That job pages Google and upserts CRM rows. Do not wire live events to backfill history. Changing a mapped event in CRM runs push-calendar-event-update-to-google, which patches Google. On a workplace Event list, set Calendar view section to the calendar relationship so events from every synced calendar appear together.',
               icon: 'Info',
             },
           },

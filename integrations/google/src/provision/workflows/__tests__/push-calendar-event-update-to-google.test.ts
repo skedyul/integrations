@@ -1,14 +1,13 @@
 import { describe, expect, it } from '@jest/globals'
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 
 const yamlPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  '../../../../workflows/push-calendar-event-rename-to-google.yml',
+  process.cwd(),
+  'workflows/push-calendar-event-update-to-google.yml',
 )
 
-describe('push-calendar-event-rename-to-google', () => {
+describe('push-calendar-event-update-to-google', () => {
   const yaml = readFileSync(yamlPath, 'utf8')
 
   it('subscribes to any mapped CRM model update, not Google inbound events', () => {
@@ -17,11 +16,13 @@ describe('push-calendar-event-rename-to-google', () => {
     expect(yaml).not.toContain('@app/google/calendar/event')
   })
 
-  it('unformats the CRM row via the trigger-selected model and patches Google with the new title only', () => {
+  it('unformats before/after and patches Google with the mapped entity payload', () => {
     expect(yaml).toContain('google: "unformat", inputs.data.model')
     expect(yaml).toContain("'present', inputs.data.model")
     expect(yaml).toContain('toolName: calendar_event_update')
-    expect(yaml).toContain('summary: "{{ steps.build-update.outputs.response.data.summary }}"')
+    expect(yaml).toContain('before: "{{ steps.build-update.outputs.response.data.before | json }}"')
+    expect(yaml).toContain('after: "{{ steps.build-update.outputs.response.data.after | json }}"')
     expect(yaml).not.toContain('instance.upsertMany')
+    expect(yaml).not.toContain('summary: "{{ steps.build-update.outputs.response.data.summary }}"')
   })
 })

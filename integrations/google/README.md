@@ -78,7 +78,7 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 `sync-google-calendar-event-from-webhook` upserts the parent calendar first, then the event (with the calendar relationship) via `| google: "format", "calendar_event"`.
 
-`push-calendar-event-rename-to-google` listens for CRM title changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update`. Setup provisions an origin skip so Google-originated upserts do not loop.
+`push-calendar-event-update-to-google` listens for CRM record changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update` (title, description, location, times, attendees, recurrence, status). Setup provisions an origin skip so Google-originated upserts do not loop.
 
 ## Tools
 
@@ -99,7 +99,7 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 ### Write
 
 - `calendar_event_create`
-- `calendar_event_update`
+- `calendar_event_update` (mapped fields, or unformatted CRM `before`/`after` payloads)
 - `calendar_event_delete`
 
 ### Sync
@@ -128,5 +128,5 @@ pnpm build
 - Per-install calendar identity lives on the workplace `calendar` CRM map after Import. Tools, watches, and batch jobs list calendars from the Google API — they do not call `instance.*` on `calendar`. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
 - CRM-facing `calendar` and `calendar_event` entities are mapped per install; events relate to calendars so workplace Calendar LIST view can load events from multiple calendars in one query
 - Live `calendar.event.*` workflows stay for a later 1:1 payload, not for pull/history
-- CRM title changes push to Google through `push-calendar-event-rename-to-google`. Other CRM → Google field writes still use `calendar_event_update` from agents or a follow-up workflow
+- CRM record changes push to Google through `push-calendar-event-update-to-google` / `calendar_event_update`
 - Gmail and Drive modules exist as stubs only (`src/services/gmail`, `src/services/drive`)
