@@ -71,9 +71,6 @@ export default definePage({
             props: {
               eventTypes: calendarTypes,
               recommendedWorkflowHandle: calendarWorkflowHandle,
-              title: 'Calendar live sync',
-              description:
-                'Wire calendar created/updated/deleted webhooks. Use Import above for initial backfill.',
             },
           },
         ],
@@ -137,9 +134,10 @@ export default definePage({
             props: {
               eventTypes: calendarEventTypes,
               recommendedWorkflowHandle: calendarEventWorkflowHandle,
-              title: 'Event live sync',
-              description:
-                'Wire event webhooks for real-time sync. Includes inbound (from Google) and outbound (to Google) events.',
+              inboundLabel: 'FROM GOOGLE',
+              outboundLabel: 'TO GOOGLE',
+              inboundDescription: 'When an event changes in Google Calendar',
+              outboundDescription: 'When an event is saved in Skedyul',
             },
           },
         ],
