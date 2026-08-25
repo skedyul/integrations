@@ -16,7 +16,7 @@ export default definePage({
   label: 'Events',
   type: 'instance',
   path: '/events',
-  navigation: true,
+  navigation: false, // Hidden: use consolidated /google-calendar page
 
   blocks: [
     {
