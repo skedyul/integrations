@@ -13,7 +13,7 @@ export default definePage({
   label: 'Calendars',
   type: 'instance',
   path: '/calendars',
-  navigation: true,
+  navigation: false, // Hidden: use consolidated /google-calendar page
 
   blocks: [
     {
