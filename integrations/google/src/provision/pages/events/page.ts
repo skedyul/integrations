@@ -125,11 +125,22 @@ export default definePage({
                 'Map calendar event fields and the calendar relationship to your CRM event or appointment model',
             },
           },
+          {
+            component: 'EntityCrmMapEditor',
+            id: 'calendar-event-crm-map-editor',
+            row: 1,
+            col: 0,
+            props: {
+              entity: 'calendar_event',
+              section: 'fields',
+            },
+          },
         ],
         layout: {
           type: 'form',
           rows: [
             { columns: [{ field: 'calendar-event-crm-map-status', colSpan: 12 }] },
+            { columns: [{ field: 'calendar-event-crm-map-editor', colSpan: 12 }] },
           ],
         },
       },

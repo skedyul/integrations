@@ -121,10 +121,23 @@ export default definePage({
               description: 'Map calendar fields to your CRM calendar model',
             },
           },
+          {
+            component: 'EntityCrmMapEditor',
+            id: 'calendar-crm-map-editor',
+            row: 1,
+            col: 0,
+            props: {
+              entity: 'calendar',
+              section: 'fields',
+            },
+          },
         ],
         layout: {
           type: 'form',
-          rows: [{ columns: [{ field: 'calendar-crm-map-status', colSpan: 12 }] }],
+          rows: [
+            { columns: [{ field: 'calendar-crm-map-status', colSpan: 12 }] },
+            { columns: [{ field: 'calendar-crm-map-editor', colSpan: 12 }] },
+          ],
         },
       },
     },
