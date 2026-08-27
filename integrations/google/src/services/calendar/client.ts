@@ -2,6 +2,7 @@ import { google, type calendar_v3 } from 'googleapis'
 import type { OAuth2Client } from 'google-auth-library'
 import { AppAuthInvalidError } from 'skedyul'
 import { mapGoogleAuthError } from '../../lib/google_client'
+import { buildEventDateTime, resolveGoogleWriteTarget } from './event-datetime'
 
 export interface GoogleCalendarSummary {
   calendar_id: string
@@ -23,6 +24,9 @@ export interface GoogleCalendarEventInput {
   attendees?: string[]
   recurrence?: string[]
   status?: string
+  google_event_id?: string
+  recurring_event_id?: string
+  original_start?: string
 }
 
 export interface GoogleFreeBusyInterval {
@@ -125,19 +129,19 @@ export async function getGoogleCalendarEvent(
   }
 }
 
-function buildEventDateTime(input: GoogleCalendarEventInput, kind: 'start' | 'end') {
-  const value = kind === 'start' ? input.start : input.end
-  if (!value) {
-    return undefined
-  }
-
-  if (input.all_day) {
-    return { date: value.slice(0, 10) }
-  }
-
+function toGoogleEventBody(
+  input: GoogleCalendarEventInput,
+  options?: { includeRecurrence?: boolean },
+): calendar_v3.Schema$Event {
   return {
-    dateTime: value,
-    timeZone: input.timezone || undefined,
+    summary: input.summary,
+    description: input.description,
+    location: input.location,
+    start: buildEventDateTime(input, 'start'),
+    end: buildEventDateTime(input, 'end'),
+    attendees: input.attendees?.map((email) => ({ email })),
+    ...(options?.includeRecurrence === false ? {} : { recurrence: input.recurrence }),
+    status: input.status,
   }
 }
 
@@ -146,19 +150,19 @@ export async function createGoogleCalendarEvent(
   calendarId: string,
   input: GoogleCalendarEventInput,
 ): Promise<calendar_v3.Schema$Event> {
+  const target = resolveGoogleWriteTarget(input)
+  if (target.mode === 'patch' && input.recurring_event_id && input.original_start) {
+    return updateGoogleCalendarEvent(auth, calendarId, target.eventId, {
+      ...input,
+      recurrence: undefined,
+    })
+  }
+
   try {
     const calendar = await getCalendarApi(auth)
     const response = await calendar.events.insert({
       calendarId,
-      requestBody: {
-        summary: input.summary,
-        description: input.description,
-        location: input.location,
-        start: buildEventDateTime(input, 'start'),
-        end: buildEventDateTime(input, 'end'),
-        attendees: input.attendees?.map((email) => ({ email })),
-        recurrence: input.recurrence,
-      },
+      requestBody: toGoogleEventBody(input),
     })
 
     if (!response.data.id) {
@@ -182,16 +186,9 @@ export async function updateGoogleCalendarEvent(
     const response = await calendar.events.patch({
       calendarId,
       eventId,
-      requestBody: {
-        summary: input.summary,
-        description: input.description,
-        location: input.location,
-        start: buildEventDateTime(input, 'start'),
-        end: buildEventDateTime(input, 'end'),
-        attendees: input.attendees?.map((email) => ({ email })),
-        recurrence: input.recurrence,
-        status: input.status,
-      },
+      requestBody: toGoogleEventBody(input, {
+        includeRecurrence: input.recurrence != null,
+      }),
     })
 
     if (!response.data.id) {

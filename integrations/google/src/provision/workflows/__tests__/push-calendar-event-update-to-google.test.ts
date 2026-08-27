@@ -20,8 +20,9 @@ describe('push-calendar-event-update-to-google', () => {
     expect(yaml).toContain('google: "unformat", inputs.data.model')
     expect(yaml).toContain("'present', inputs.data.model")
     expect(yaml).toContain('toolName: calendar_event_update')
-    expect(yaml).toContain('before: "{{ steps.build-update.outputs.response.data.before | json }}"')
-    expect(yaml).toContain('after: "{{ steps.build-update.outputs.response.data.after | json }}"')
+    expect(yaml).toContain(
+      'if: "{{ steps.build-update.outputs.response.data.calendar_id != blank }}"',
+    )
     expect(yaml).not.toContain('instance.upsertMany')
     expect(yaml).not.toContain('summary: "{{ steps.build-update.outputs.response.data.summary }}"')
   })

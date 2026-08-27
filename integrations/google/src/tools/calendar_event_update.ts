@@ -37,7 +37,7 @@ const JsonRecordSchema = z.union([
 
 const CalendarEventUpdateInputSchema = z.object({
   calendar_id: z.string().min(1),
-  event_id: z.string().min(1),
+  event_id: z.string().min(1).optional(),
   summary: z.string().optional(),
   description: z.string().optional(),
   location: z.string().optional(),
@@ -93,6 +93,10 @@ function resolveUpdateInput(
     return buildCalendarEventUpdatePatch(parseJsonRecord(input.before), after)
   }
 
+  if (!input.event_id) {
+    return null
+  }
+
   return {
     calendar_id: input.calendar_id,
     event_id: input.event_id,
@@ -134,6 +138,11 @@ export const calendarEventUpdateRegistry: ToolDefinition<
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
       const patch = resolveUpdateInput(input)
+      if (!patch && !input.event_id) {
+        return createValidationError(
+          'event_id is required unless the after payload includes a Google event id or series instance',
+        )
+      }
       const updated = patch
         ? await updateGoogleCalendarEvent(
             client,
@@ -141,7 +150,7 @@ export const calendarEventUpdateRegistry: ToolDefinition<
             patch.event_id,
             patch,
           )
-        : await getGoogleCalendarEvent(client, input.calendar_id, input.event_id)
+        : await getGoogleCalendarEvent(client, input.calendar_id, input.event_id as string)
       const normalized = normalizeGoogleCalendarEvent(updated)
 
       if (patch) {

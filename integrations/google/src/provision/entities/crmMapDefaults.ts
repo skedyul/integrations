@@ -51,5 +51,35 @@ export const calendarEventCrmMapDefaults: EntityCrmMapDefaults = {
   },
   relationshipHandles: {
     calendar: 'calendar',
+    organizer: 'organizer',
+  },
+}
+
+export const userCrmMapDefaults: EntityCrmMapDefaults = {
+  modelHandle: 'customer',
+  matchFieldHandle: 'email',
+  matchRuleEntityPaths: ['email'],
+  fieldHandles: {
+    email: 'email',
+    display_name: 'name',
+  },
+}
+
+export const attendeeCrmMapDefaults: EntityCrmMapDefaults = {
+  modelHandle: 'attendee',
+  matchFieldHandle: 'event_attendee_key',
+  matchRuleEntityPaths: ['event_attendee_key'],
+  fieldHandles: {
+    event_attendee_key: 'event_attendee_key',
+    email: 'email',
+    display_name: 'name',
+    response_status: 'response_status',
+    organizer: 'organizer',
+    optional: 'optional',
+    self: 'self',
+  },
+  relationshipHandles: {
+    event: 'event',
+    user: 'customer',
   },
 }

@@ -12,7 +12,7 @@ Future Google services (Gmail, Drive) are stubbed under `src/services/` but not 
 - History and incremental pull go through one `import_calendars` / `import_calendar_events` batch job (sync-token aware, stored on the mapped calendar). Never emit one app event per listed row
 - Optional live Google push: one ping starts one batch job after the user enables watches
 - Typed app events for later single changes (`app.google.calendar.created/updated/deleted`)
-- Install-time CRM maps for `calendar` and `calendar_event`, including an event → calendar relationship
+- Install-time CRM maps for `calendar`, `calendar_event`, `user`, and `attendee`. Map `user` onto a workplace people model (customer/client/contact). Attendees are event×email RSVP rows related to the event and user.
 - Bundled workflows with event wiring UI (not a backfill path)
 - Admin pages for setup, account, calendars, linked sync state, and event CRM mapping
 
@@ -54,10 +54,16 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
    - Map the `calendar_event` entity to your workplace event model
    - Set composite match fields: `google_event_id` + `calendar_id`
    - Map the `calendar` relationship so Calendar LIST view can section by calendar
+   - Optionally map `organizer` onto a people relation
    - Run **Import Calendar Events** on the Events page (one batch job)
    - Optionally wire `app.google.calendar.event.*` for a later 1:1 payload — not for pull sync
-5. On the workplace Event list, set Calendar view **section** to the calendar relationship so events from every synced calendar appear together
-6. Optional live updates: call `calendar_sync` with `enable_live_sync: true` (or add a calendar with sync enabled) so Google push starts **one** import batch per ping
+5. Complete **Set up calendar people**:
+   - Map `user` onto customer/client/contact (match `email`)
+   - Map `attendee` onto an RSVP/guest model (match `event_attendee_key`)
+   - Map attendee `event` → event and `user` → the workplace people field
+   - Import events also upserts users then attendees (`event: { __crmMatch }` / `user: { __crmMatch }`)
+6. On the workplace Event list, set Calendar view **section** to the calendar relationship so events from every synced calendar appear together
+7. Optional live updates: call `calendar_sync` with `enable_live_sync: true` (or add a calendar with sync enabled) so Google push starts **one** import batch per ping
 
 Connect never imports history, never starts `calendar_push`, and never emits per-event webhooks.
 
@@ -78,7 +84,7 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 `sync-google-calendar-event-from-webhook` upserts the parent calendar first, then the event (with the calendar relationship) via `| google: "format", "calendar_event"`.
 
-`push-calendar-event-update-to-google` listens for CRM record changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update` (title, description, location, times, attendees, recurrence, status). Setup provisions an origin skip so Google-originated upserts do not loop.
+`push-calendar-event-update-to-google` listens for CRM record changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update` (title, description, location, times, attendees, recurrence, status). Timed patches send a naive local `dateTime` plus `timeZone` (never a `Z`/offset timestamp together with `timeZone`). Series exceptions patch `{recurringEventId}_{yyyyMMdd'T'HHmmss'Z'}` instead of inserting a duplicate. Setup provisions an origin skip so Google-originated upserts do not loop.
 
 ## Tools
 

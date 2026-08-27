@@ -27,6 +27,9 @@ const CalendarEventCreateInputSchema = z.object({
   all_day: z.boolean().optional(),
   attendees: z.array(z.string().email()).optional(),
   recurrence: z.array(z.string()).optional(),
+  google_event_id: z.string().optional(),
+  recurring_event_id: z.string().optional(),
+  original_start: z.string().optional(),
 })
 
 const CalendarEventCreateOutputSchema = z.object({

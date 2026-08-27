@@ -130,16 +130,28 @@ describe('buildCalendarEventUpdatePatch', () => {
     })
   })
 
-  it('parses JSON string payloads from workflow interpolation', () => {
+  it('skips start and end when only the ISO serialization of the same instant changed', () => {
     expect(
-      buildCalendarEventUpdatePatch(
-        JSON.stringify(after),
-        JSON.stringify({ ...after, summary: 'Planning' }),
-      ),
+      buildCalendarEventUpdatePatch(after, {
+        ...after,
+        start: '2026-08-24T09:00:00Z',
+        end: '2026-08-24T09:30:00Z',
+        html_link: 'https://other',
+      }),
+    ).toBeNull()
+  })
+
+  it('patches a series instance id when google_event_id is the master id', () => {
+    expect(
+      calendarEventIds({
+        calendar_id: 'cal_1',
+        google_event_id: 'abc123',
+        recurring_event_id: 'abc123',
+        original_start: '2026-08-17T09:00:00.000Z',
+      }),
     ).toEqual({
       calendar_id: 'cal_1',
-      event_id: 'evt_1',
-      summary: 'Planning',
+      event_id: 'abc123_20260817T090000Z',
     })
   })
 })

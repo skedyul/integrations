@@ -10,7 +10,7 @@ describe('Google provision', () => {
   )
 
   it('does not declare internal models — calendars are CRM-mapped entities', () => {
-    expect(source).toContain("entities: [calendar, calendarEvent]")
+    expect(source).toContain("entities: [calendar, calendarEvent, user, attendee]")
     expect(source).not.toContain('models:')
     expect(source).not.toContain("from './crm/models")
   })

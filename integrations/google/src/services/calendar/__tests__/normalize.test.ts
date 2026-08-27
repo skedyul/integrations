@@ -34,7 +34,17 @@ describe('normalizeGoogleCalendarEvent', () => {
       recurrence: null,
       recurring_event_id: null,
       original_start: null,
-      attendees: [{ email: 'user@example.com', response_status: 'accepted' }],
+      attendees: [
+        {
+          email: 'user@example.com',
+          response_status: 'accepted',
+          display_name: null,
+          organizer: false,
+          optional: false,
+          self: false,
+        },
+      ],
+      organizer_email: null,
       location: 'Office',
       html_link: 'https://calendar.google.com/event?eid=evt_1',
       updated_at: '2026-07-20T23:00:00.000Z',
@@ -82,6 +92,50 @@ describe('normalizeGoogleCalendarEvent', () => {
     expect(exception.original_start).toBe('2026-08-17T09:00:00.000Z')
     expect(exception.status).toBe('cancelled')
     expect(classifyGoogleCalendarEvent(exception)).toBe('exception')
+  })
+
+  it('keeps displayName, organizer, optional, and self on attendees', () => {
+    const normalized = normalizeGoogleCalendarEvent({
+      id: 'evt_3',
+      status: 'confirmed',
+      start: { dateTime: '2026-08-24T09:00:00Z' },
+      end: { dateTime: '2026-08-24T10:00:00Z' },
+      organizer: { email: 'host@example.com', displayName: 'Host' },
+      attendees: [
+        {
+          email: 'host@example.com',
+          displayName: 'Host',
+          responseStatus: 'accepted',
+          organizer: true,
+          self: true,
+        },
+        {
+          email: 'guest@example.com',
+          displayName: 'Guest',
+          responseStatus: 'tentative',
+          optional: true,
+        },
+      ],
+    })
+    expect(normalized.organizer_email).toBe('host@example.com')
+    expect(normalized.attendees).toEqual([
+      {
+        email: 'host@example.com',
+        response_status: 'accepted',
+        display_name: 'Host',
+        organizer: true,
+        optional: false,
+        self: true,
+      },
+      {
+        email: 'guest@example.com',
+        response_status: 'tentative',
+        display_name: 'Guest',
+        organizer: false,
+        optional: true,
+        self: false,
+      },
+    ])
   })
 })
 

@@ -18,6 +18,10 @@ export const GoogleEventAttendeeSchema = z
   .object({
     email: z.string().email(),
     response_status: nullableString.optional(),
+    display_name: nullableString.optional(),
+    organizer: z.boolean().optional(),
+    optional: z.boolean().optional(),
+    self: z.boolean().optional(),
   })
   .strict()
 
@@ -35,6 +39,7 @@ export const GoogleEventEntitySchema = z
     recurring_event_id: nullableString,
     original_start: nullableString,
     attendees: z.array(GoogleEventAttendeeSchema),
+    organizer_email: nullableString.optional(),
     location: nullableString,
     html_link: nullableString,
     updated_at: nullableString,
