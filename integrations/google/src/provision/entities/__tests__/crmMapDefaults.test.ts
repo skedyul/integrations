@@ -35,6 +35,9 @@ describe('crmMapDefaults', () => {
     expect(calendarEventCrmMapDefaults.relationshipHandles?.organizer).toBe(
       'organizer',
     )
+    expect(calendarEventCrmMapDefaults.fieldHandles.attendees).toBe(
+      'attendee_emails',
+    )
   })
 })
 
