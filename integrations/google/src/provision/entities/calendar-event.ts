@@ -65,6 +65,11 @@ export default defineEntity({
       label: 'Calendar',
       targetEntity: 'calendar',
     },
+    {
+      handle: 'organizer',
+      label: 'Organizer',
+      targetEntity: 'user',
+    },
   ],
   contextFields: [
     {

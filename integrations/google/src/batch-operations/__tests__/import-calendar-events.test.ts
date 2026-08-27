@@ -24,6 +24,10 @@ describe('import_calendar_events source', () => {
   it('imports Google payloads as-is (masters and exceptions, not expanded occurrences)', () => {
     expect(source).toContain('normalizeGoogleCalendarEvent')
     expect(source).toContain('listGoogleCalendarEvents')
+    expect(source).toContain("entity: 'user', order: 2, wave: 'page'")
+    expect(source).toContain("entity: 'attendee', order: 4, wave: 'page'")
+    expect(source).toContain('buildCalendarPeopleCascadeItems')
+    expect(source).toContain('__crmMatch')
   })
 })
 

@@ -4,13 +4,18 @@
  */
 
 import type { GoogleCalendarEventInput } from '../services/calendar/client'
+import {
+  isDateOnlyValue,
+  resolveGoogleWriteTarget,
+} from '../services/calendar/event-datetime'
 
 export type CalendarEventUpdatePatch = GoogleCalendarEventInput & {
   calendar_id: string
   event_id: string
+  recurring_event_id?: string
+  original_start?: string
 }
 
-const TIME_KEYS = ['start', 'end', 'timezone', 'all_day'] as const
 const SCALAR_KEYS = ['summary', 'description', 'location', 'status'] as const
 
 export function unwrapSingleton(value: unknown): unknown {
@@ -119,6 +124,40 @@ function valuesChanged(before: unknown, after: unknown): boolean {
   return jsonKey(before) !== jsonKey(after)
 }
 
+function instantsEqual(before: unknown, after: unknown): boolean {
+  const left = asString(before)
+  const right = asString(after)
+  if (!left && !right) {
+    return true
+  }
+  if (!left || !right) {
+    return false
+  }
+  if (isDateOnlyValue(left) || isDateOnlyValue(right)) {
+    return left.slice(0, 10) === right.slice(0, 10)
+  }
+  const leftDate = new Date(left)
+  const rightDate = new Date(right)
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) {
+    return left === right
+  }
+  return leftDate.getTime() === rightDate.getTime()
+}
+
+function isTruthyBoolean(value: unknown): boolean {
+  return asBoolean(value) === true
+}
+
+export function resolveGoogleEventId(record: Record<string, unknown>): string | undefined {
+  const target = resolveGoogleWriteTarget({
+    google_event_id: asString(record.google_event_id),
+    event_id: asString(record.event_id),
+    recurring_event_id: asString(record.recurring_event_id),
+    original_start: asString(record.original_start),
+  })
+  return target.mode === 'patch' ? target.eventId : undefined
+}
+
 export function calendarEventIds(
   after: unknown,
 ): { calendar_id: string; event_id: string } | null {
@@ -127,7 +166,7 @@ export function calendarEventIds(
     return null
   }
   const calendarId = asString(record.calendar_id)
-  const eventId = asString(record.google_event_id) ?? asString(record.event_id)
+  const eventId = resolveGoogleEventId(record)
   if (!calendarId || !eventId) {
     return null
   }
@@ -182,9 +221,13 @@ export function buildCalendarEventUpdatePatch(
     hasField = true
   }
 
-  const timeChanged = TIME_KEYS.some((key) =>
-    valuesChanged(readField(beforeRecord, key), readField(afterRecord, key)),
-  )
+  const timeChanged =
+    !instantsEqual(readField(beforeRecord, 'start'), readField(afterRecord, 'start')) ||
+    !instantsEqual(readField(beforeRecord, 'end'), readField(afterRecord, 'end')) ||
+    (asString(readField(beforeRecord, 'timezone')) ?? '') !==
+      (asString(readField(afterRecord, 'timezone')) ?? '') ||
+    isTruthyBoolean(readField(beforeRecord, 'all_day')) !==
+      isTruthyBoolean(readField(afterRecord, 'all_day'))
   if (timeChanged) {
     const start = asString(afterRecord.start)
     const end = asString(afterRecord.end)

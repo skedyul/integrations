@@ -44,7 +44,7 @@ steps:
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
-        {%- if event_id != blank and calendar_id != blank -%}
+        {%- if calendar_id != blank -%}
         {
           "calendar_id": {{ calendar_id | json }},
           "event_id": {{ event_id | json }},
@@ -61,7 +61,7 @@ steps:
     name: Update Google Calendar event
     description: Patch mapped Google event fields via calendar_event_update
     timeout: 2 minutes
-    if: "{{ steps.build-update.outputs.response.data.event_id != blank }}"
+    if: "{{ steps.build-update.outputs.response.data.calendar_id != blank }}"
     service:
       name: skedyul/app
       cmd: tool.call

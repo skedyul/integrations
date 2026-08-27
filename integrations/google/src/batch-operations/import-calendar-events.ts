@@ -6,6 +6,7 @@ import {
   listGoogleCalendarEvents,
   type GoogleCalendarSummary,
 } from '../services/calendar/client'
+import { buildCalendarPeopleCascadeItems } from '../lib/calendar-people'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import {
   loadGoogleCalendarRecord,
@@ -65,7 +66,9 @@ export default defineBatchOperation({
   entity: 'calendar_event',
   cascade: [
     { entity: 'calendar', order: 1, wave: 'setup' },
-    { entity: 'calendar_event', order: 2, wave: 'page' },
+    { entity: 'user', order: 2, wave: 'page' },
+    { entity: 'calendar_event', order: 3, wave: 'page' },
+    { entity: 'attendee', order: 4, wave: 'page' },
   ],
   maxConcurrent: 1,
   pageSize: 100,
@@ -156,24 +159,60 @@ export default defineBatchOperation({
     }
 
     const eventItems: Record<string, unknown>[] = []
-    if (cascadeEntities.has('calendar_event')) {
-      for (const googleEvent of page.events) {
-        if (!googleEvent.id) {
-          continue
+    const userItems: Record<string, unknown>[] = []
+    const attendeeItems: Record<string, unknown>[] = []
+    const seenUserEmails = new Set<string>()
+
+    for (const googleEvent of page.events) {
+      if (!googleEvent.id) {
+        continue
+      }
+      const event = normalizeGoogleCalendarEvent(googleEvent)
+      const people = buildCalendarPeopleCascadeItems({
+        googleEventId: event.google_event_id,
+        calendarId: calendar.calendar_id,
+        event,
+      })
+
+      if (cascadeEntities.has('user')) {
+        for (const item of people.users) {
+          const email =
+            item.user && typeof item.user === 'object' && 'email' in item.user
+              ? String((item.user as { email?: unknown }).email ?? '')
+              : ''
+          if (!email || seenUserEmails.has(email)) {
+            continue
+          }
+          seenUserEmails.add(email)
+          userItems.push(item)
         }
-        const event = normalizeGoogleCalendarEvent(googleEvent)
+      }
+
+      if (cascadeEntities.has('calendar_event')) {
         eventItems.push({
           calendar_event: {
             ...event,
             calendar_id: calendar.calendar_id,
+            ...(people.organizerMatch ? { organizer: people.organizerMatch } : {}),
           },
           calendar: { __crmMatch: calendar.calendar_id },
+          ...(people.organizerMatch ? { organizer: people.organizerMatch } : {}),
         })
+      }
+
+      if (cascadeEntities.has('attendee')) {
+        attendeeItems.push(...people.attendees)
       }
     }
 
+    if (userItems.length > 0) {
+      itemsByEntity.user = userItems
+    }
     if (eventItems.length > 0) {
       itemsByEntity.calendar_event = eventItems
+    }
+    if (attendeeItems.length > 0) {
+      itemsByEntity.attendee = attendeeItems
     }
 
     if (page.nextSyncToken) {

@@ -1,9 +1,13 @@
 import { describe, expect, it } from '@jest/globals'
 import calendar from '../calendar'
 import calendarEvent from '../calendar-event'
+import user from '../user'
+import attendee from '../attendee'
 import {
   calendarCrmMapDefaults,
   calendarEventCrmMapDefaults,
+  userCrmMapDefaults,
+  attendeeCrmMapDefaults,
 } from '../crmMapDefaults'
 
 describe('crmMapDefaults', () => {
@@ -28,6 +32,33 @@ describe('crmMapDefaults', () => {
     expect(calendarEventCrmMapDefaults.relationshipHandles?.calendar).toBe(
       'calendar',
     )
+    expect(calendarEventCrmMapDefaults.relationshipHandles?.organizer).toBe(
+      'organizer',
+    )
+  })
+})
+
+describe('user and attendee entities', () => {
+  it('maps users onto a customer model by email', () => {
+    expect(userCrmMapDefaults.modelHandle).toBe('customer')
+    expect(userCrmMapDefaults.matchFieldHandle).toBe('email')
+    expect(user.fields.map((field) => field.handle)).toEqual([
+      'email',
+      'display_name',
+    ])
+  })
+
+  it('maps attendees as event participation related to user', () => {
+    expect(attendeeCrmMapDefaults.modelHandle).toBe('attendee')
+    expect(attendeeCrmMapDefaults.matchFieldHandle).toBe('event_attendee_key')
+    expect(attendeeCrmMapDefaults.relationshipHandles).toEqual({
+      event: 'event',
+      user: 'customer',
+    })
+    expect(attendee.relationships?.map((rel) => rel.handle)).toEqual([
+      'event',
+      'user',
+    ])
   })
 })
 

@@ -30,8 +30,16 @@ export interface GoogleEventEntity {
   recurrence: string[] | null
   recurring_event_id: string | null
   original_start: string | null
-  attendees: Array<{ email: string; response_status?: string | null }>
-  location: string | null
+    attendees: Array<{
+      email: string
+      response_status?: string | null
+      display_name?: string | null
+      organizer?: boolean
+      optional?: boolean
+      self?: boolean
+    }>
+    organizer_email?: string | null
+    location: string | null
   html_link: string | null
   updated_at: string | null
   etag: string | null

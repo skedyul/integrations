@@ -1,5 +1,6 @@
 import type { calendar_v3 } from 'googleapis'
 import type { GoogleEventEntity } from '../../events/types'
+import { mapGoogleAttendee, normalizeAttendeeEmail } from '../../lib/calendar-people'
 
 function readDateTime(
   value: calendar_v3.Schema$EventDateTime | undefined | null,
@@ -27,6 +28,15 @@ export function normalizeGoogleCalendarEvent(
 
   const originalStart = readDateTime(event.originalStartTime)
 
+  const attendees = (event.attendees ?? [])
+    .map((attendee) => mapGoogleAttendee(attendee))
+    .filter((attendee): attendee is NonNullable<typeof attendee> => attendee != null)
+
+  const organizerEmail =
+    normalizeAttendeeEmail(event.organizer?.email) ??
+    attendees.find((attendee) => attendee.organizer)?.email ??
+    null
+
   return {
     google_event_id: event.id || '',
     status: event.status || 'confirmed',
@@ -39,10 +49,8 @@ export function normalizeGoogleCalendarEvent(
     recurrence: event.recurrence ?? null,
     recurring_event_id: event.recurringEventId ?? null,
     original_start: originalStart.value,
-    attendees: (event.attendees ?? []).map((attendee) => ({
-      email: attendee.email || '',
-      response_status: attendee.responseStatus ?? null,
-    })),
+    attendees,
+    organizer_email: organizerEmail,
     location: event.location ?? null,
     html_link: event.htmlLink ?? null,
     updated_at: event.updated ?? null,
