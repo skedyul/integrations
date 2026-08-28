@@ -44,6 +44,19 @@ export function isGoogleThisAndFollowingMasterId(eventId: string): boolean {
   return GOOGLE_SPLIT_MASTER_ID.test(eventId.trim())
 }
 
+/** CRM instance ids are not Google event ids; do not PATCH them as `{id}_{stamp}`. */
+export function isSkedyulInstanceId(value: string): boolean {
+  return value.trim().startsWith('ins_')
+}
+
+function asGoogleEventId(value?: string | null): string | undefined {
+  const trimmed = value?.trim()
+  if (!trimmed || isSkedyulInstanceId(trimmed)) {
+    return undefined
+  }
+  return trimmed
+}
+
 export function toCompactUtcStamp(value: string): string | null {
   const trimmed = value.trim()
   const compactMatch = trimmed.match(COMPACT_UTC)
@@ -109,12 +122,13 @@ export function resolveGoogleWriteTarget(input: {
   recurring_event_id?: string | null
   original_start?: string | null
 }): { mode: 'insert' } | { mode: 'patch'; eventId: string } {
-  const storedId = input.google_event_id?.trim() || input.event_id?.trim()
+  const storedId =
+    asGoogleEventId(input.google_event_id) || asGoogleEventId(input.event_id)
   if (storedId && isGoogleThisAndFollowingMasterId(storedId)) {
     return { mode: 'patch', eventId: storedId }
   }
 
-  const recurringEventId = input.recurring_event_id?.trim()
+  const recurringEventId = asGoogleEventId(input.recurring_event_id)
   const originalStart = input.original_start?.trim()
   if (recurringEventId && originalStart) {
     if (isGoogleThisAndFollowingMasterId(recurringEventId)) {

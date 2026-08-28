@@ -5,15 +5,19 @@ import { AppAuthInvalidError } from 'skedyul'
 import { assertCalendarWritable } from '../lib/calendar_link'
 import {
   attendeeEmails,
+  asBoolean,
+  buildCalendarEventCreateInput,
   buildCalendarEventUpdatePatch,
+  calendarEventIds,
   parseJsonRecord,
+  withCalendarId,
 } from '../lib/calendar-event-update-patch'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { createGoogleEvent } from '../lib/create-google-event'
 import {
+  createGoogleCalendarEvent,
   getGoogleCalendarEvent,
   updateGoogleCalendarEvent,
-  type GoogleCalendarEventInput,
 } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
@@ -37,14 +41,14 @@ const JsonRecordSchema = z.union([
 
 const CalendarEventUpdateInputSchema = z.object({
   calendar_id: z.string().min(1),
-  event_id: z.string().min(1).optional(),
+  event_id: z.string().optional(),
   summary: z.string().optional(),
   description: z.string().optional(),
   location: z.string().optional(),
   start: z.string().optional(),
   end: z.string().optional(),
   timezone: z.string().optional(),
-  all_day: z.boolean().optional(),
+  all_day: z.union([z.boolean(), z.string()]).optional(),
   attendees: z.array(AttendeeSchema).optional(),
   recurrence: z.array(z.string()).optional(),
   status: z.string().optional(),
@@ -82,34 +86,71 @@ const CalendarEventUpdateOutputSchema = z.object({
 type CalendarEventUpdateInput = z.infer<typeof CalendarEventUpdateInputSchema>
 type CalendarEventUpdateOutput = z.infer<typeof CalendarEventUpdateOutputSchema>
 
-function resolveUpdateInput(
-  input: CalendarEventUpdateInput,
-): (GoogleCalendarEventInput & { calendar_id: string; event_id: string }) | null {
+type ResolvedWrite =
+  | { kind: 'patch'; patch: NonNullable<ReturnType<typeof buildCalendarEventUpdatePatch>> }
+  | { kind: 'insert'; input: NonNullable<ReturnType<typeof buildCalendarEventCreateInput>> }
+  | { kind: 'get'; eventId: string }
+  | { kind: 'invalid'; message: string }
+
+function blankToUndefined(value: string | undefined): string | undefined {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
+}
+
+function resolveWrite(input: CalendarEventUpdateInput): ResolvedWrite {
+  const eventId = blankToUndefined(input.event_id)
+
   if (input.after != null && input.after !== '') {
-    const after = parseJsonRecord(input.after)
+    const after = withCalendarId(parseJsonRecord(input.after), input.calendar_id)
     if (!after) {
-      return null
+      return {
+        kind: 'invalid',
+        message: 'after payload must be a JSON object',
+      }
     }
-    return buildCalendarEventUpdatePatch(parseJsonRecord(input.before), after)
+    const patch = buildCalendarEventUpdatePatch(parseJsonRecord(input.before), after)
+    if (patch) {
+      return { kind: 'patch', patch }
+    }
+    const ids = calendarEventIds(after, input.calendar_id)
+    if (ids) {
+      return { kind: 'get', eventId: ids.event_id }
+    }
+    const createInput = buildCalendarEventCreateInput(after, input.calendar_id)
+    if (createInput) {
+      return { kind: 'insert', input: createInput }
+    }
+    return {
+      kind: 'invalid',
+      message:
+        'event_id is required unless the after payload includes a Google event id, series instance, or enough fields to create the event',
+    }
   }
 
-  if (!input.event_id) {
-    return null
+  if (!eventId) {
+    return {
+      kind: 'invalid',
+      message:
+        'event_id is required unless the after payload includes a Google event id or series instance',
+    }
   }
 
   return {
-    calendar_id: input.calendar_id,
-    event_id: input.event_id,
-    summary: input.summary,
-    description: input.description,
-    location: input.location,
-    start: input.start,
-    end: input.end,
-    timezone: input.timezone,
-    all_day: input.all_day,
-    attendees: attendeeEmails(input.attendees),
-    recurrence: input.recurrence,
-    status: input.status,
+    kind: 'patch',
+    patch: {
+      calendar_id: input.calendar_id,
+      event_id: eventId,
+      summary: input.summary,
+      description: input.description,
+      location: input.location,
+      start: input.start,
+      end: input.end,
+      timezone: input.timezone,
+      all_day: asBoolean(input.all_day),
+      attendees: attendeeEmails(input.attendees),
+      recurrence: input.recurrence,
+      status: input.status,
+    },
   }
 }
 
@@ -120,7 +161,7 @@ export const calendarEventUpdateRegistry: ToolDefinition<
   name: 'calendar_event_update',
   label: 'Update Calendar Event',
   description:
-    'Update a Google Calendar event. Pass mapped fields directly, or unformatted CRM before/after payloads from the install map.',
+    'Update a Google Calendar event, or create it when the CRM record has no Google event id yet. Pass mapped fields directly, or unformatted CRM before/after payloads from the install map.',
   inputSchema: CalendarEventUpdateInputSchema,
   outputSchema: CalendarEventUpdateOutputSchema,
   handler: async (input, context) => {
@@ -137,23 +178,27 @@ export const calendarEventUpdateRegistry: ToolDefinition<
       assertCalendarWritable(record)
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
-      const patch = resolveUpdateInput(input)
-      if (!patch && !input.event_id) {
-        return createValidationError(
-          'event_id is required unless the after payload includes a Google event id or series instance',
-        )
+      const write = resolveWrite(input)
+      if (write.kind === 'invalid') {
+        return createValidationError(write.message)
       }
-      const updated = patch
-        ? await updateGoogleCalendarEvent(
-            client,
-            patch.calendar_id,
-            patch.event_id,
-            patch,
-          )
-        : await getGoogleCalendarEvent(client, input.calendar_id, input.event_id as string)
+
+      // Insert without emitting calendar.event.created — inbound sync would
+      // upsert a second CRM row because the workplace event has no Google id yet.
+      const updated =
+        write.kind === 'insert'
+          ? await createGoogleCalendarEvent(client, write.input.calendar_id, write.input)
+          : write.kind === 'patch'
+            ? await updateGoogleCalendarEvent(
+                client,
+                write.patch.calendar_id,
+                write.patch.event_id,
+                write.patch,
+              )
+            : await getGoogleCalendarEvent(client, input.calendar_id, write.eventId)
       const normalized = normalizeGoogleCalendarEvent(updated)
 
-      if (patch) {
+      if (write.kind === 'patch') {
         await createGoogleEvent(
           'calendar.event.updated',
           {

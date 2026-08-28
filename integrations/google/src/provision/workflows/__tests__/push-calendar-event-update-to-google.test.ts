@@ -21,9 +21,24 @@ describe('push-calendar-event-update-to-google', () => {
     expect(yaml).toContain("'present', inputs.data.model")
     expect(yaml).toContain('toolName: calendar_event_update')
     expect(yaml).toContain(
-      'if: "{{ steps.build-update.outputs.response.data.calendar_id != blank }}"',
+      'if: "{{ steps.resolve-update.outputs.response.data.calendar_id != blank }}"',
     )
     expect(yaml).not.toContain('instance.upsertMany')
     expect(yaml).not.toContain('summary: "{{ steps.build-update.outputs.response.data.summary }}"')
+  })
+
+  it('resolves Google calendar id from the assigned calendar relation', () => {
+    expect(yaml).toContain('google: "unformat", "calendar"')
+    expect(yaml).toContain('related_mapped.google_calendar_id')
+    expect(yaml).toContain('after.calendar')
+    expect(yaml).toContain('cmd: instance.find')
+  })
+
+  it('writes google_event_id back when the CRM row had none', () => {
+    expect(yaml).toContain('cmd: instance.update')
+    expect(yaml).toContain('instanceId: "{{ inputs.data.after.id }}"')
+    expect(yaml).toContain(
+      'steps.resolve-update.outputs.response.data.event_id == blank',
+    )
   })
 })

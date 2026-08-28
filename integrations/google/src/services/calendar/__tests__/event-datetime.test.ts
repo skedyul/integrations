@@ -3,6 +3,7 @@ import {
   buildEventDateTime,
   googleSeriesInstanceId,
   isGoogleThisAndFollowingMasterId,
+  isSkedyulInstanceId,
   resolveGoogleWriteTarget,
   toCompactUtcStamp,
 } from '../event-datetime'
@@ -96,6 +97,21 @@ describe('resolveGoogleWriteTarget', () => {
     ).toEqual({
       mode: 'insert',
     })
+  })
+
+  it('inserts when recurring_event_id is a Skedyul instance id', () => {
+    expect(isSkedyulInstanceId('ins_hbu1u27jtrg4jmc3f95n9i60')).toBe(true)
+    expect(
+      resolveGoogleWriteTarget({
+        recurring_event_id: 'ins_hbu1u27jtrg4jmc3f95n9i60',
+        original_start: '2026-08-28T01:00:00.000Z',
+      }),
+    ).toEqual({ mode: 'insert' })
+    expect(
+      resolveGoogleWriteTarget({
+        google_event_id: 'ins_hbu1u27jtrg4jmc3f95n9i60',
+      }),
+    ).toEqual({ mode: 'insert' })
   })
 
   it('patches a this-and-following _R id as the series master', () => {

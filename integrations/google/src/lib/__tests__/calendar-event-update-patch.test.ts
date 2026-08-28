@@ -1,9 +1,11 @@
 import { describe, expect, it } from '@jest/globals'
 import {
   attendeeEmails,
+  buildCalendarEventCreateInput,
   buildCalendarEventUpdatePatch,
   calendarEventIds,
   unwrapSingleton,
+  withCalendarId,
 } from '../calendar-event-update-patch'
 
 const after = {
@@ -161,6 +163,71 @@ describe('calendarEventIds', () => {
     expect(calendarEventIds(after)).toEqual({
       calendar_id: 'cal_1',
       event_id: 'evt_1',
+    })
+  })
+
+  it('does not treat a Skedyul instance id as a Google series id', () => {
+    expect(
+      calendarEventIds({
+        calendar_id: 'cal_1',
+        recurring_event_id: 'ins_hbu1u27jtrg4jmc3f95n9i60',
+        original_start: '2026-08-28T01:00:00.000Z',
+      }),
+    ).toBeNull()
+  })
+
+  it('uses a fallback calendar id when the after payload has none', () => {
+    expect(
+      calendarEventIds({ google_event_id: 'evt_1', summary: 'Standup' }, 'cal_1'),
+    ).toEqual({
+      calendar_id: 'cal_1',
+      event_id: 'evt_1',
+    })
+  })
+})
+
+describe('withCalendarId', () => {
+  it('fills calendar_id when missing', () => {
+    expect(withCalendarId({ summary: 'Standup' }, 'cal_1')).toEqual({
+      summary: 'Standup',
+      calendar_id: 'cal_1',
+    })
+  })
+})
+
+describe('buildCalendarEventCreateInput', () => {
+  it('returns null without summary, start, end, or calendar', () => {
+    expect(buildCalendarEventCreateInput({ summary: 'Add' })).toBeNull()
+    expect(
+      buildCalendarEventCreateInput(
+        {
+          summary: 'Add',
+          start: '2026-08-28T18:30:00.000Z',
+          end: '2026-08-28T20:00:00.000Z',
+        },
+      ),
+    ).toBeNull()
+  })
+
+  it('builds an insert body from after fields and a fallback calendar id', () => {
+    expect(
+      buildCalendarEventCreateInput(
+        {
+          summary: 'Something',
+          start: '2026-08-28T18:30:00.000Z',
+          end: '2026-08-28T20:00:00.000Z',
+          timezone: 'Australia/Melbourne',
+          description: 'Notes',
+        },
+        'avin@skedyul.it',
+      ),
+    ).toEqual({
+      calendar_id: 'avin@skedyul.it',
+      summary: 'Something',
+      start: '2026-08-28T18:30:00.000Z',
+      end: '2026-08-28T20:00:00.000Z',
+      timezone: 'Australia/Melbourne',
+      description: 'Notes',
     })
   })
 })

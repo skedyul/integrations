@@ -1,6 +1,6 @@
 name: Push Calendar Event Update to Google
 handle: push-calendar-event-update-to-google
-description: "When a mapped CRM record changes, unformat through the install map and patch the Google Calendar event. Skips Google-originated writes so import and inbound sync do not loop."
+description: "When a mapped CRM record changes, unformat through the install map and patch the Google Calendar event, or create it when the row has no Google id yet. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
@@ -14,11 +14,11 @@ inputs:
 outputs:
   google-event-id:
     type: string
-    description: Google event id that was patched
+    description: Google event id that was patched or created
     value: "{{ steps.push-google.outputs.response.data.event.google_event_id }}"
   summary:
     type: string
-    description: Title on the Google event after the patch
+    description: Title on the Google event after the write
     value: "{{ steps.push-google.outputs.response.data.event.summary }}"
 
 steps:
@@ -44,24 +44,99 @@ steps:
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
-        {%- if calendar_id != blank -%}
+        {%- assign related = after.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- if related == blank -%}
+        {%- assign related = inputs.data.after.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- assign calendar_instance_id = related.id -%}
+        {%- if calendar_instance_id == blank -%}
+        {%- assign calendar_instance_id = related -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign related_mapped = related | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = related_mapped.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = related.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
         {
           "calendar_id": {{ calendar_id | json }},
+          "calendar_instance_id": {{ calendar_instance_id | json }},
           "event_id": {{ event_id | json }},
           "before": {{ before | json }},
           "after": {{ after | json }}
+        }
+
+  load-calendar:
+    needs: [build-update]
+    type: task
+    name: Load related calendar
+    description: Resolve Google calendar id from the assigned CRM calendar when the event string is empty
+    timeout: 30 seconds
+    if: "{{ steps.build-update.outputs.response.data.calendar_id == blank and steps.build-update.outputs.response.data.calendar_instance_id != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.find
+    inputs:
+      id: "{{ steps.build-update.outputs.response.data.calendar_instance_id }}"
+
+  resolve-update:
+    needs: [build-update, load-calendar]
+    on-parent-skip: run
+    type: task
+    name: Resolve Google calendar id
+    timeout: 30 seconds
+    if: "{{ steps.build-update.outputs.response.data.after != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign calendar_id = steps.build-update.outputs.response.data.calendar_id -%}
+        {%- if calendar_id == blank -%}
+        {%- assign loaded = steps.load-calendar.outputs.response.data | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = loaded.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = steps.load-calendar.outputs.response.data.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- if calendar_id != blank -%}
+        {
+          "calendar_id": {{ calendar_id | json }},
+          "event_id": {{ steps.build-update.outputs.response.data.event_id | json }},
+          "before": {{ steps.build-update.outputs.response.data.before | json }},
+          "after": {{ steps.build-update.outputs.response.data.after | json }}
         }
         {%- else -%}
         {}
         {%- endif -%}
 
   push-google:
-    needs: [build-update]
+    needs: [resolve-update]
     type: task
     name: Update Google Calendar event
-    description: Patch mapped Google event fields via calendar_event_update
+    description: Patch mapped Google event fields via calendar_event_update, or insert when the CRM row has no Google id
     timeout: 2 minutes
-    if: "{{ steps.build-update.outputs.response.data.calendar_id != blank }}"
+    if: "{{ steps.resolve-update.outputs.response.data.calendar_id != blank }}"
     service:
       name: skedyul/app
       cmd: tool.call
@@ -69,7 +144,42 @@ steps:
         app: google
         toolName: calendar_event_update
     inputs:
-      calendar_id: "{{ steps.build-update.outputs.response.data.calendar_id }}"
-      event_id: "{{ steps.build-update.outputs.response.data.event_id }}"
-      before: "{{ steps.build-update.outputs.response.data.before | json }}"
-      after: "{{ steps.build-update.outputs.response.data.after | json }}"
+      calendar_id: "{{ steps.resolve-update.outputs.response.data.calendar_id }}"
+      event_id: "{{ steps.resolve-update.outputs.response.data.event_id }}"
+      before: "{{ steps.resolve-update.outputs.response.data.before | json }}"
+      after: "{{ steps.resolve-update.outputs.response.data.after | json }}"
+
+  build-writeback:
+    needs: [push-google]
+    type: task
+    name: Build Google id writeback
+    timeout: 30 seconds
+    if: "{{ steps.resolve-update.outputs.response.data.event_id == blank and steps.push-google.outputs.response.data.event.google_event_id != blank and inputs.data.after.id != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "calendar_event": {
+            "google_event_id": {{ steps.push-google.outputs.response.data.event.google_event_id | json }},
+            "calendar_id": {{ steps.resolve-update.outputs.response.data.calendar_id | json }},
+            "html_link": {{ steps.push-google.outputs.response.data.event.html_link | json }},
+            "etag": {{ steps.push-google.outputs.response.data.event.etag | json }}
+          }
+        }
+
+  write-google-ids:
+    needs: [build-writeback]
+    type: task
+    name: Write Google event id onto CRM record
+    description: Patch the existing instance so later updates can PATCH Google instead of inserting again
+    timeout: 30 seconds
+    if: "{{ steps.build-writeback.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.update
+    inputs:
+      instanceId: "{{ inputs.data.after.id }}"
+      data: "{{ steps.build-writeback.outputs.response.data | google: 'format', 'calendar_event' | json }}"
