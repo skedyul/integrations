@@ -48,6 +48,14 @@ export function asString(value: unknown): string | undefined {
   return undefined
 }
 
+/** Workflow simple-refs preserve JSON null; Zod string().optional() rejects it. */
+export function blankToUndefined(value: unknown): unknown {
+  if (value == null || value === '') {
+    return undefined
+  }
+  return value
+}
+
 export function asBoolean(value: unknown): boolean | undefined {
   const unwrapped = unwrapSingleton(value)
   if (typeof unwrapped === 'boolean') {

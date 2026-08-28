@@ -1,12 +1,14 @@
 import { describe, expect, it } from '@jest/globals'
 import {
   attendeeEmails,
+  blankToUndefined,
   buildCalendarEventCreateInput,
   buildCalendarEventUpdatePatch,
   calendarEventIds,
   unwrapSingleton,
   withCalendarId,
 } from '../calendar-event-update-patch'
+import { z } from 'skedyul'
 
 const after = {
   google_event_id: 'evt_1',
@@ -244,5 +246,16 @@ describe('attendeeEmails', () => {
 describe('unwrapSingleton', () => {
   it('unwraps nested one-item arrays', () => {
     expect(unwrapSingleton([['evt_1']])).toBe('evt_1')
+  })
+})
+
+describe('blankToUndefined', () => {
+  it('turns JSON null and empty string into undefined so Zod optional strings parse', () => {
+    const schema = z.object({
+      event_id: z.preprocess(blankToUndefined, z.string().optional()),
+    })
+    expect(schema.parse({ event_id: null }).event_id).toBeUndefined()
+    expect(schema.parse({ event_id: '' }).event_id).toBeUndefined()
+    expect(schema.parse({ event_id: 'evt_1' }).event_id).toBe('evt_1')
   })
 })

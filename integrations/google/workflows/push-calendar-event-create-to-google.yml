@@ -177,15 +177,15 @@ steps:
     inputs:
       calendar_id: "{{ steps.resolve-create.outputs.response.data.calendar_id }}"
       summary: "{{ steps.resolve-create.outputs.response.data.summary }}"
-      description: "{{ steps.resolve-create.outputs.response.data.description }}"
-      location: "{{ steps.resolve-create.outputs.response.data.location }}"
+      description: "{{ steps.resolve-create.outputs.response.data.description | default: '' }}"
+      location: "{{ steps.resolve-create.outputs.response.data.location | default: '' }}"
       start: "{{ steps.resolve-create.outputs.response.data.start }}"
       end: "{{ steps.resolve-create.outputs.response.data.end }}"
-      timezone: "{{ steps.resolve-create.outputs.response.data.timezone }}"
+      timezone: "{{ steps.resolve-create.outputs.response.data.timezone | default: '' }}"
       all_day: "{{ steps.resolve-create.outputs.response.data.all_day }}"
-      google_event_id: "{{ steps.resolve-create.outputs.response.data.google_event_id }}"
-      recurring_event_id: "{{ steps.resolve-create.outputs.response.data.recurring_event_id }}"
-      original_start: "{{ steps.resolve-create.outputs.response.data.original_start }}"
+      google_event_id: "{{ steps.resolve-create.outputs.response.data.google_event_id | default: '' }}"
+      recurring_event_id: "{{ steps.resolve-create.outputs.response.data.recurring_event_id | default: '' }}"
+      original_start: "{{ steps.resolve-create.outputs.response.data.original_start | default: '' }}"
       emit_event: "false"
 
   build-writeback:
