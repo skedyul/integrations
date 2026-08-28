@@ -108,7 +108,7 @@ export default definePage({
       header: {
         title: 'Calendar event CRM map',
         description:
-          'Map Google Calendar events to a workplace CRM model. Use google_event_id + calendar_id as composite match keys, and map the calendar relationship so Calendar LIST view can group events by calendar.',
+          'Map Google Calendar events to a workplace CRM model. Use google_event_id + calendar_id as composite match keys (not required on Skedyul create), and map the calendar relationship so Calendar LIST view can group events by calendar.',
       },
       form: {
         id: 'calendar-event-crm-map-form',

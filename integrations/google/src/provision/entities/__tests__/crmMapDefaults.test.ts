@@ -69,7 +69,16 @@ describe('calendar event entity', () => {
   it('does not treat calendar_id as an upsert identity', () => {
     const calendarId = calendarEvent.fields.find((field) => field.handle === 'calendar_id')
     expect(calendarId?.isUnique).toBeUndefined()
-    expect(calendarId?.required).toBe(true)
+    expect(calendarId?.required).not.toBe(true)
+  })
+
+  it('does not require Google ids on CRM create', () => {
+    const byHandle = Object.fromEntries(
+      calendarEvent.fields.map((field) => [field.handle, field]),
+    )
+    expect(byHandle.google_event_id?.required).not.toBe(true)
+    expect(byHandle.google_event_id?.isUnique).toBe(true)
+    expect(byHandle.calendar_id?.required).not.toBe(true)
   })
 
   it('declares global iCal recurrence definitions', () => {

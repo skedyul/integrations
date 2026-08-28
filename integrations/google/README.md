@@ -52,7 +52,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
    - Optionally wire `app.google.calendar.created/updated/deleted` for later single changes — not for history
 4. Complete **Set up calendar events**:
    - Map the `calendar_event` entity to your workplace event model
-   - Set composite match fields: `google_event_id` + `calendar_id`
+   - Set composite match fields: `google_event_id` + `calendar_id` (match keys only — not required on Skedyul create)
    - Map the `calendar` relationship so Calendar LIST view can section by calendar
    - Keep the event `attendees` Google JSON on a field such as `attendee_emails` (do not map that object onto a people relation). RSVP rows live on the `attendee` model.
    - Run **Import Calendar Events** on the Events page (one batch job)

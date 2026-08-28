@@ -19,13 +19,13 @@ export default defineEntity({
       label: 'Google Event ID',
       type: 'string',
       isUnique: true,
-      required: true,
+      // Match key for import/push; omit so Skedyul-native creates are allowed.
     },
     {
       handle: 'calendar_id',
       label: 'Calendar ID',
       type: 'string',
-      required: true,
+      // Google calendar id for sync; workplace create uses the calendar relation.
     },
     { handle: 'summary', label: 'Title', type: 'string' },
     { handle: 'description', label: 'Description', type: 'long_string' },
