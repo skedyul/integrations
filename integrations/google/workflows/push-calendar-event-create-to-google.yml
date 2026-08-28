@@ -39,6 +39,23 @@ steps:
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign related = record.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- assign related_mapped = related | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = related_mapped.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = related.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
         {%- if calendar_id != blank and record.summary != blank -%}
         {
           "calendar_id": {{ calendar_id | json }},
