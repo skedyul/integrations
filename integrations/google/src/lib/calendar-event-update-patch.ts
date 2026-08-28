@@ -16,6 +16,10 @@ export type CalendarEventUpdatePatch = GoogleCalendarEventInput & {
   original_start?: string
 }
 
+export type CalendarEventCreateBody = GoogleCalendarEventInput & {
+  calendar_id: string
+}
+
 const SCALAR_KEYS = ['summary', 'description', 'location', 'status'] as const
 
 export function unwrapSingleton(value: unknown): unknown {
@@ -160,17 +164,84 @@ export function resolveGoogleEventId(record: Record<string, unknown>): string | 
 
 export function calendarEventIds(
   after: unknown,
+  fallbackCalendarId?: string,
 ): { calendar_id: string; event_id: string } | null {
   const record = asRecord(after)
   if (!record) {
     return null
   }
-  const calendarId = asString(record.calendar_id)
+  const calendarId = asString(record.calendar_id) ?? asString(fallbackCalendarId)
   const eventId = resolveGoogleEventId(record)
   if (!calendarId || !eventId) {
     return null
   }
   return { calendar_id: calendarId, event_id: eventId }
+}
+
+export function withCalendarId(
+  record: Record<string, unknown> | null,
+  calendarId: string | undefined,
+): Record<string, unknown> | null {
+  if (!record) {
+    return null
+  }
+  if (asString(record.calendar_id) || !asString(calendarId)) {
+    return record
+  }
+  return { ...record, calendar_id: calendarId }
+}
+
+/**
+ * Full Google insert body from an unformatted CRM calendar_event snapshot.
+ * Used when the workplace row has no Google event id yet.
+ */
+export function buildCalendarEventCreateInput(
+  after: unknown,
+  fallbackCalendarId?: string,
+): CalendarEventCreateBody | null {
+  const afterRecord = asRecord(after) ?? parseJsonRecord(after)
+  if (!afterRecord) {
+    return null
+  }
+  const calendarId = asString(afterRecord.calendar_id) ?? asString(fallbackCalendarId)
+  const summary = asString(afterRecord.summary)
+  const start = asString(afterRecord.start)
+  const end = asString(afterRecord.end)
+  if (!calendarId || !summary || !start || !end) {
+    return null
+  }
+
+  const created: CalendarEventCreateBody = {
+    calendar_id: calendarId,
+    summary,
+    start,
+    end,
+  }
+  const description = asString(afterRecord.description)
+  if (description) {
+    created.description = description
+  }
+  const location = asString(afterRecord.location)
+  if (location) {
+    created.location = location
+  }
+  const timezone = asString(afterRecord.timezone)
+  if (timezone) {
+    created.timezone = timezone
+  }
+  const allDay = asBoolean(afterRecord.all_day)
+  if (allDay != null) {
+    created.all_day = allDay
+  }
+  const attendees = attendeeEmails(afterRecord.attendees)
+  if (attendees) {
+    created.attendees = attendees
+  }
+  const recurrence = asStringArray(afterRecord.recurrence)
+  if (recurrence) {
+    created.recurrence = recurrence
+  }
+  return created
 }
 
 export function parseJsonRecord(value: unknown): Record<string, unknown> | null {

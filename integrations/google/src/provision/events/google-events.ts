@@ -65,7 +65,7 @@ export const calendarEventTypes: GoogleAppEventDefinition[] = [
     type: 'instance.created',
     label: 'CRM event created',
     description:
-      'A new mapped workplace event was created. Unformat through the install map and create in Google.',
+      'A new mapped workplace event was created. Load the full row, create it in Google, and write google_event_id back.',
     icon: 'Plus',
     sourceType: 'CRM',
     direction: 'outbound',
@@ -75,7 +75,7 @@ export const calendarEventTypes: GoogleAppEventDefinition[] = [
     type: 'instance.updated',
     label: 'CRM event updated',
     description:
-      'A mapped workplace event changed. Unformat through the install map and patch Google.',
+      'A mapped workplace event changed. Unformat through the install map and patch Google, or create the Google event when it has no Google id yet.',
     icon: 'Pencil',
     sourceType: 'CRM',
     direction: 'outbound',

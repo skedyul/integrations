@@ -84,7 +84,9 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 `sync-google-calendar-event-from-webhook` upserts the parent calendar first, then the event (with the calendar relationship) via `| google: "format", "calendar_event"`.
 
-`push-calendar-event-update-to-google` listens for CRM record changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update` (title, description, location, times, attendees, recurrence, status). Timed patches send a naive local `dateTime` plus `timeZone` (never a `Z`/offset timestamp together with `timeZone`). Series exceptions patch `{recurringEventId}_{yyyyMMdd'T'HHmmss'Z'}` instead of inserting a duplicate. Setup provisions an origin skip so Google-originated upserts do not loop.
+`push-calendar-event-create-to-google` listens for CRM record creates (`@crm/*/created`). Create payloads are sparse (title/times only), so the workflow reloads the row, resolves the Google calendar from the assigned relation (`instance.find` when the value is a Skedyul id), creates via `calendar_event_create` with `emit_event: false`, and writes `google_event_id` back with `instance.update`. Emitting `calendar.event.created` here would inbound-upsert a duplicate CRM row.
+
+`push-calendar-event-update-to-google` listens for CRM record changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update` (title, description, location, times, attendees, recurrence, status). Timed patches send a naive local `dateTime` plus `timeZone` (never a `Z`/offset timestamp together with `timeZone`). Series exceptions patch `{recurringEventId}_{yyyyMMdd'T'HHmmss'Z'}` instead of inserting a duplicate. When the row has no Google event id yet, the same tool inserts a new Google event and the workflow writes `google_event_id` back. Setup provisions an origin skip so Google-originated upserts do not loop.
 
 ## Tools
 

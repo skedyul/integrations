@@ -3,6 +3,7 @@ import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
 import { AppAuthInvalidError } from 'skedyul'
 import { assertCalendarWritable } from '../lib/calendar_link'
+import { asBoolean } from '../lib/calendar-event-update-patch'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { createGoogleEvent } from '../lib/create-google-event'
 import { createGoogleCalendarEvent } from '../services/calendar/client'
@@ -24,12 +25,14 @@ const CalendarEventCreateInputSchema = z.object({
   start: z.string().min(1),
   end: z.string().min(1),
   timezone: z.string().optional(),
-  all_day: z.boolean().optional(),
+  all_day: z.union([z.boolean(), z.string()]).optional(),
   attendees: z.array(z.string().email()).optional(),
   recurrence: z.array(z.string()).optional(),
   google_event_id: z.string().optional(),
   recurring_event_id: z.string().optional(),
   original_start: z.string().optional(),
+  /** Set false on CRM outbound create so inbound webhook sync does not duplicate the row. */
+  emit_event: z.union([z.boolean(), z.string()]).optional(),
 })
 
 const CalendarEventCreateOutputSchema = z.object({
@@ -61,13 +64,20 @@ const CalendarEventCreateOutputSchema = z.object({
 type CalendarEventCreateInput = z.infer<typeof CalendarEventCreateInputSchema>
 type CalendarEventCreateOutput = z.infer<typeof CalendarEventCreateOutputSchema>
 
+function shouldEmitCreatedEvent(value: unknown): boolean {
+  if (value === false || value === 'false' || value === 0 || value === '0') {
+    return false
+  }
+  return true
+}
+
 export const calendarEventCreateRegistry: ToolDefinition<
   CalendarEventCreateInput,
   CalendarEventCreateOutput
 > = {
   name: 'calendar_event_create',
   label: 'Create Calendar Event',
-  description: 'Create a Google Calendar event',
+  description: 'Create a Google Calendar event. Set emit_event false when creating from a CRM outbound push so inbound sync does not insert a duplicate row.',
   inputSchema: CalendarEventCreateInputSchema,
   outputSchema: CalendarEventCreateOutputSchema,
   handler: async (input, context) => {
@@ -84,24 +94,39 @@ export const calendarEventCreateRegistry: ToolDefinition<
       assertCalendarWritable(record)
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
-      const created = await createGoogleCalendarEvent(client, input.calendar_id, input)
+      const created = await createGoogleCalendarEvent(client, input.calendar_id, {
+        summary: input.summary,
+        description: input.description,
+        location: input.location,
+        start: input.start,
+        end: input.end,
+        timezone: input.timezone,
+        all_day: asBoolean(input.all_day),
+        attendees: input.attendees,
+        recurrence: input.recurrence,
+        google_event_id: input.google_event_id,
+        recurring_event_id: input.recurring_event_id,
+        original_start: input.original_start,
+      })
       const normalized = normalizeGoogleCalendarEvent(created)
 
-      await createGoogleEvent(
-        'calendar.event.created',
-        {
-          calendar: {
-            calendar_id: input.calendar_id,
-            summary: record.summary || input.calendar_id,
+      if (shouldEmitCreatedEvent(input.emit_event)) {
+        await createGoogleEvent(
+          'calendar.event.created',
+          {
+            calendar: {
+              calendar_id: input.calendar_id,
+              summary: record.summary || input.calendar_id,
+            },
+            event: normalized,
+            sync: {
+              direction: record.sync_direction ?? 'both',
+              trigger: 'tool',
+            },
           },
-          event: normalized,
-          sync: {
-            direction: record.sync_direction ?? 'both',
-            trigger: 'tool',
-          },
-        },
-        { trigger: 'tool' },
-      )
+          { trigger: 'tool' },
+        )
+      }
 
       return createSuccessResponse({ event: normalized })
     } catch (error) {

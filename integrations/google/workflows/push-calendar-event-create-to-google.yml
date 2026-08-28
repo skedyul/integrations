@@ -1,6 +1,6 @@
 name: Push Calendar Event Create to Google
 handle: push-calendar-event-create-to-google
-description: "When a mapped CRM record is created, unformat through the install map and create a new Google Calendar event. Skips Google-originated writes so import and inbound sync do not loop."
+description: "When a mapped CRM record is created, load the full row (create payloads are sparse), resolve the Google calendar from the assigned relation, create the Google event, and write google_event_id back. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
@@ -22,7 +22,21 @@ outputs:
     value: "{{ steps.create-google.outputs.response.data.event.summary }}"
 
 steps:
+  load-record:
+    type: task
+    name: Load created CRM event
+    description: instance.created payloads omit relation fields; reload the row so the assigned calendar is present
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | google: 'present', inputs.data.model }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.find
+    inputs:
+      id: "{{ inputs.data.record.id }}"
+
   build-create:
+    needs: [load-record]
+    on-parent-skip: run
     type: task
     name: Build Google event data
     description: Unformat the CRM record through the map for the trigger-selected model
@@ -34,14 +48,46 @@ steps:
     inputs:
       outputFormat: json
       template: |
-        {%- assign record = inputs.data.record | google: "unformat", inputs.data.model -%}
+        {%- assign source = steps.load-record.outputs.response.data -%}
+        {%- if source == blank -%}
+        {%- assign source = inputs.data.record -%}
+        {%- endif -%}
+        {%- assign record = source | google: "unformat", inputs.data.model -%}
         {%- assign calendar_id = record.calendar_id -%}
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
-        {%- if calendar_id != blank and record.summary != blank -%}
+        {%- assign related = record.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- if related == blank -%}
+        {%- assign related = source.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- assign calendar_instance_id = related.id -%}
+        {%- if calendar_instance_id == blank -%}
+        {%- assign calendar_instance_id = related -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign related_mapped = related | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = related_mapped.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = related.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- if record.summary != blank -%}
         {
           "calendar_id": {{ calendar_id | json }},
+          "calendar_instance_id": {{ calendar_instance_id | json }},
           "summary": {{ record.summary | json }},
           "description": {{ record.description | default: "" | json }},
           "location": {{ record.location | default: "" | json }},
@@ -57,13 +103,71 @@ steps:
         {}
         {%- endif -%}
 
-  create-google:
+  load-calendar:
     needs: [build-create]
     type: task
+    name: Load related calendar
+    description: Resolve Google calendar id from the assigned CRM calendar when the event string is empty
+    timeout: 30 seconds
+    if: "{{ steps.build-create.outputs.response.data.calendar_id == blank and steps.build-create.outputs.response.data.calendar_instance_id != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.find
+    inputs:
+      id: "{{ steps.build-create.outputs.response.data.calendar_instance_id }}"
+
+  resolve-create:
+    needs: [build-create, load-calendar]
+    on-parent-skip: run
+    type: task
+    name: Resolve Google calendar id
+    timeout: 30 seconds
+    if: "{{ steps.build-create.outputs.response.data.summary != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign calendar_id = steps.build-create.outputs.response.data.calendar_id -%}
+        {%- if calendar_id == blank -%}
+        {%- assign loaded = steps.load-calendar.outputs.response.data | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = loaded.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = steps.load-calendar.outputs.response.data.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- if calendar_id != blank -%}
+        {
+          "calendar_id": {{ calendar_id | json }},
+          "summary": {{ steps.build-create.outputs.response.data.summary | json }},
+          "description": {{ steps.build-create.outputs.response.data.description | json }},
+          "location": {{ steps.build-create.outputs.response.data.location | json }},
+          "start": {{ steps.build-create.outputs.response.data.start | json }},
+          "end": {{ steps.build-create.outputs.response.data.end | json }},
+          "timezone": {{ steps.build-create.outputs.response.data.timezone | json }},
+          "all_day": {{ steps.build-create.outputs.response.data.all_day | json }},
+          "google_event_id": {{ steps.build-create.outputs.response.data.google_event_id | json }},
+          "recurring_event_id": {{ steps.build-create.outputs.response.data.recurring_event_id | json }},
+          "original_start": {{ steps.build-create.outputs.response.data.original_start | json }}
+        }
+        {%- else -%}
+        {}
+        {%- endif -%}
+
+  create-google:
+    needs: [resolve-create]
+    type: task
     name: Create Google Calendar event
-    description: Create a new Google Calendar event via calendar_event_create
+    description: Create a new Google Calendar event via calendar_event_create without emitting inbound sync
     timeout: 2 minutes
-    if: "{{ steps.build-create.outputs.response.data.calendar_id != blank }}"
+    if: "{{ steps.resolve-create.outputs.response.data.calendar_id != blank }}"
     service:
       name: skedyul/app
       cmd: tool.call
@@ -71,14 +175,50 @@ steps:
         app: google
         toolName: calendar_event_create
     inputs:
-      calendar_id: "{{ steps.build-create.outputs.response.data.calendar_id }}"
-      summary: "{{ steps.build-create.outputs.response.data.summary }}"
-      description: "{{ steps.build-create.outputs.response.data.description }}"
-      location: "{{ steps.build-create.outputs.response.data.location }}"
-      start: "{{ steps.build-create.outputs.response.data.start }}"
-      end: "{{ steps.build-create.outputs.response.data.end }}"
-      timezone: "{{ steps.build-create.outputs.response.data.timezone }}"
-      all_day: "{{ steps.build-create.outputs.response.data.all_day }}"
-      google_event_id: "{{ steps.build-create.outputs.response.data.google_event_id }}"
-      recurring_event_id: "{{ steps.build-create.outputs.response.data.recurring_event_id }}"
-      original_start: "{{ steps.build-create.outputs.response.data.original_start }}"
+      calendar_id: "{{ steps.resolve-create.outputs.response.data.calendar_id }}"
+      summary: "{{ steps.resolve-create.outputs.response.data.summary }}"
+      description: "{{ steps.resolve-create.outputs.response.data.description }}"
+      location: "{{ steps.resolve-create.outputs.response.data.location }}"
+      start: "{{ steps.resolve-create.outputs.response.data.start }}"
+      end: "{{ steps.resolve-create.outputs.response.data.end }}"
+      timezone: "{{ steps.resolve-create.outputs.response.data.timezone }}"
+      all_day: "{{ steps.resolve-create.outputs.response.data.all_day }}"
+      google_event_id: "{{ steps.resolve-create.outputs.response.data.google_event_id }}"
+      recurring_event_id: "{{ steps.resolve-create.outputs.response.data.recurring_event_id }}"
+      original_start: "{{ steps.resolve-create.outputs.response.data.original_start }}"
+      emit_event: "false"
+
+  build-writeback:
+    needs: [create-google]
+    type: task
+    name: Build Google id writeback
+    timeout: 30 seconds
+    if: "{{ steps.create-google.outputs.response.data.event.google_event_id != blank and inputs.data.record.id != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "calendar_event": {
+            "google_event_id": {{ steps.create-google.outputs.response.data.event.google_event_id | json }},
+            "calendar_id": {{ steps.resolve-create.outputs.response.data.calendar_id | json }},
+            "html_link": {{ steps.create-google.outputs.response.data.event.html_link | json }},
+            "etag": {{ steps.create-google.outputs.response.data.event.etag | json }}
+          }
+        }
+
+  write-google-ids:
+    needs: [build-writeback]
+    type: task
+    name: Write Google event id onto CRM record
+    description: Patch the existing instance so later updates can PATCH Google instead of inserting again
+    timeout: 30 seconds
+    if: "{{ steps.build-writeback.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.update
+    inputs:
+      instanceId: "{{ inputs.data.record.id }}"
+      data: "{{ steps.build-writeback.outputs.response.data | google: 'format', 'calendar_event' | json }}"
