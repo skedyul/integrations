@@ -6,6 +6,7 @@ import { assertCalendarWritable } from '../lib/calendar_link'
 import {
   attendeeEmails,
   asBoolean,
+  blankToUndefined,
   buildCalendarEventCreateInput,
   buildCalendarEventUpdatePatch,
   calendarEventIds,
@@ -39,22 +40,27 @@ const JsonRecordSchema = z.union([
   z.string(),
 ])
 
+const optionalString = z.preprocess(blankToUndefined, z.string().optional())
+
 const CalendarEventUpdateInputSchema = z.object({
   calendar_id: z.string().min(1),
-  event_id: z.string().optional(),
-  summary: z.string().optional(),
-  description: z.string().optional(),
-  location: z.string().optional(),
-  start: z.string().optional(),
-  end: z.string().optional(),
-  timezone: z.string().optional(),
-  all_day: z.union([z.boolean(), z.string()]).optional(),
+  event_id: optionalString,
+  summary: optionalString,
+  description: optionalString,
+  location: optionalString,
+  start: optionalString,
+  end: optionalString,
+  timezone: optionalString,
+  all_day: z.preprocess(
+    blankToUndefined,
+    z.union([z.boolean(), z.string()]).optional(),
+  ),
   attendees: z.array(AttendeeSchema).optional(),
   recurrence: z.array(z.string()).optional(),
-  status: z.string().optional(),
+  status: optionalString,
   /** Unformatted calendar_event payload from `| google: "unformat"` */
-  before: JsonRecordSchema.optional(),
-  after: JsonRecordSchema.optional(),
+  before: z.preprocess(blankToUndefined, JsonRecordSchema.optional()),
+  after: z.preprocess(blankToUndefined, JsonRecordSchema.optional()),
 })
 
 const CalendarEventUpdateOutputSchema = z.object({
@@ -92,13 +98,13 @@ type ResolvedWrite =
   | { kind: 'get'; eventId: string }
   | { kind: 'invalid'; message: string }
 
-function blankToUndefined(value: string | undefined): string | undefined {
+function trimToUndefined(value: string | undefined): string | undefined {
   const trimmed = value?.trim()
   return trimmed ? trimmed : undefined
 }
 
 function resolveWrite(input: CalendarEventUpdateInput): ResolvedWrite {
-  const eventId = blankToUndefined(input.event_id)
+  const eventId = trimToUndefined(input.event_id)
 
   if (input.after != null && input.after !== '') {
     const after = withCalendarId(parseJsonRecord(input.after), input.calendar_id)

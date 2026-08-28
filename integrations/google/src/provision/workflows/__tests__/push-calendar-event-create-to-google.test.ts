@@ -26,6 +26,9 @@ describe('push-calendar-event-create-to-google', () => {
     )
     expect(yaml).toContain('toolName: calendar_event_create')
     expect(yaml).toContain('emit_event: "false"')
+    expect(yaml).toContain(
+      "google_event_id: \"{{ steps.resolve-create.outputs.response.data.google_event_id | default: '' }}\"",
+    )
   })
 
   it('resolves calendar_id from the related calendar when the event string is empty', () => {

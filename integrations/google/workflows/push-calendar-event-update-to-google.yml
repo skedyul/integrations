@@ -145,7 +145,7 @@ steps:
         toolName: calendar_event_update
     inputs:
       calendar_id: "{{ steps.resolve-update.outputs.response.data.calendar_id }}"
-      event_id: "{{ steps.resolve-update.outputs.response.data.event_id }}"
+      event_id: "{{ steps.resolve-update.outputs.response.data.event_id | default: '' }}"
       before: "{{ steps.resolve-update.outputs.response.data.before | json }}"
       after: "{{ steps.resolve-update.outputs.response.data.after | json }}"
 

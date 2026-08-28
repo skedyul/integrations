@@ -3,7 +3,7 @@ import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
 import { AppAuthInvalidError } from 'skedyul'
 import { assertCalendarWritable } from '../lib/calendar_link'
-import { asBoolean } from '../lib/calendar-event-update-patch'
+import { asBoolean, blankToUndefined } from '../lib/calendar-event-update-patch'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { createGoogleEvent } from '../lib/create-google-event'
 import { createGoogleCalendarEvent } from '../services/calendar/client'
@@ -17,22 +17,30 @@ import {
   createValidationError,
 } from '../lib/response'
 
+const optionalString = z.preprocess(blankToUndefined, z.string().optional())
+
 const CalendarEventCreateInputSchema = z.object({
   calendar_id: z.string().min(1),
   summary: z.string().min(1),
-  description: z.string().optional(),
-  location: z.string().optional(),
+  description: optionalString,
+  location: optionalString,
   start: z.string().min(1),
   end: z.string().min(1),
-  timezone: z.string().optional(),
-  all_day: z.union([z.boolean(), z.string()]).optional(),
+  timezone: optionalString,
+  all_day: z.preprocess(
+    blankToUndefined,
+    z.union([z.boolean(), z.string()]).optional(),
+  ),
   attendees: z.array(z.string().email()).optional(),
   recurrence: z.array(z.string()).optional(),
-  google_event_id: z.string().optional(),
-  recurring_event_id: z.string().optional(),
-  original_start: z.string().optional(),
+  google_event_id: optionalString,
+  recurring_event_id: optionalString,
+  original_start: optionalString,
   /** Set false on CRM outbound create so inbound webhook sync does not duplicate the row. */
-  emit_event: z.union([z.boolean(), z.string()]).optional(),
+  emit_event: z.preprocess(
+    blankToUndefined,
+    z.union([z.boolean(), z.string()]).optional(),
+  ),
 })
 
 const CalendarEventCreateOutputSchema = z.object({

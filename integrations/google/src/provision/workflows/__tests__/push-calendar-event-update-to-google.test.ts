@@ -34,6 +34,12 @@ describe('push-calendar-event-update-to-google', () => {
     expect(yaml).toContain('cmd: instance.find')
   })
 
+  it('does not pass a JSON null event_id into calendar_event_update', () => {
+    expect(yaml).toContain(
+      "event_id: \"{{ steps.resolve-update.outputs.response.data.event_id | default: '' }}\"",
+    )
+  })
+
   it('writes google_event_id back when the CRM row had none', () => {
     expect(yaml).toContain('cmd: instance.update')
     expect(yaml).toContain('instanceId: "{{ inputs.data.after.id }}"')
