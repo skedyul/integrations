@@ -7,7 +7,9 @@ function isHttpUrl(value: string): boolean {
 
 export function buildFirstMessagesPageUrl(operationId: string): string {
   const url = new URL(TWILIO_BULK_MESSAGES_URL)
-  url.searchParams.set('operation_id', operationId)
+  // Twilio Comms List Messages filters on camelCase `operationId`.
+  // `operation_id` is ignored and returns the account-wide message list.
+  url.searchParams.set('operationId', operationId)
   url.searchParams.set('pageSize', String(TWILIO_BULK_MESSAGES_PAGE_SIZE))
   return url.toString()
 }
@@ -36,7 +38,7 @@ export function resolveNextMessagesPageUrl(input: {
 
   const token = candidates[0]
   const url = new URL(TWILIO_BULK_MESSAGES_URL)
-  url.searchParams.set('operation_id', input.operationId)
+  url.searchParams.set('operationId', input.operationId)
   url.searchParams.set('pageToken', token)
   url.searchParams.set('pageSize', String(TWILIO_BULK_MESSAGES_PAGE_SIZE))
   return url.toString()

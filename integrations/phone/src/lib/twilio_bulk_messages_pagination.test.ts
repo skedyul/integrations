@@ -9,9 +9,9 @@ import {
 const OPERATION_ID = 'comms_operation_01m13eryjdf74aw86mjr7j68dq'
 
 describe('buildFirstMessagesPageUrl', () => {
-  it('requests pageSize 1000 with the same operation_id query', () => {
+  it('requests pageSize 1000 with the camelCase operationId query', () => {
     expect(buildFirstMessagesPageUrl(OPERATION_ID)).toBe(
-      `${TWILIO_BULK_MESSAGES_URL}?operation_id=${OPERATION_ID}&pageSize=${TWILIO_BULK_MESSAGES_PAGE_SIZE}`,
+      `${TWILIO_BULK_MESSAGES_URL}?operationId=${OPERATION_ID}&pageSize=${TWILIO_BULK_MESSAGES_PAGE_SIZE}`,
     )
   })
 })
@@ -35,7 +35,7 @@ describe('resolveNextMessagesPageUrl', () => {
   })
 
   it('uses an absolute next_page_url as-is', () => {
-    const nextPageUrl = `${TWILIO_BULK_MESSAGES_URL}?operation_id=${OPERATION_ID}&pageToken=abc`
+    const nextPageUrl = `${TWILIO_BULK_MESSAGES_URL}?operationId=${OPERATION_ID}&pageToken=abc`
     expect(
       resolveNextMessagesPageUrl({
         operationId: OPERATION_ID,
@@ -66,7 +66,7 @@ describe('resolveNextMessagesPageUrl', () => {
         nextPageUrl: null,
       }),
     ).toBe(
-      `${TWILIO_BULK_MESSAGES_URL}?operation_id=${OPERATION_ID}&pageToken=${encodeURIComponent(token)}&pageSize=${TWILIO_BULK_MESSAGES_PAGE_SIZE}`,
+      `${TWILIO_BULK_MESSAGES_URL}?operationId=${OPERATION_ID}&pageToken=${encodeURIComponent(token)}&pageSize=${TWILIO_BULK_MESSAGES_PAGE_SIZE}`,
     )
   })
 })
