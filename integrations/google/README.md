@@ -54,7 +54,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
    - Map the `calendar_event` entity to your workplace event model
    - Set composite match fields: `google_event_id` + `calendar_id`
    - Map the `calendar` relationship so Calendar LIST view can section by calendar
-   - Optionally map `organizer` onto a people relation
+   - Keep the event `attendees` Google JSON on a field such as `attendee_emails` (do not map that object onto a people relation). RSVP rows live on the `attendee` model.
    - Run **Import Calendar Events** on the Events page (one batch job)
    - Optionally wire `app.google.calendar.event.*` for a later 1:1 payload — not for pull sync
 5. Complete **Set up calendar people**:

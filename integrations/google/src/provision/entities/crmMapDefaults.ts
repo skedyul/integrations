@@ -42,7 +42,7 @@ export const calendarEventCrmMapDefaults: EntityCrmMapDefaults = {
     all_day: 'all_day',
     status: 'status',
     location: 'location',
-    attendees: 'attendees',
+    attendees: 'attendee_emails',
     html_link: 'html_link',
     updated_at: 'updated_at',
     recurrence: 'recurrence',
