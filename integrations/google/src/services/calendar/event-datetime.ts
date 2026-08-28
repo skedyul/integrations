@@ -37,6 +37,13 @@ export function googleSeriesInstanceId(
   return `${recurringEventId}_${compact}`
 }
 
+/** Google this-and-following split masters end with `_RyyyyMMddTHHmmss` (optional Z). */
+const GOOGLE_SPLIT_MASTER_ID = /_R\d{8}T\d{6}Z?$/i
+
+export function isGoogleThisAndFollowingMasterId(eventId: string): boolean {
+  return GOOGLE_SPLIT_MASTER_ID.test(eventId.trim())
+}
+
 export function toCompactUtcStamp(value: string): string | null {
   const trimmed = value.trim()
   const compactMatch = trimmed.match(COMPACT_UTC)
@@ -102,20 +109,26 @@ export function resolveGoogleWriteTarget(input: {
   recurring_event_id?: string | null
   original_start?: string | null
 }): { mode: 'insert' } | { mode: 'patch'; eventId: string } {
+  const storedId = input.google_event_id?.trim() || input.event_id?.trim()
+  if (storedId && isGoogleThisAndFollowingMasterId(storedId)) {
+    return { mode: 'patch', eventId: storedId }
+  }
+
   const recurringEventId = input.recurring_event_id?.trim()
   const originalStart = input.original_start?.trim()
   if (recurringEventId && originalStart) {
+    if (isGoogleThisAndFollowingMasterId(recurringEventId)) {
+      return { mode: 'patch', eventId: recurringEventId }
+    }
     const instanceId = googleSeriesInstanceId(recurringEventId, originalStart)
-    const storedId = input.google_event_id?.trim() || input.event_id?.trim()
     if (!storedId || storedId === recurringEventId) {
       return { mode: 'patch', eventId: instanceId }
     }
     return { mode: 'patch', eventId: storedId }
   }
 
-  const eventId = input.google_event_id?.trim() || input.event_id?.trim()
-  if (eventId) {
-    return { mode: 'patch', eventId }
+  if (storedId) {
+    return { mode: 'patch', eventId: storedId }
   }
   return { mode: 'insert' }
 }

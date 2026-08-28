@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import {
   buildEventDateTime,
   googleSeriesInstanceId,
+  isGoogleThisAndFollowingMasterId,
   resolveGoogleWriteTarget,
   toCompactUtcStamp,
 } from '../event-datetime'
@@ -95,5 +96,31 @@ describe('resolveGoogleWriteTarget', () => {
     ).toEqual({
       mode: 'insert',
     })
+  })
+
+  it('patches a this-and-following _R id as the series master', () => {
+    const splitId = '21276hr5ftmq6ts3pe451ti7er_R20260629T233000'
+    expect(isGoogleThisAndFollowingMasterId(splitId)).toBe(true)
+    expect(
+      isGoogleThisAndFollowingMasterId(`${splitId}_20260825T233000Z`),
+    ).toBe(false)
+    expect(
+      resolveGoogleWriteTarget({
+        google_event_id: splitId,
+      }),
+    ).toEqual({ mode: 'patch', eventId: splitId })
+    expect(
+      resolveGoogleWriteTarget({
+        google_event_id: splitId,
+        recurring_event_id: splitId,
+        original_start: '2026-08-25T23:30:00.000Z',
+      }),
+    ).toEqual({ mode: 'patch', eventId: splitId })
+    expect(
+      resolveGoogleWriteTarget({
+        recurring_event_id: splitId,
+        original_start: '2026-08-25T23:30:00.000Z',
+      }),
+    ).toEqual({ mode: 'patch', eventId: splitId })
   })
 })
