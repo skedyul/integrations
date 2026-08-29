@@ -103,7 +103,7 @@ describe('verifyReaWebhookSignature', () => {
     })
   })
 
-  it('reports unknown_kid when the key is missing', async () => {
+  it('reports stale_timestamp for the expired docs sample', async () => {
     await expect(
       verifyReaWebhookSignature({
         rawBody: '{}',
@@ -112,8 +112,24 @@ describe('verifyReaWebhookSignature', () => {
       }),
     ).resolves.toEqual({
       ok: false,
-      reason: 'unknown_kid',
+      reason: 'stale_timestamp',
       keyId: '512bcc40-2aab-4cb7-9810-58a3dd8fa418',
+      headerPartCount: 4,
+    })
+  })
+
+  it('reports unknown_kid when the key is missing', async () => {
+    const timestamp = Math.floor(Date.now() / 1000)
+    await expect(
+      verifyReaWebhookSignature({
+        rawBody: '{}',
+        signatureHeader: `s:missing-kid:${timestamp}:dGVzdA==`,
+        signingKeys: [],
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'unknown_kid',
+      keyId: 'missing-kid',
       headerPartCount: 4,
     })
   })
