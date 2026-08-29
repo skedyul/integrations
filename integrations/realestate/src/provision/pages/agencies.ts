@@ -2,6 +2,8 @@
  * Agencies Page
  *
  * Lists REA agencies discovered via Ignite authorization / Integrations API.
+ * Uses a card + context list (same pattern as phone / Facebook pages), not a
+ * top-level list block — those render as a generic "Showing all items" card.
  */
 
 import { definePage } from 'skedyul'
@@ -15,8 +17,12 @@ export default definePage({
   audience: 'install',
   navigation: true,
 
-  filter: {
-    model: 'agency',
+  context: {
+    agencies: {
+      model: 'agency',
+      mode: 'many',
+      limit: 50,
+    },
   },
 
   blocks: [
@@ -47,15 +53,52 @@ export default definePage({
             id: 'refresh_agencies',
             row: 1,
             col: 0,
-            label: 'Refresh from Ignite',
-            description: 'Re-check REA Integrations API and update agency records.',
+            label: 'Ignite integration',
+            description: [
+              "{%- assign active_count = 0 -%}",
+              "{%- for agency in agencies -%}",
+              "{%- if agency.status == 'ACTIVE' -%}",
+              "{%- assign active_count = active_count | plus: 1 -%}",
+              "{%- endif -%}",
+              "{%- endfor -%}",
+              "{%- if active_count > 0 -%}",
+              "{{ active_count }} active agency(ies). Click to refresh from REA.",
+              "{%- else -%}",
+              "No agencies connected yet. After authorizing in Ignite, check status — this calls REA directly.",
+              "{%- endif -%}",
+            ].join(''),
             mode: 'field',
             handler: 'check_ignite_integration',
             button: {
               label: 'Check Ignite status',
-              variant: 'outline',
+              variant: 'default',
               size: 'sm',
             },
+          } as never,
+          {
+            component: 'list',
+            id: 'agencies_list',
+            row: 2,
+            col: 0,
+            iterable: '{{ agencies }}',
+            itemTemplate: {
+              component: 'ActionTile',
+              span: 12,
+              mdSpan: 12,
+              lgSpan: 12,
+              props: {
+                id: '{{ item.id }}',
+                label: '{{ item.agency_id }}',
+                description: [
+                  "{{ item.status }}",
+                  "{%- if item.has_lead_scope -%} · Lead scope{%- endif -%}",
+                ].join(''),
+                leftIcon: 'Building2',
+              },
+            },
+            title: 'Agencies',
+            emptyMessage:
+              'No agencies yet. Authorize in Ignite, then check status.',
           } as never,
         ],
         layout: {
@@ -63,24 +106,11 @@ export default definePage({
           rows: [
             { columns: [{ field: 'agencies-info', colSpan: 12 }] },
             { columns: [{ field: 'refresh_agencies', colSpan: 12 }] },
+            { columns: [{ field: 'agencies_list', colSpan: 12 }] },
           ],
         },
       },
     },
-    {
-      type: 'list',
-      model: 'agency',
-      columns: [
-        { field: 'agency_id', label: 'Agency ID' },
-        { field: 'status', label: 'Status' },
-        { field: 'has_lead_scope', label: 'Lead scope' },
-        { field: 'connected_at', label: 'Connected' },
-      ],
-      emptyState: {
-        title: 'No agencies yet',
-        description: 'Authorize in Ignite, then check status on Setup.',
-      },
-    } as never,
   ],
 
   actions: [

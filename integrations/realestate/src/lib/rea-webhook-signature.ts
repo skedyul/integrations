@@ -45,8 +45,22 @@ export interface ParsedReaSignature {
   keyId: string
   timestamp: number
   signatureBase64: string
+  headerPartCount: number
 }
 
+/**
+ * Decode REA Base64 or Base64URL (`-`/`_`, optional padding).
+ */
+export function decodeReaBase64(value: string): Buffer {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padLength = (4 - (normalized.length % 4)) % 4
+  return Buffer.from(normalized + '='.repeat(padLength), 'base64')
+}
+
+/**
+ * Official form: `s:{keyId}:{timestamp}:{signature}` (4 parts).
+ * REA docs sample also uses a duplicate timestamp: `s:kid:ts:ts:sig` (5 parts).
+ */
 export function parseReaSignatureHeader(
   header: string | undefined,
 ): ParsedReaSignature | null {
@@ -59,7 +73,9 @@ export function parseReaSignatureHeader(
     return null
   }
 
-  const [, keyId, timestampStr, , signatureBase64] = parts
+  const keyId = parts[1]
+  const timestampStr = parts[2]
+  const signatureBase64 = parts.length === 4 ? parts[3] : parts[parts.length - 1]
   if (!keyId || !timestampStr || !signatureBase64) {
     return null
   }
@@ -69,7 +85,12 @@ export function parseReaSignatureHeader(
     return null
   }
 
-  return { keyId, timestamp, signatureBase64 }
+  return {
+    keyId,
+    timestamp,
+    signatureBase64,
+    headerPartCount: parts.length,
+  }
 }
 
 export function isSignatureTimestampValid(timestamp: number, nowSeconds?: number): boolean {
@@ -77,18 +98,44 @@ export function isSignatureTimestampValid(timestamp: number, nowSeconds?: number
   return timestamp + EIGHT_HOURS_IN_SECONDS >= currentEpochTimeInSeconds
 }
 
+export type ReaSignatureVerifyFailure =
+  | 'bad_header'
+  | 'stale_timestamp'
+  | 'unknown_kid'
+  | 'verify_failed'
+
+export type ReaSignatureVerifyResult =
+  | { ok: true; keyId: string; headerPartCount: number }
+  | {
+      ok: false
+      reason: ReaSignatureVerifyFailure
+      keyId?: string
+      headerPartCount?: number
+    }
+
 export async function verifyReaWebhookSignature(params: {
   rawBody: string
   signatureHeader: string | undefined
   signingKeys: ReaSigningKey[]
-}): Promise<boolean> {
+}): Promise<ReaSignatureVerifyResult> {
   const parsed = parseReaSignatureHeader(params.signatureHeader)
   if (!parsed) {
-    return false
+    return {
+      ok: false,
+      reason: 'bad_header',
+      headerPartCount: params.signatureHeader?.startsWith('s:')
+        ? params.signatureHeader.split(':').length
+        : 0,
+    }
   }
 
   if (!isSignatureTimestampValid(parsed.timestamp)) {
-    return false
+    return {
+      ok: false,
+      reason: 'stale_timestamp',
+      keyId: parsed.keyId,
+      headerPartCount: parsed.headerPartCount,
+    }
   }
 
   const keyEntry =
@@ -96,12 +143,38 @@ export async function verifyReaWebhookSignature(params: {
     getCachedSigningKey(parsed.keyId)
 
   if (!keyEntry) {
-    return false
+    return {
+      ok: false,
+      reason: 'unknown_kid',
+      keyId: parsed.keyId,
+      headerPartCount: parsed.headerPartCount,
+    }
   }
 
-  const signature = Buffer.from(parsed.signatureBase64, 'base64')
-  const publicKey = Buffer.from(keyEntry.x, 'base64')
-  const messageBytes = Buffer.from(`${parsed.timestamp}${params.rawBody}`)
-
-  return ed.verifyAsync(signature, messageBytes, publicKey)
+  try {
+    const signature = decodeReaBase64(parsed.signatureBase64)
+    const publicKey = decodeReaBase64(keyEntry.x)
+    const messageBytes = Buffer.from(`${parsed.timestamp}${params.rawBody}`)
+    const isValid = await ed.verifyAsync(signature, messageBytes, publicKey)
+    if (!isValid) {
+      return {
+        ok: false,
+        reason: 'verify_failed',
+        keyId: parsed.keyId,
+        headerPartCount: parsed.headerPartCount,
+      }
+    }
+    return {
+      ok: true,
+      keyId: parsed.keyId,
+      headerPartCount: parsed.headerPartCount,
+    }
+  } catch {
+    return {
+      ok: false,
+      reason: 'verify_failed',
+      keyId: parsed.keyId,
+      headerPartCount: parsed.headerPartCount,
+    }
+  }
 }

@@ -5,6 +5,7 @@ import {
   getCachedSigningKeys,
   isSigningKeyCacheStale,
   verifyReaWebhookSignature,
+  type ReaSignatureVerifyResult,
 } from '../../lib/rea-webhook-signature'
 import type { ReaClientEnv } from '../../lib/rea-types'
 import { getHeaderValue, getRawBodyString } from './helpers'
@@ -17,6 +18,19 @@ async function loadSigningKeys(env: ReaClientEnv) {
   const client = ReaClient.fromEnv(env)
   const response = await client.getSigningKeys()
   cacheSigningKeys(response.keys ?? [])
+}
+
+function logInvalidSignature(
+  logPrefix: string,
+  result: Extract<ReaSignatureVerifyResult, { ok: false }>,
+) {
+  console.warn(
+    `[${logPrefix}] Invalid webhook signature reason=${result.reason}` +
+      (result.keyId ? ` kid=${result.keyId}` : '') +
+      (result.headerPartCount !== undefined
+        ? ` headerParts=${result.headerPartCount}`
+        : ''),
+  )
 }
 
 export type VerifyReaWebhookResult =
@@ -64,20 +78,20 @@ export async function verifyReaWebhookRequest(
   }
 
   let signingKeys = getCachedSigningKeys()
-  let isValid = await verifyReaWebhookSignature({
+  let result = await verifyReaWebhookSignature({
     rawBody,
     signatureHeader,
     signingKeys,
   })
 
-  if (!isValid) {
+  if (!result.ok) {
     try {
       const client = ReaClient.fromEnv(env)
       const response = await client.getSigningKeys()
       cacheSigningKeys(response.keys ?? [])
       signingKeys = response.keys ?? []
 
-      isValid = await verifyReaWebhookSignature({
+      result = await verifyReaWebhookSignature({
         rawBody,
         signatureHeader,
         signingKeys,
@@ -87,8 +101,8 @@ export async function verifyReaWebhookRequest(
     }
   }
 
-  if (!isValid) {
-    console.warn(`[${logPrefix}] Invalid webhook signature`)
+  if (!result.ok) {
+    logInvalidSignature(logPrefix, result)
     return {
       ok: false,
       status: 401,
