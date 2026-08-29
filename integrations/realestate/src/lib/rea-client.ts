@@ -288,6 +288,23 @@ export class ReaClient {
   async fetchEnquiry(resourceUrl: string): Promise<ReaEnquiryRecord> {
     return this.getJson<ReaEnquiryRecord>(resourceUrl)
   }
+
+  async listEnquiries(options: {
+    since: string
+    agencyId?: string
+  }): Promise<ReaEnquiryRecord[]> {
+    const params = new URLSearchParams({ since: options.since })
+    if (options.agencyId) {
+      params.set('agency_id', options.agencyId)
+    }
+
+    const data = await this.getJson<{
+      _embedded?: { enquiry?: ReaEnquiryRecord[] }
+      enquiries?: ReaEnquiryRecord[]
+    }>(`${this.baseUrl}/lead/v1/enquiries?${params.toString()}`)
+
+    return data._embedded?.enquiry ?? data.enquiries ?? []
+  }
 }
 
 /** Reset cached token — for tests. */

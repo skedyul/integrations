@@ -51,6 +51,40 @@ function mockReaFetch(options: {
 
   jest.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input)
+    if (url.includes('/me/v1/integrations')) {
+      return new Response(
+        JSON.stringify({
+          _embedded: {
+            integrations: [
+              {
+                integrationId: 'int-1',
+                ownerId: 'GHBDWE',
+                ownerType: 'agency',
+                scopes: ['lead:enquiries:read'],
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+    if (url.includes('/lead/v1/enquiries')) {
+      return new Response(
+        JSON.stringify({
+          _embedded: {
+            enquiry: [
+              {
+                id: 'enquiry-recent',
+                agencyId: 'GHBDWE',
+                receivedAt: '2026-08-29T10:50:00.000Z',
+                type: 'REALESTATE_COM_AU_LISTING',
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    }
     if (url.includes('/oauth/token')) {
       return new Response(JSON.stringify({ access_token: 'token', expires_in: 3600 }), {
         status: 200,
@@ -148,6 +182,8 @@ describe('ensure_rea_webhooks', () => {
     expect(result.output.message).toContain(installUrl)
     expect(result.output.deliveries[0]?.outcome).toBe('Ok')
     expect(result.output.message).toContain('Latest REA delivery')
+    expect(result.output.recentEnquiries[0]?.id).toBe('enquiry-recent')
+    expect(result.output.message).toContain('REA Leads API has')
     expect(created).toEqual([
       {
         eventType: 'EnquiryCreated',

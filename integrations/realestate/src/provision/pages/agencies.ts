@@ -82,7 +82,7 @@ export default definePage({
             col: 0,
             label: 'REA lead webhooks',
             description:
-              'Point REA EnquiryCreated at this install. Use if Temporal shows no webhook activity.',
+              'Confirm the EnquiryCreated subscription and show recent REA deliveries / leads. Temporal stays empty until REA POSTs a signed EnquiryCreated.',
             mode: 'field',
             handler: 'ensure_rea_webhooks',
             button: {

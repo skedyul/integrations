@@ -15,6 +15,7 @@ import {
 } from 'skedyul'
 import { ReaClient } from '../lib/rea-client'
 import { ensureInstallEnquiryCreatedSubscription } from '../lib/ensure-rea-webhooks'
+import type { ReaEnquiryRecord } from '../events/types'
 import type {
   ReaClientEnv,
   ReaWebhookDelivery,
@@ -40,6 +41,13 @@ const ReaDeliveryRowSchema = z.object({
   createdAt: z.string(),
 })
 
+const ReaEnquiryRowSchema = z.object({
+  id: z.string(),
+  agencyId: z.string(),
+  receivedAt: z.string().optional(),
+  type: z.string().optional(),
+})
+
 const EnsureReaWebhooksOutputSchema = z.object({
   enquiryWebhookUrl: z.string(),
   leadSubscriptionId: z.string(),
@@ -48,6 +56,7 @@ const EnsureReaWebhooksOutputSchema = z.object({
   before: z.array(ReaSubscriptionRowSchema),
   after: z.array(ReaSubscriptionRowSchema),
   deliveries: z.array(ReaDeliveryRowSchema),
+  recentEnquiries: z.array(ReaEnquiryRowSchema),
   message: z.string(),
 })
 
@@ -87,6 +96,16 @@ function deliverySummary(deliveries: ReaWebhookDelivery[]): string {
   return `Latest REA delivery: ${outcome} HTTP ${status} at ${when}.`
 }
 
+function enquirySummary(enquiries: ReaEnquiryRecord[], agencyIds: string[]): string {
+  const agencies = agencyIds.length > 0 ? agencyIds.join(', ') : 'connected agencies'
+  if (enquiries.length === 0) {
+    return `REA Leads API has no enquiries for ${agencies} in the last 7 days. Submit a listing enquiry on realestate.com.au for that agency.`
+  }
+
+  const latest = enquiries[0]
+  return `REA Leads API has ${enquiries.length} enquiry(ies) for ${agencies} (latest ${latest.id} at ${latest.receivedAt ?? 'unknown'}). If Temporal is still empty, REA created the lead but did not deliver EnquiryCreated.`
+}
+
 export const ensureReaWebhooksRegistry: ToolDefinition<
   EnsureReaWebhooksInput,
   EnsureReaWebhooksOutput
@@ -114,6 +133,27 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
       const deliveries = toDeliveryRows(
         await client.listWebhookDeliveries(ensured.leadSubscriptionId),
       )
+      const leadIntegrations = await client.listLeadIntegrations()
+      const agencyIds = [
+        ...new Set(leadIntegrations.map((integration) => integration.ownerId).filter(Boolean)),
+      ]
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const recentEnquiries = (
+        await Promise.all(
+          (agencyIds.length > 0 ? agencyIds : [undefined]).map((agencyId) =>
+            client.listEnquiries({ since, agencyId }),
+          ),
+        )
+      )
+        .flat()
+        .sort((left, right) => (right.receivedAt ?? '').localeCompare(left.receivedAt ?? ''))
+        .slice(0, 10)
+        .map((enquiry) => ({
+          id: enquiry.id,
+          agencyId: enquiry.agencyId,
+          receivedAt: enquiry.receivedAt,
+          type: enquiry.type,
+        }))
 
       const repairMessage =
         ensured.leadAction === 'kept'
@@ -121,7 +161,7 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
           : ensured.leadAction === 'retargeted'
             ? `Retargeted EnquiryCreated from ${ensured.leadPreviousUrl} to ${ensured.enquiryWebhookUrl}.`
             : `Created EnquiryCreated subscription at ${ensured.enquiryWebhookUrl}.`
-      const message = `${repairMessage} ${deliverySummary(deliveries)}`
+      const message = `${repairMessage} ${deliverySummary(deliveries)} ${enquirySummary(recentEnquiries, agencyIds)}`
 
       return createSuccessResponse({
         enquiryWebhookUrl: ensured.enquiryWebhookUrl,
@@ -131,6 +171,7 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
         before,
         after,
         deliveries,
+        recentEnquiries,
         message,
       })
     } catch (error) {
