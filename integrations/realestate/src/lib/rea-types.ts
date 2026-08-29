@@ -50,6 +50,14 @@ export interface ReaWebhookSubscription {
   ownerType?: string
 }
 
+export interface ReaWebhookDelivery {
+  attemptId: string
+  deliveryId: string
+  statusCode?: number
+  outcome?: string
+  createdAt: string
+}
+
 export interface ReaSigningKey {
   kty: string
   use: string

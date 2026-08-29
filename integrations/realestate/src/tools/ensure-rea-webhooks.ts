@@ -15,7 +15,11 @@ import {
 } from 'skedyul'
 import { ReaClient } from '../lib/rea-client'
 import { ensureInstallEnquiryCreatedSubscription } from '../lib/ensure-rea-webhooks'
-import type { ReaClientEnv, ReaWebhookSubscription } from '../lib/rea-types'
+import type {
+  ReaClientEnv,
+  ReaWebhookDelivery,
+  ReaWebhookSubscription,
+} from '../lib/rea-types'
 
 const EnsureReaWebhooksInputSchema = z.object({})
 
@@ -28,6 +32,14 @@ const ReaSubscriptionRowSchema = z.object({
   ownerId: z.string().optional(),
 })
 
+const ReaDeliveryRowSchema = z.object({
+  attemptId: z.string(),
+  deliveryId: z.string(),
+  statusCode: z.number().optional(),
+  outcome: z.string().optional(),
+  createdAt: z.string(),
+})
+
 const EnsureReaWebhooksOutputSchema = z.object({
   enquiryWebhookUrl: z.string(),
   leadSubscriptionId: z.string(),
@@ -35,6 +47,7 @@ const EnsureReaWebhooksOutputSchema = z.object({
   leadPreviousUrl: z.string().optional(),
   before: z.array(ReaSubscriptionRowSchema),
   after: z.array(ReaSubscriptionRowSchema),
+  deliveries: z.array(ReaDeliveryRowSchema),
   message: z.string(),
 })
 
@@ -50,6 +63,28 @@ function toRows(subscriptions: ReaWebhookSubscription[]) {
     status: subscription.status,
     ownerId: subscription.ownerId,
   }))
+}
+
+function toDeliveryRows(deliveries: ReaWebhookDelivery[]) {
+  return deliveries.slice(0, 10).map((delivery) => ({
+    attemptId: delivery.attemptId,
+    deliveryId: delivery.deliveryId,
+    statusCode: delivery.statusCode,
+    outcome: delivery.outcome,
+    createdAt: delivery.createdAt,
+  }))
+}
+
+function deliverySummary(deliveries: ReaWebhookDelivery[]): string {
+  if (deliveries.length === 0) {
+    return 'REA has no delivery attempts for this subscription yet — Temporal will stay empty until REA POSTs EnquiryCreated.'
+  }
+
+  const latest = deliveries[0]
+  const when = latest.createdAt
+  const outcome = latest.outcome ?? 'unknown'
+  const status = latest.statusCode ?? 'n/a'
+  return `Latest REA delivery: ${outcome} HTTP ${status} at ${when}.`
 }
 
 export const ensureReaWebhooksRegistry: ToolDefinition<
@@ -76,13 +111,17 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
       const before = toRows(await client.listWebhookSubscriptions())
       const ensured = await ensureInstallEnquiryCreatedSubscription(env)
       const after = toRows(await client.listWebhookSubscriptions())
+      const deliveries = toDeliveryRows(
+        await client.listWebhookDeliveries(ensured.leadSubscriptionId),
+      )
 
-      const message =
+      const repairMessage =
         ensured.leadAction === 'kept'
           ? `REA EnquiryCreated already points at ${ensured.enquiryWebhookUrl}.`
           : ensured.leadAction === 'retargeted'
             ? `Retargeted EnquiryCreated from ${ensured.leadPreviousUrl} to ${ensured.enquiryWebhookUrl}.`
             : `Created EnquiryCreated subscription at ${ensured.enquiryWebhookUrl}.`
+      const message = `${repairMessage} ${deliverySummary(deliveries)}`
 
       return createSuccessResponse({
         enquiryWebhookUrl: ensured.enquiryWebhookUrl,
@@ -91,6 +130,7 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
         leadPreviousUrl: ensured.leadPreviousUrl,
         before,
         after,
+        deliveries,
         message,
       })
     } catch (error) {

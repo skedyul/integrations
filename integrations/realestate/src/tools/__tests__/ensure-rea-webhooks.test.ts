@@ -16,6 +16,7 @@ jest.unstable_mockModule('skedyul', () => ({
   z: {
     object: () => schema,
     string: () => schema,
+    number: () => schema,
     array: () => schema,
     enum: () => schema,
   },
@@ -55,6 +56,22 @@ function mockReaFetch(options: {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
+    }
+    if (url.includes('/webhooks/v1/subscriptions') && url.includes('/delivery') && !init?.method) {
+      return new Response(
+        JSON.stringify({
+          deliveries: [
+            {
+              attemptId: 'attempt-1',
+              deliveryId: 'delivery-1',
+              statusCode: 200,
+              outcome: 'Ok',
+              createdAt: '2026-08-29T10:00:00.000Z',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
     }
     if (url.includes('/webhooks/v1/subscriptions') && !init?.method) {
       return new Response(JSON.stringify({ subscriptions: options.subscriptions }), {
@@ -129,6 +146,8 @@ describe('ensure_rea_webhooks', () => {
     expect(result.output.leadSubscriptionId).toBe('sub-lead')
     expect(result.output.enquiryWebhookUrl).toBe(installUrl)
     expect(result.output.message).toContain(installUrl)
+    expect(result.output.deliveries[0]?.outcome).toBe('Ok')
+    expect(result.output.message).toContain('Latest REA delivery')
     expect(created).toEqual([
       {
         eventType: 'EnquiryCreated',

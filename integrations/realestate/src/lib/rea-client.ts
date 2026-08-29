@@ -4,6 +4,7 @@ import {
   type ReaSigningKeysResponse,
   type ReaSubscriptionSpec,
   type ReaTokenResponse,
+  type ReaWebhookDelivery,
   type ReaWebhookSubscription,
   REA_REQUIRED_LEAD_SCOPE,
 } from './rea-types'
@@ -202,6 +203,15 @@ export class ReaClient {
       webhookUrl,
       owner,
     })
+  }
+
+  async listWebhookDeliveries(
+    subscriptionId: string,
+  ): Promise<ReaWebhookDelivery[]> {
+    const data = await this.getJson<{ deliveries?: ReaWebhookDelivery[] }>(
+      `${this.baseUrl}/webhooks/v1/subscriptions/${encodeURIComponent(subscriptionId)}/delivery`,
+    )
+    return data.deliveries ?? []
   }
 
   async deleteWebhookSubscription(subscriptionId: string): Promise<void> {
