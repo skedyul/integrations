@@ -6,16 +6,37 @@ const webhookList = jest.fn<(args: { name: string }) => Promise<{
 }>>()
 const webhookCreate = jest.fn()
 
-jest.unstable_mockModule('skedyul', async () => {
-  const actual = await import('skedyul')
-  return {
-    ...actual,
-    webhook: {
-      list: webhookList,
-      create: webhookCreate,
+const schema = {
+  optional() {
+    return this
+  },
+}
+
+jest.unstable_mockModule('skedyul', () => ({
+  z: {
+    object: () => schema,
+    string: () => schema,
+    array: () => schema,
+    enum: () => schema,
+  },
+  createSuccessResponse: (output: unknown) => ({ success: true, output }),
+  createValidationError: (message: string) => ({
+    success: false,
+    error: { code: 'VALIDATION_ERROR', message },
+  }),
+  createExternalError: (service: string, message: string) => ({
+    success: false,
+    error: {
+      code: 'EXTERNAL_SERVICE_ERROR',
+      message: `${service}: ${message}`,
+      category: 'external',
     },
-  }
-})
+  }),
+  webhook: {
+    list: webhookList,
+    create: webhookCreate,
+  },
+}))
 
 const { ensureReaWebhooksRegistry } = await import('../ensure-rea-webhooks')
 
