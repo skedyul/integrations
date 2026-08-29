@@ -97,12 +97,29 @@ export default definePage({
               size: 'sm',
             },
           } as never,
+          {
+            component: 'fieldsetting',
+            id: 'ensure_webhooks',
+            row: 2,
+            col: 0,
+            label: 'REA lead webhooks',
+            description:
+              'Point REA EnquiryCreated at this install. Use if Temporal shows no webhook activity.',
+            mode: 'field',
+            handler: 'ensure_rea_webhooks',
+            button: {
+              label: 'Ensure REA webhooks',
+              variant: 'outline',
+              size: 'sm',
+            },
+          } as never,
         ],
         layout: {
           type: 'form',
           rows: [
             { columns: [{ field: 'ignite-instructions', colSpan: 12 }] },
             { columns: [{ field: 'check_ignite', colSpan: 12 }] },
+            { columns: [{ field: 'ensure_webhooks', colSpan: 12 }] },
           ],
         },
       },
@@ -116,6 +133,13 @@ export default definePage({
       handler: 'check_ignite_integration',
       icon: 'RefreshCw',
       variant: 'primary',
+    },
+    {
+      handle: 'ensure_rea_webhooks',
+      label: 'Ensure REA webhooks',
+      handler: 'ensure_rea_webhooks',
+      icon: 'Webhook',
+      variant: 'secondary',
     },
   ],
 })

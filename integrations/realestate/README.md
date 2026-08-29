@@ -40,6 +40,7 @@ Subscription IDs are stored on the install env by the install hook (not user-ent
 2. On **Setup**, click **Check Ignite status** — invokes `check_ignite_integration` directly (no dialog).  
    The tool calls the Integrations API, upserts internal agencies, and completes the `connect_agencies` step when ≥1 lead-capable agency exists.
 3. Background `Integration*` webhooks keep the agency list in sync as authorizations change.
+4. If Temporal shows no workplace webhook activity, click **Ensure REA webhooks**. That retargets a leftover all-owners `EnquiryCreated` subscription (often a provision-level URL) onto this install.
 
 ### Set up Leads (CRM)
 

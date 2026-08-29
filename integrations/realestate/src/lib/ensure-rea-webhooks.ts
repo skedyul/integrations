@@ -35,11 +35,21 @@ export async function ensureInstallReaWebhook(
   return { id: created.id, url: created.url, name }
 }
 
+export type ReaSubscriptionEnsureAction = 'kept' | 'created' | 'retargeted'
+
+export type ReaSubscriptionEnsureResult = {
+  subscriptionId: string
+  status?: string
+  created: boolean
+  action: ReaSubscriptionEnsureAction
+  previousUrl?: string
+}
+
 export async function ensureReaAllOwnersSubscription(
   env: ReaClientEnv,
   webhookUrl: string,
   spec: ReaSubscriptionSpec,
-): Promise<{ subscriptionId: string; status?: string; created: boolean }> {
+): Promise<ReaSubscriptionEnsureResult> {
   const client = ReaClient.fromEnv(env)
   const subscriptions = await client.listWebhookSubscriptions()
 
@@ -55,6 +65,7 @@ export async function ensureReaAllOwnersSubscription(
       subscriptionId: existingMatchingUrl.subscriptionId,
       status: existingMatchingUrl.status,
       created: false,
+      action: 'kept',
     }
   }
 
@@ -65,12 +76,9 @@ export async function ensureReaAllOwnersSubscription(
   })
 
   if (existingAllOwners) {
-    throw new Error(
-      `REA all-owners subscription already exists for ${spec.eventCategory}/${spec.eventType} ` +
-        `pointing at a different URL (${existingAllOwners.webhookUrl}). ` +
-        `This app supports a single workplace install. Delete subscription ` +
-        `${existingAllOwners.subscriptionId} in REA before reinstalling.`,
-    )
+    // Single-workplace partner: retarget the leftover all-owners sub
+    // (often the July provision-level URL) onto this install's registration.
+    await client.deleteWebhookSubscription(existingAllOwners.subscriptionId)
   }
 
   // Per-agency subs for the same event conflict with all-owners — remove them.
@@ -94,6 +102,8 @@ export async function ensureReaAllOwnersSubscription(
     subscriptionId: created.subscriptionId,
     status: created.status,
     created: true,
+    action: existingAllOwners ? 'retargeted' : 'created',
+    previousUrl: existingAllOwners?.webhookUrl,
   }
 }
 
@@ -104,6 +114,8 @@ export type ReaInstallSubscriptions = {
   integrationDeletedSubscriptionId: string
   enquiryWebhookUrl: string
   integrationWebhookUrl: string
+  leadAction: ReaSubscriptionEnsureAction
+  leadPreviousUrl?: string
 }
 
 export async function ensureInstallReaSubscriptions(
@@ -153,6 +165,8 @@ export async function ensureInstallReaSubscriptions(
     integrationDeletedSubscriptionId: integrationDeleted.subscriptionId,
     enquiryWebhookUrl: enquiryRegistration.url,
     integrationWebhookUrl: integrationRegistration.url,
+    leadAction: lead.action,
+    leadPreviousUrl: lead.previousUrl,
   }
 }
 

@@ -238,8 +238,8 @@ export class ReaClient {
       if (subscription.eventType !== options.eventType) return false
       if (subscription.eventCategory !== options.eventCategory) return false
 
-      if (options.allOwners) {
-        return !subscription.ownerId
+      if (options.allOwners && subscription.ownerId) {
+        return false
       }
 
       if (options.ownerId && subscription.ownerId !== options.ownerId) {
