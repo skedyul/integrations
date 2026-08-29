@@ -4,6 +4,7 @@ import {
   type ReaSigningKeysResponse,
   type ReaSubscriptionSpec,
   type ReaTokenResponse,
+  type ReaWebhookDelivery,
   type ReaWebhookSubscription,
   REA_REQUIRED_LEAD_SCOPE,
 } from './rea-types'
@@ -204,6 +205,15 @@ export class ReaClient {
     })
   }
 
+  async listWebhookDeliveries(
+    subscriptionId: string,
+  ): Promise<ReaWebhookDelivery[]> {
+    const data = await this.getJson<{ deliveries?: ReaWebhookDelivery[] }>(
+      `${this.baseUrl}/webhooks/v1/subscriptions/${encodeURIComponent(subscriptionId)}/delivery`,
+    )
+    return data.deliveries ?? []
+  }
+
   async deleteWebhookSubscription(subscriptionId: string): Promise<void> {
     const token = await this.getAccessToken()
     const response = await fetch(
@@ -277,6 +287,23 @@ export class ReaClient {
 
   async fetchEnquiry(resourceUrl: string): Promise<ReaEnquiryRecord> {
     return this.getJson<ReaEnquiryRecord>(resourceUrl)
+  }
+
+  async listEnquiries(options: {
+    since: string
+    agencyId?: string
+  }): Promise<ReaEnquiryRecord[]> {
+    const params = new URLSearchParams({ since: options.since })
+    if (options.agencyId) {
+      params.set('agency_id', options.agencyId)
+    }
+
+    const data = await this.getJson<{
+      _embedded?: { enquiry?: ReaEnquiryRecord[] }
+      enquiries?: ReaEnquiryRecord[]
+    }>(`${this.baseUrl}/lead/v1/enquiries?${params.toString()}`)
+
+    return data._embedded?.enquiry ?? data.enquiries ?? []
   }
 }
 
