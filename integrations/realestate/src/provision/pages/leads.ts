@@ -5,6 +5,7 @@
  */
 
 import { definePage } from 'skedyul'
+import { leadEventTypes, leadWorkflowHandle } from '../events/rea-events'
 
 export default definePage({
   handle: 'leads',
@@ -38,20 +39,15 @@ export default definePage({
               icon: 'Info',
             },
           } as never,
+          // EventWiringPanel is not in the 1.7.17 PageDefinition field union.
           {
             component: 'EventWiringPanel',
             id: 'lead-event-wiring',
             row: 1,
             col: 0,
             props: {
-              eventTypes: [
-                {
-                  name: 'enquiry.created',
-                  label: 'Enquiry created',
-                  description: 'A new realestate.com.au enquiry was received',
-                },
-              ],
-              recommendedWorkflowHandle: 'sync-rea-enquiry-from-webhook',
+              eventTypes: leadEventTypes,
+              recommendedWorkflowHandle: leadWorkflowHandle,
             },
           } as never,
         ],
