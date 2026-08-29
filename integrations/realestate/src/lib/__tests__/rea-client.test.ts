@@ -35,6 +35,22 @@ describe('ReaClient.findLeadSubscription', () => {
     expect(found?.subscriptionId).toBe('sub-all')
   })
 
+  it('does not treat a different-URL all-owners sub as a URL match', () => {
+    const found = client.findLeadSubscription(subscriptions, {
+      allOwners: true,
+      webhookUrl: 'https://example.com/install',
+    })
+    expect(found).toBeUndefined()
+  })
+
+  it('matches all-owners by URL when requested', () => {
+    const found = client.findLeadSubscription(subscriptions, {
+      allOwners: true,
+      webhookUrl: 'https://example.com/all',
+    })
+    expect(found?.subscriptionId).toBe('sub-all')
+  })
+
   it('finds agency subscription by owner and URL', () => {
     const found = client.findLeadSubscription(subscriptions, {
       ownerId: 'ABCDEF',

@@ -32,10 +32,12 @@ describe('Agencies page', () => {
       | LooseField[]
       | undefined
     const refresh = fields?.find((field) => field.id === 'refresh_agencies')
+    const ensure = fields?.find((field) => field.id === 'ensure_webhooks')
     const list = fields?.find((field) => field.id === 'agencies_list')
 
     expect(refresh?.component).toBe('fieldsetting')
     expect(refresh?.handler).toBe('check_ignite_integration')
+    expect(ensure?.handler).toBe('ensure_rea_webhooks')
     expect(list?.component).toBe('list')
     expect(list?.iterable).toBe('{{ agencies }}')
     expect(list?.itemTemplate?.props?.label).toBe('{{ item.agency_id }}')
@@ -48,6 +50,11 @@ describe('Agencies page', () => {
         handle: 'check_ignite_integration',
         handler: 'check_ignite_integration',
         label: 'Check Ignite status',
+      }),
+      expect.objectContaining({
+        handle: 'ensure_rea_webhooks',
+        handler: 'ensure_rea_webhooks',
+        label: 'Ensure REA webhooks',
       }),
     ])
   })

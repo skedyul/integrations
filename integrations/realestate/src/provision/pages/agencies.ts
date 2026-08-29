@@ -76,9 +76,25 @@ export default definePage({
             },
           } as never,
           {
+            component: 'fieldsetting',
+            id: 'ensure_webhooks',
+            row: 2,
+            col: 0,
+            label: 'REA lead webhooks',
+            description:
+              'Point REA EnquiryCreated at this install. Use if Temporal shows no webhook activity.',
+            mode: 'field',
+            handler: 'ensure_rea_webhooks',
+            button: {
+              label: 'Ensure REA webhooks',
+              variant: 'outline',
+              size: 'sm',
+            },
+          } as never,
+          {
             component: 'list',
             id: 'agencies_list',
-            row: 2,
+            row: 3,
             col: 0,
             iterable: '{{ agencies }}',
             itemTemplate: {
@@ -106,6 +122,7 @@ export default definePage({
           rows: [
             { columns: [{ field: 'agencies-info', colSpan: 12 }] },
             { columns: [{ field: 'refresh_agencies', colSpan: 12 }] },
+            { columns: [{ field: 'ensure_webhooks', colSpan: 12 }] },
             { columns: [{ field: 'agencies_list', colSpan: 12 }] },
           ],
         },
@@ -120,6 +137,13 @@ export default definePage({
       handler: 'check_ignite_integration',
       icon: 'RefreshCw',
       variant: 'primary',
+    },
+    {
+      handle: 'ensure_rea_webhooks',
+      label: 'Ensure REA webhooks',
+      handler: 'ensure_rea_webhooks',
+      icon: 'Webhook',
+      variant: 'secondary',
     },
   ],
 })

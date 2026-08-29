@@ -29,7 +29,7 @@ export default async function install(
   const subscriptions = await ensureInstallReaSubscriptions(clientEnv)
 
   ctx.log.info(
-    `[REA Install] Enquiry webhook: ${subscriptions.enquiryWebhookUrl} (sub ${subscriptions.leadSubscriptionId})`,
+    `[REA Install] Enquiry webhook: ${subscriptions.enquiryWebhookUrl} (sub ${subscriptions.leadSubscriptionId}, ${subscriptions.leadAction})`,
   )
   ctx.log.info(
     `[REA Install] Integration webhook: ${subscriptions.integrationWebhookUrl}`,
