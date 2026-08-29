@@ -107,6 +107,31 @@ export async function ensureReaAllOwnersSubscription(
   }
 }
 
+export type EnquiryCreatedEnsureResult = {
+  enquiryWebhookUrl: string
+  leadSubscriptionId: string
+  leadAction: ReaSubscriptionEnsureAction
+  leadPreviousUrl?: string
+}
+
+/** Install-page repair: EnquiryCreated / lead only. Does not create Integration*. */
+export async function ensureInstallEnquiryCreatedSubscription(
+  env: ReaClientEnv,
+): Promise<EnquiryCreatedEnsureResult> {
+  const enquiryRegistration = await ensureInstallReaWebhook(ENQUIRY_CREATED_WEBHOOK_NAME)
+  const lead = await ensureReaAllOwnersSubscription(env, enquiryRegistration.url, {
+    eventType: REA_LEAD_EVENT_TYPE,
+    eventCategory: REA_LEAD_EVENT_CATEGORY,
+  })
+
+  return {
+    enquiryWebhookUrl: enquiryRegistration.url,
+    leadSubscriptionId: lead.subscriptionId,
+    leadAction: lead.action,
+    leadPreviousUrl: lead.previousUrl,
+  }
+}
+
 export type ReaInstallSubscriptions = {
   leadSubscriptionId: string
   integrationCreatedSubscriptionId: string

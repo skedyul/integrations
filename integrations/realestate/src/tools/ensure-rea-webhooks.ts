@@ -14,7 +14,7 @@ import {
   createExternalError,
 } from 'skedyul'
 import { ReaClient } from '../lib/rea-client'
-import { ensureInstallReaSubscriptions } from '../lib/ensure-rea-webhooks'
+import { ensureInstallEnquiryCreatedSubscription } from '../lib/ensure-rea-webhooks'
 import type { ReaClientEnv, ReaWebhookSubscription } from '../lib/rea-types'
 
 const EnsureReaWebhooksInputSchema = z.object({})
@@ -59,7 +59,7 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
   name: 'ensure_rea_webhooks',
   label: 'Ensure REA webhooks',
   description:
-    'List REA webhook subscriptions and point EnquiryCreated at this install URL.',
+    'List REA webhook subscriptions and point EnquiryCreated (lead only) at this install URL.',
   inputSchema: EnsureReaWebhooksInputSchema,
   outputSchema: EnsureReaWebhooksOutputSchema,
   handler: async (_input, context) => {
@@ -74,7 +74,7 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
     try {
       const client = ReaClient.fromEnv(env)
       const before = toRows(await client.listWebhookSubscriptions())
-      const ensured = await ensureInstallReaSubscriptions(env)
+      const ensured = await ensureInstallEnquiryCreatedSubscription(env)
       const after = toRows(await client.listWebhookSubscriptions())
 
       const message =
