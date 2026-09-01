@@ -15,11 +15,23 @@ inputs:
 outputs:
   lead-id:
     type: string
-    description: "Upserted lead instance ID"
+    description: "Upserted lead instance ID (legacy single-model map)"
     value: "{{ steps.sync-lead.outputs.data.lead-id }}"
+  customer-id:
+    type: string
+    description: "Upserted customer instance ID"
+    value: "{{ steps.upsert-customer.outputs.response.results[0].instanceId }}"
+  property-id:
+    type: string
+    description: "Upserted property instance ID"
+    value: "{{ steps.upsert-property.outputs.response.results[0].instanceId }}"
+  enquiry-id:
+    type: string
+    description: "Upserted enquiry instance ID"
+    value: "{{ steps.upsert-enquiry.outputs.response.results[0].instanceId }}"
   contact-id:
     type: string
-    description: "Conversation contact linked to the lead"
+    description: "Conversation contact linked to the customer (or legacy lead)"
     value: "{% if steps.resolve-contact.outputs.response.contact-id != blank %}{{ steps.resolve-contact.outputs.response.contact-id }}{% else %}{{ steps.ensure-contact.outputs.response.data.id }}{% endif %}"
   signal-block-id:
     type: string
@@ -30,39 +42,205 @@ steps:
   sync-lead:
     type: workflow
     name: Sync REA lead
-    description: Upsert CRM record via lead CRM map
+    description: Legacy flattened upsert when only the lead CRM map is configured
     run: "@realestate/sync-rea-lead"
     if: "{{ 'model_handle' | realestate: 'present', 'lead' }}"
     inputs:
       data: "{{ inputs.data.enquiry }}"
 
+  build-customer-payload:
+    type: task
+    name: Build customer CRM payload
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | realestate: 'present', 'customer' }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "customer": {
+            "first_name": {{ inputs.data.enquiry.first_name | json }},
+            "last_name": {{ inputs.data.enquiry.last_name | json }},
+            "email": {{ inputs.data.enquiry.email | json }},
+            "phone": {{ inputs.data.enquiry.phone | json }},
+            "preferred_contact_method": {{ inputs.data.enquiry.preferred_contact_method | json }}
+          }
+        }
+
+  format-customer:
+    needs: [build-customer-payload]
+    type: task
+    name: Format customer for CRM
+    timeout: 30 seconds
+    if: "{{ steps.build-customer-payload.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [{{ steps.build-customer-payload.outputs.response.data | realestate: "format", "customer" | json }}]
+
+  upsert-customer:
+    needs: [format-customer]
+    type: task
+    name: Upsert customer via CRM map
+    timeout: 5 minutes
+    if: "{{ 'model_handle' | realestate: 'present', 'customer' and 'match_id' | realestate: 'present', 'customer' and steps.format-customer.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.upsertMany
+    inputs:
+      model-handle: "{{ 'model_handle' | realestate: 'config', 'customer' }}"
+      matchField: "{{ 'match_id' | realestate: 'config', 'customer' }}"
+      matchFields: "{{ 'match_fields' | realestate: 'config', 'customer' | json }}"
+      errorMode: partial
+      data: "{{ steps.format-customer.outputs.response.data }}"
+
+  build-property-payload:
+    type: task
+    name: Build property CRM payload
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | realestate: 'present', 'property' }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {
+          "property": {
+            "listing_id": {{ inputs.data.enquiry.listing_id | json }},
+            "address": {{ inputs.data.enquiry.listing_address | json }}
+          }
+        }
+
+  format-property:
+    needs: [build-property-payload]
+    type: task
+    name: Format property for CRM
+    timeout: 30 seconds
+    if: "{{ steps.build-property-payload.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [{{ steps.build-property-payload.outputs.response.data | realestate: "format", "property" | json }}]
+
+  upsert-property:
+    needs: [format-property]
+    type: task
+    name: Upsert property via CRM map
+    timeout: 5 minutes
+    if: "{{ 'model_handle' | realestate: 'present', 'property' and 'match_id' | realestate: 'present', 'property' and steps.format-property.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.upsertMany
+    inputs:
+      model-handle: "{{ 'model_handle' | realestate: 'config', 'property' }}"
+      matchField: "{{ 'match_id' | realestate: 'config', 'property' }}"
+      matchFields: "{{ 'match_fields' | realestate: 'config', 'property' | json }}"
+      errorMode: partial
+      data: "{{ steps.format-property.outputs.response.data }}"
+
+  build-enquiry-payload:
+    needs: [upsert-customer, upsert-property]
+    on-parent-skip: run
+    type: task
+    name: Build enquiry CRM payload
+    timeout: 30 seconds
+    if: "{{ 'model_handle' | realestate: 'present', 'enquiry' }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign customer_id = steps.upsert-customer.outputs.response.results[0].instanceId -%}
+        {%- assign property_id = steps.upsert-property.outputs.response.results[0].instanceId -%}
+        {
+          "enquiry": {
+            "rea_enquiry_id": {{ inputs.data.enquiry.rea_enquiry_id | json }},
+            "rea_agency_id": {{ inputs.data.enquiry.rea_agency_id | json }},
+            "enquiry_type": {{ inputs.data.enquiry.enquiry_type | json }},
+            "comments": {{ inputs.data.enquiry.comments | json }},
+            "source": {{ inputs.data.enquiry.source | json }},
+            "received_at": {{ inputs.data.enquiry.received_at | json }},
+            "processed_at": {{ inputs.data.enquiry.processed_at | json }},
+            "postcode": {{ inputs.data.enquiry.postcode | json }},
+            "preferred_contact_method": {{ inputs.data.enquiry.preferred_contact_method | json }}
+            {%- if customer_id != blank -%}
+            ,"customer": {{ customer_id | json }}
+            {%- endif -%}
+            {%- if property_id != blank -%}
+            ,"property": {{ property_id | json }}
+            {%- endif -%}
+          }
+        }
+
+  format-enquiry:
+    needs: [build-enquiry-payload]
+    type: task
+    name: Format enquiry for CRM
+    timeout: 30 seconds
+    if: "{{ steps.build-enquiry-payload.outputs.response.data != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        [{{ steps.build-enquiry-payload.outputs.response.data | realestate: "format", "enquiry" | json }}]
+
+  upsert-enquiry:
+    needs: [format-enquiry]
+    type: task
+    name: Upsert enquiry via CRM map
+    timeout: 5 minutes
+    if: "{{ 'model_handle' | realestate: 'present', 'enquiry' and 'match_id' | realestate: 'present', 'enquiry' and steps.format-enquiry.outputs.response.data != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.upsertMany
+    inputs:
+      model-handle: "{{ 'model_handle' | realestate: 'config', 'enquiry' }}"
+      matchField: "{{ 'match_id' | realestate: 'config', 'enquiry' }}"
+      matchFields: "{{ 'match_fields' | realestate: 'config', 'enquiry' | json }}"
+      errorMode: partial
+      data: "{{ steps.format-enquiry.outputs.response.data }}"
+
   resolve-contact:
-    needs: [sync-lead]
+    needs: [sync-lead, upsert-customer]
+    on-parent-skip: run
     type: task
     name: Resolve conversation contact
-    description: Find existing conversation contact linked to the lead instance
+    description: Find existing conversation contact linked to the customer (or legacy lead)
     timeout: 1 minute
-    if: "{{ steps.sync-lead.outputs.data.lead-id != blank }}"
+    if: "{% if steps.upsert-customer.outputs.response.results[0].instanceId != blank %}true{% elsif steps.sync-lead.outputs.data.lead-id != blank %}true{% else %}false{% endif %}"
     service:
       name: skedyul/conversations
       cmd: contact.resolve
     inputs:
-      instance-id: "{{ steps.sync-lead.outputs.data.lead-id }}"
+      instance-id: "{% if steps.upsert-customer.outputs.response.results[0].instanceId != blank %}{{ steps.upsert-customer.outputs.response.results[0].instanceId }}{% else %}{{ steps.sync-lead.outputs.data.lead-id }}{% endif %}"
 
   ensure-contact:
-    needs: [sync-lead, resolve-contact]
+    needs: [sync-lead, upsert-customer, resolve-contact]
+    on-parent-skip: run
     type: task
     name: Ensure conversation contact
-    description: Create conversation contact linked to the lead when none exists yet
+    description: Create conversation contact linked to the customer when none exists yet
     timeout: 2 minutes
-    if: "{{ steps.sync-lead.outputs.data.lead-id != blank and steps.resolve-contact.outputs.response.contact-id == blank }}"
+    if: "{% assign contact_instance_id = steps.upsert-customer.outputs.response.results[0].instanceId | default: steps.sync-lead.outputs.data.lead-id %}{% if contact_instance_id != blank and steps.resolve-contact.outputs.response.contact-id == blank %}true{% else %}false{% endif %}"
     service:
       name: skedyul/conversations
       cmd: contact.create
     inputs:
       name: "{{ inputs.data.enquiry.first_name }} {{ inputs.data.enquiry.last_name }}"
       associations:
-        - instance-id: "{{ steps.sync-lead.outputs.data.lead-id }}"
+        - instance-id: "{% if steps.upsert-customer.outputs.response.results[0].instanceId != blank %}{{ steps.upsert-customer.outputs.response.results[0].instanceId }}{% else %}{{ steps.sync-lead.outputs.data.lead-id }}{% endif %}"
 
   build-enquiry-data-blocks:
     type: task
