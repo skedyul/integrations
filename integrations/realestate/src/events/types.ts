@@ -35,6 +35,37 @@ export interface ReaEnquiryEntity {
   source: string | null
 }
 
+export interface ReaCustomerEntity {
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+  phone: string | null
+  preferred_contact_method: string | null
+}
+
+export interface ReaPropertyEntity {
+  listing_id: string | null
+  address: string | null
+}
+
+export interface ReaEnquiryRecordEntity {
+  rea_enquiry_id: string
+  rea_agency_id: string
+  enquiry_type: string | null
+  comments: string | null
+  source: string | null
+  received_at: string | null
+  processed_at: string | null
+  postcode: string | null
+  preferred_contact_method: string | null
+}
+
+export interface ReaSplitEnquiryEntities {
+  customer: ReaCustomerEntity
+  property: ReaPropertyEntity
+  enquiry: ReaEnquiryRecordEntity
+}
+
 export interface ReaEnquiryEventPayload {
   webhook: ReaWebhookContext
   agency: ReaAgencyContext
