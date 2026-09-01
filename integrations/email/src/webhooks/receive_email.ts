@@ -139,6 +139,9 @@ async function handleReceiveEmail(
             newChat: true,
           },
           remoteId: inboundEmail.messageId || undefined,
+          ...(inboundEmail.attachments.length > 0
+            ? { expectedAttachmentCount: inboundEmail.attachments.length }
+            : {}),
         })
 
         const messageId = messageResult.messageId

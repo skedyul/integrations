@@ -118,7 +118,7 @@ async function handleReceiveCall(
   }
 
   const searchResult = await instance.list('phone_number', {
-    filter: { phone: to },
+    filter: { phone: { eq: to } },
     limit: 1,
   })
   const phoneRecord = searchResult.data[0] as unknown as

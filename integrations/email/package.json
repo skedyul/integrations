@@ -11,7 +11,7 @@
   "dependencies": {
     "form-data": "^4.0.5",
     "mailgun.js": "12.7.0",
-    "skedyul": "1.7.26"
+    "skedyul": "1.7.28"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
