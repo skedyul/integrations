@@ -29,6 +29,9 @@ export interface GoogleCalendarEventInput {
   original_start?: string
 }
 
+/** Google Calendar event colorId for Peacock (teal/blue). Hardcoded until colors are configurable. */
+export const GOOGLE_EVENT_COLOR_PEACOCK = '7'
+
 export interface GoogleFreeBusyInterval {
   start: string
   end: string
@@ -129,7 +132,7 @@ export async function getGoogleCalendarEvent(
   }
 }
 
-function toGoogleEventBody(
+export function toGoogleEventBody(
   input: GoogleCalendarEventInput,
   options?: { includeRecurrence?: boolean },
 ): calendar_v3.Schema$Event {
@@ -142,6 +145,7 @@ function toGoogleEventBody(
     attendees: input.attendees?.map((email) => ({ email })),
     ...(options?.includeRecurrence === false ? {} : { recurrence: input.recurrence }),
     status: input.status,
+    colorId: GOOGLE_EVENT_COLOR_PEACOCK,
   }
 }
 
