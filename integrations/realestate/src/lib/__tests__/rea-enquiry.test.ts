@@ -76,31 +76,28 @@ describe('mapLeadType', () => {
     agencyId: 'ABCDEF',
   }
 
-  it('maps sales appraisals to vendor', () => {
+  it('maps appraisal requests to prospect', () => {
     expect(
       mapLeadType({ ...base, type: 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST' }),
-    ).toBe('vendor')
+    ).toBe('prospect')
     expect(
       mapLeadType({
         ...base,
         type: 'REALESTATE_COM_AU_AGENCY_SALES_APPRAISAL_REQUEST',
       }),
-    ).toBe('vendor')
-  })
-
-  it('maps rental appraisals to landlord', () => {
+    ).toBe('prospect')
     expect(
       mapLeadType({
         ...base,
         type: 'REALESTATE_COM_AU_RENTAL_APPRAISAL_REQUEST',
       }),
-    ).toBe('landlord')
+    ).toBe('prospect')
     expect(
       mapLeadType({
         ...base,
         type: 'REALESTATE_COM_AU_AGENCY_RENTAL_APPRAISAL_REQUEST',
       }),
-    ).toBe('landlord')
+    ).toBe('prospect')
   })
 
   it('maps rental listing type to tenant', () => {

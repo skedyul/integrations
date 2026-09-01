@@ -110,10 +110,9 @@ export function mapLeadType(enquiry: ReaEnquiryRecord): LeadType | null {
   switch (enquiry.type) {
     case 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST':
     case 'REALESTATE_COM_AU_AGENCY_SALES_APPRAISAL_REQUEST':
-      return 'vendor'
     case 'REALESTATE_COM_AU_RENTAL_APPRAISAL_REQUEST':
     case 'REALESTATE_COM_AU_AGENCY_RENTAL_APPRAISAL_REQUEST':
-      return 'landlord'
+      return 'prospect'
     case 'REALESTATE_COM_AU_RENT':
       return 'tenant'
     case 'REALESTATE_COM_AU_LISTING':

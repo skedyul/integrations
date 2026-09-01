@@ -17,7 +17,13 @@ export interface ReaAgencyContext {
   integration_id: string
 }
 
-export const LEAD_TYPES = ['vendor', 'buyer', 'landlord', 'tenant'] as const
+export const LEAD_TYPES = [
+  'vendor',
+  'buyer',
+  'landlord',
+  'tenant',
+  'prospect',
+] as const
 
 export type LeadType = (typeof LEAD_TYPES)[number]
 

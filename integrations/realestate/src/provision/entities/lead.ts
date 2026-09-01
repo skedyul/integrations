@@ -44,6 +44,7 @@ export default defineEntity({
         { value: 'buyer', label: 'Buyer' },
         { value: 'landlord', label: 'Landlord' },
         { value: 'tenant', label: 'Tenant' },
+        { value: 'prospect', label: 'Prospect' },
       ],
     },
     {
