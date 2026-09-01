@@ -142,7 +142,7 @@ async function handleReceiveEmail(
           ...(inboundEmail.attachments.length > 0
             ? { expectedAttachmentCount: inboundEmail.attachments.length }
             : {}),
-        } as Parameters<typeof communicationChannel.receiveMessage>[0])
+        })
 
         const messageId = messageResult.messageId
 

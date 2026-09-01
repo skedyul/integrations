@@ -48,7 +48,7 @@ async function captureInboundSmsWithMedia(params: {
     },
     remoteId: params.messageSid || undefined,
     ...(media.length > 0 ? { expectedAttachmentCount: media.length } : {}),
-  } as Parameters<typeof communicationChannel.receiveMessage>[0])
+  })
 
   if (media.length > 0) {
     console.log(

@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "libphonenumber-js": "^1.13.11",
-    "skedyul": "1.7.12",
+    "skedyul": "1.7.28",
     "twilio": "^5.0.0"
   },
   "devDependencies": {
