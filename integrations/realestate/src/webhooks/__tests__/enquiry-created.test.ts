@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals'
 import { parseReaEventPayload } from '../../events/schemas'
+import catalogExamples from '../../events/catalog-examples.json'
 
 describe('parseReaEventPayload', () => {
   it('validates enquiry.created payload', () => {
@@ -19,6 +20,7 @@ describe('parseReaEventPayload', () => {
         rea_enquiry_id: 'enquiry-1',
         rea_agency_id: 'ABCDEF',
         enquiry_type: 'REALESTATE_COM_AU_LISTING',
+        lead_type: 'buyer',
         comments: null,
         first_name: 'Sarah',
         last_name: 'Smith',
@@ -35,5 +37,14 @@ describe('parseReaEventPayload', () => {
     })
 
     expect(payload.enquiry.email).toBe('sarah@example.com')
+    expect(payload.enquiry.lead_type).toBe('buyer')
+  })
+
+  it('validates the catalog example payload', () => {
+    const payload = parseReaEventPayload(
+      'enquiry.created',
+      catalogExamples['enquiry.created'],
+    )
+    expect(payload.enquiry.lead_type).toBe('buyer')
   })
 })

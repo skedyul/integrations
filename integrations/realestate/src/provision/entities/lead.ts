@@ -36,6 +36,17 @@ export default defineEntity({
       type: 'string',
     },
     {
+      handle: 'lead_type',
+      label: 'Lead Type',
+      type: 'string',
+      options: [
+        { value: 'vendor', label: 'Vendor' },
+        { value: 'buyer', label: 'Buyer' },
+        { value: 'landlord', label: 'Landlord' },
+        { value: 'tenant', label: 'Tenant' },
+      ],
+    },
+    {
       handle: 'comments',
       label: 'Comments',
       type: 'long_string',

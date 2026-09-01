@@ -17,10 +17,15 @@ export interface ReaAgencyContext {
   integration_id: string
 }
 
+export const LEAD_TYPES = ['vendor', 'buyer', 'landlord', 'tenant'] as const
+
+export type LeadType = (typeof LEAD_TYPES)[number]
+
 export interface ReaEnquiryEntity {
   rea_enquiry_id: string
   rea_agency_id: string
   enquiry_type: string | null
+  lead_type: LeadType | null
   comments: string | null
   first_name: string | null
   last_name: string | null
@@ -82,6 +87,8 @@ export interface ReaEnquiryRecord {
   processedAt?: string
   type?: string
   comments?: string
+  requestedInformation?: string[]
+  emailSubject?: string
   contactDetails?: {
     fullName?: string
     email?: string

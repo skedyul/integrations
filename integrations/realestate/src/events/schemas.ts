@@ -3,7 +3,7 @@
  */
 
 import { z } from 'skedyul'
-import type { ReaEventName } from './types'
+import { LEAD_TYPES, type ReaEventName } from './types'
 
 const nullableString = z.string().nullable()
 
@@ -29,6 +29,7 @@ export const ReaEnquiryEntitySchema = z
     rea_enquiry_id: z.string().min(1),
     rea_agency_id: z.string().min(1),
     enquiry_type: nullableString,
+    lead_type: z.enum(LEAD_TYPES).nullable(),
     comments: nullableString,
     first_name: nullableString,
     last_name: nullableString,

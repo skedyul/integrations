@@ -4,7 +4,11 @@ import type {
   ReaEnquiryRecord,
   ReaEnquiryEntity,
   ReaEnquiryEventPayload,
+  LeadType,
 } from '../events/types'
+
+const RENTAL_INFO_RE = /rental/i
+const RENTAL_SUBJECT_RE = /rental|\bfor rent\b/i
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
@@ -86,6 +90,43 @@ export function normalizeReaWebhookEvents(
   return normalized
 }
 
+function isRentalListingEnquiry(enquiry: ReaEnquiryRecord): boolean {
+  const requested = enquiry.requestedInformation ?? []
+  if (
+    requested.some(
+      (item) => typeof item === 'string' && RENTAL_INFO_RE.test(item),
+    )
+  ) {
+    return true
+  }
+
+  return (
+    typeof enquiry.emailSubject === 'string' &&
+    RENTAL_SUBJECT_RE.test(enquiry.emailSubject)
+  )
+}
+
+export function mapLeadType(enquiry: ReaEnquiryRecord): LeadType | null {
+  switch (enquiry.type) {
+    case 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST':
+    case 'REALESTATE_COM_AU_AGENCY_SALES_APPRAISAL_REQUEST':
+      return 'vendor'
+    case 'REALESTATE_COM_AU_RENTAL_APPRAISAL_REQUEST':
+    case 'REALESTATE_COM_AU_AGENCY_RENTAL_APPRAISAL_REQUEST':
+      return 'landlord'
+    case 'REALESTATE_COM_AU_RENT':
+      return 'tenant'
+    case 'REALESTATE_COM_AU_LISTING':
+      return isRentalListingEnquiry(enquiry) ? 'tenant' : 'buyer'
+    case 'REALESTATE_COM_AU_LEAD_AD':
+    case 'REALESTATE_COM_AU_AGENT':
+    case 'REALESTATE_COM_AU_AGENCY':
+      return 'buyer'
+    default:
+      return null
+  }
+}
+
 export function transformReaEnquiryRecord(
   enquiry: ReaEnquiryRecord,
 ): ReaEnquiryEntity {
@@ -100,6 +141,7 @@ export function transformReaEnquiryRecord(
     rea_enquiry_id: enquiry.id,
     rea_agency_id: enquiry.agencyId,
     enquiry_type: enquiry.type ?? null,
+    lead_type: mapLeadType(enquiry),
     comments: enquiry.comments ?? null,
     first_name,
     last_name,

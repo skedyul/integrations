@@ -15,6 +15,7 @@
       "rea_enquiry_id": "2bb121ad-2849-4b20-bc40-19e4ae371b7e",
       "rea_agency_id": "ABCDEF",
       "enquiry_type": "REALESTATE_COM_AU_LISTING",
+      "lead_type": "buyer",
       "comments": "Hi, I am interested in this property.",
       "first_name": "Sarah",
       "last_name": "Smith",

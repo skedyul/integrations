@@ -1,9 +1,11 @@
 import { describe, expect, it } from '@jest/globals'
 import {
   buildEnquiryCreatedPayload,
+  mapLeadType,
   normalizeReaWebhookEvents,
   transformReaEnquiryRecord,
 } from '../rea-enquiry'
+import type { ReaEnquiryRecord } from '../../events/types'
 
 describe('normalizeReaWebhookEvents', () => {
   it('parses EnquiryCreated events from webhook payload', () => {
@@ -64,6 +66,93 @@ describe('transformReaEnquiryRecord', () => {
     expect(entity.first_name).toBe('Sarah')
     expect(entity.last_name).toBe('Smith')
     expect(entity.source).toBe('SPONSORED_CONTENT / My campaign')
+    expect(entity.lead_type).toBe('buyer')
+  })
+})
+
+describe('mapLeadType', () => {
+  const base: ReaEnquiryRecord = {
+    id: 'enquiry-1',
+    agencyId: 'ABCDEF',
+  }
+
+  it('maps sales appraisals to vendor', () => {
+    expect(
+      mapLeadType({ ...base, type: 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST' }),
+    ).toBe('vendor')
+    expect(
+      mapLeadType({
+        ...base,
+        type: 'REALESTATE_COM_AU_AGENCY_SALES_APPRAISAL_REQUEST',
+      }),
+    ).toBe('vendor')
+  })
+
+  it('maps rental appraisals to landlord', () => {
+    expect(
+      mapLeadType({
+        ...base,
+        type: 'REALESTATE_COM_AU_RENTAL_APPRAISAL_REQUEST',
+      }),
+    ).toBe('landlord')
+    expect(
+      mapLeadType({
+        ...base,
+        type: 'REALESTATE_COM_AU_AGENCY_RENTAL_APPRAISAL_REQUEST',
+      }),
+    ).toBe('landlord')
+  })
+
+  it('maps rental listing type to tenant', () => {
+    expect(mapLeadType({ ...base, type: 'REALESTATE_COM_AU_RENT' })).toBe(
+      'tenant',
+    )
+  })
+
+  it('maps listing enquiries to buyer by default', () => {
+    expect(mapLeadType({ ...base, type: 'REALESTATE_COM_AU_LISTING' })).toBe(
+      'buyer',
+    )
+  })
+
+  it('maps listing enquiries to tenant when requestedInformation is rental', () => {
+    expect(
+      mapLeadType({
+        ...base,
+        type: 'REALESTATE_COM_AU_LISTING',
+        requestedInformation: [
+          'know when the property is available and obtain a rental application',
+        ],
+      }),
+    ).toBe('tenant')
+  })
+
+  it('maps listing enquiries to tenant when emailSubject is rental', () => {
+    expect(
+      mapLeadType({
+        ...base,
+        type: 'REALESTATE_COM_AU_LISTING',
+        emailSubject:
+          'Enquiry for Property ID: 441195944, 13 Rosella Avenue, Pakenham Vic 3810, Listing Agent Ray White Pakenham Rental Team',
+      }),
+    ).toBe('tenant')
+  })
+
+  it('maps agent, agency, and lead ad enquiries to buyer', () => {
+    expect(mapLeadType({ ...base, type: 'REALESTATE_COM_AU_AGENT' })).toBe(
+      'buyer',
+    )
+    expect(mapLeadType({ ...base, type: 'REALESTATE_COM_AU_AGENCY' })).toBe(
+      'buyer',
+    )
+    expect(mapLeadType({ ...base, type: 'REALESTATE_COM_AU_LEAD_AD' })).toBe(
+      'buyer',
+    )
+  })
+
+  it('returns null for unknown types', () => {
+    expect(mapLeadType({ ...base, type: 'OTHER' })).toBeNull()
+    expect(mapLeadType(base)).toBeNull()
   })
 })
 

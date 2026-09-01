@@ -5,6 +5,7 @@
     { "name": "enquiry.rea_enquiry_id", "label": "Enquiry ID" },
     { "name": "enquiry.email", "label": "Email" },
     { "name": "enquiry.phone", "label": "Phone" },
-    { "name": "enquiry.listing_address", "label": "Listing Address" }
+    { "name": "enquiry.listing_address", "label": "Listing Address" },
+    { "name": "enquiry.lead_type", "label": "Lead Type" }
   ]
 }
