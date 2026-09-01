@@ -403,7 +403,7 @@ async function handleReceiveSmsWithTokenExchange(
   // Step 1: Search for phone number across all installations (uses sk_app_ token)
   // ─────────────────────────────────────────────────────────────────────────────
   const searchResults = await instance.list('phone_number', {
-    filter: { phone: to },
+    filter: { phone: { eq: to } },
     limit: 1,
   })
 

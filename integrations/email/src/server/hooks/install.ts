@@ -30,7 +30,7 @@ export default async function install(
 
   // Step 1: Find the skedyul.app domain (created during provision)
   const existingDomains = await instance.list('email_domain', {
-    filter: { domain: 'skedyul.app' },
+    filter: { domain: { eq: 'skedyul.app' } }, // pragma: allowlist secret
     limit: 1,
   })
 
@@ -45,7 +45,7 @@ export default async function install(
 
   // Step 2: Create the default email address
   const existingAddresses = await instance.list('email_address', {
-    filter: { email: defaultEmail },
+    filter: { email: { eq: defaultEmail } },
     limit: 1,
   })
 

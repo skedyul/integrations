@@ -41,7 +41,7 @@ export default async function provision(
   console.log(`[Email Provision] Step 1: Checking for skedyul.app domain...`)
 
   const existingDomains = await instance.list('email_domain', {
-    filter: { domain: 'skedyul.app' },
+    filter: { domain: { eq: 'skedyul.app' } }, // pragma: allowlist secret
     limit: 1,
   })
 
