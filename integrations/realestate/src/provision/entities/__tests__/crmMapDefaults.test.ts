@@ -1,4 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
+import { REA_ENQUIRY_TYPE_OPTIONS } from '../../../lib/rea-enquiry-types'
 import customer from '../customer'
 import property from '../property'
 import enquiry from '../enquiry'
@@ -41,6 +42,10 @@ describe('crmMapDefaults', () => {
       'customer',
       'property',
     ])
+    expect(enquiryCrmMapDefaults.fieldHandles.enquiry_type).toBe('enquiry_type')
+    expect(
+      enquiry.fields.find((field) => field.handle === 'enquiry_type')?.options,
+    ).toEqual(REA_ENQUIRY_TYPE_OPTIONS)
   })
 
   it('suggests property ownership match on ownership_key with customer and property links', () => {

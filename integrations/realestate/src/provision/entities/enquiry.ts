@@ -4,6 +4,7 @@
  */
 
 import { defineEntity } from 'skedyul'
+import { REA_ENQUIRY_TYPE_OPTIONS } from '../../lib/rea-enquiry-types'
 import { enquiryCrmMapDefaults } from './crmMapDefaults'
 
 export default defineEntity({
@@ -27,7 +28,12 @@ export default defineEntity({
       type: 'string',
       required: true,
     },
-    { handle: 'enquiry_type', label: 'Enquiry Type', type: 'string' },
+    {
+      handle: 'enquiry_type',
+      label: 'Enquiry Type',
+      type: 'string',
+      options: REA_ENQUIRY_TYPE_OPTIONS,
+    },
     { handle: 'comments', label: 'Comments', type: 'long_string' },
     { handle: 'source', label: 'REA Source', type: 'string' },
     { handle: 'received_at', label: 'REA Received At', type: 'datetime' },
