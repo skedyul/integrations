@@ -49,25 +49,16 @@ export const enquiryCrmMapDefaults: EntityCrmMapDefaults = {
   },
 }
 
-export const leadCrmMapDefaults: EntityCrmMapDefaults = {
-  modelHandle: 'customer',
-  matchFieldHandle: 'rea_enquiry_id',
-  matchRuleEntityPaths: ['rea_enquiry_id', 'phone', 'email'],
+export const propertyOwnershipCrmMapDefaults: EntityCrmMapDefaults = {
+  modelHandle: 'property_ownership',
+  matchFieldHandle: 'ownership_key',
+  matchRuleEntityPaths: ['ownership_key'],
   fieldHandles: {
-    rea_enquiry_id: 'rea_enquiry_id',
-    rea_agency_id: 'rea_agency_id',
-    first_name: 'first_name',
-    last_name: 'last_name',
-    email: 'email',
-    phone: 'phone',
-    postcode: 'postcode',
-    enquiry_type: 'enquiry_type',
-    comments: 'comments',
-    preferred_contact_method: 'preferred_contact_method',
-    received_at: 'received_at',
-    processed_at: 'processed_at',
-    listing_id: 'listing_id',
-    listing_address: 'listing_address',
-    source: 'source',
+    ownership_key: 'ownership_key',
+    role: 'role',
+  },
+  relationshipHandles: {
+    customer: 'customer',
+    property: 'property',
   },
 }

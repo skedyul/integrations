@@ -16,7 +16,7 @@ export type ReaAppEventDefinition = {
 
 export const enquiryCreatedEventType = 'app.realestate.enquiry.created'
 
-export const leadEventTypes: ReaAppEventDefinition[] = [
+export const enquiryEventTypes: ReaAppEventDefinition[] = [
   {
     type: enquiryCreatedEventType,
     label: 'Enquiry created',
@@ -27,4 +27,4 @@ export const leadEventTypes: ReaAppEventDefinition[] = [
 ]
 
 /** Bundled sync workflow handle (created on realestate app install). */
-export const leadWorkflowHandle = 'sync-rea-enquiry-from-webhook'
+export const enquiryWorkflowHandle = 'sync-rea-enquiry-from-webhook'
