@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals'
 import {
   buildEnquiryCreatedPayload,
   normalizeReaWebhookEvents,
+  splitReaEnquiryEntities,
   transformReaEnquiryRecord,
 } from '../rea-enquiry'
 
@@ -64,6 +65,44 @@ describe('transformReaEnquiryRecord', () => {
     expect(entity.first_name).toBe('Sarah')
     expect(entity.last_name).toBe('Smith')
     expect(entity.source).toBe('SPONSORED_CONTENT / My campaign')
+  })
+})
+
+describe('splitReaEnquiryEntities', () => {
+  it('splits a flattened lead into customer, property, and enquiry', () => {
+    const split = splitReaEnquiryEntities({
+      rea_enquiry_id: 'enq-1',
+      rea_agency_id: 'ABCDEF',
+      enquiry_type: 'REALESTATE_COM_AU_LISTING',
+      comments: 'Please call',
+      first_name: 'Sarah',
+      last_name: 'Smith',
+      email: 'sarah@example.com',
+      phone: '0401234567',
+      postcode: '4020',
+      preferred_contact_method: 'PHONE',
+      received_at: '2017-07-24T10:58:32.000Z',
+      processed_at: '2017-07-26T03:21:25.090Z',
+      listing_id: '100012345',
+      listing_address: '1 Test Street, Melbourne, Vic 3000',
+      source: 'SPONSORED_CONTENT / My campaign',
+    })
+
+    expect(split.customer).toEqual({
+      first_name: 'Sarah',
+      last_name: 'Smith',
+      email: 'sarah@example.com',
+      phone: '0401234567',
+      preferred_contact_method: 'PHONE',
+    })
+    expect(split.property).toEqual({
+      listing_id: '100012345',
+      address: '1 Test Street, Melbourne, Vic 3000',
+    })
+    expect(split.enquiry.rea_enquiry_id).toBe('enq-1')
+    expect(split.enquiry.postcode).toBe('4020')
+    expect(split.enquiry).not.toHaveProperty('first_name')
+    expect(split.enquiry).not.toHaveProperty('listing_address')
   })
 })
 

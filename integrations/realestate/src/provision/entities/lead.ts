@@ -4,13 +4,15 @@
  */
 
 import { defineEntity } from 'skedyul'
+import { leadCrmMapDefaults } from './crmMapDefaults'
 
 export default defineEntity({
   handle: 'lead',
   label: 'Lead',
   labelPlural: 'Leads',
   description:
-    'Enquiry payload from app.realestate.enquiry.created (REA EnquiryCreated webhooks)',
+    'Legacy flattened enquiry payload. Prefer customer + property + enquiry maps when the workplace has those models.',
+  crmMapDefaults: leadCrmMapDefaults,
   fields: [
     {
       handle: 'rea_enquiry_id',

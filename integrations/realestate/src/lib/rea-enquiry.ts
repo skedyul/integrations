@@ -4,6 +4,7 @@ import type {
   ReaEnquiryRecord,
   ReaEnquiryEntity,
   ReaEnquiryEventPayload,
+  ReaSplitEnquiryEntities,
 } from '../events/types'
 
 function readString(value: unknown): string | null {
@@ -112,6 +113,35 @@ export function transformReaEnquiryRecord(
     listing_id: enquiry.listing?.id ?? null,
     listing_address: enquiry.listing?.address ?? null,
     source: sourceParts.length > 0 ? sourceParts.join(' / ') : null,
+  }
+}
+
+export function splitReaEnquiryEntities(
+  enquiry: ReaEnquiryEntity,
+): ReaSplitEnquiryEntities {
+  return {
+    customer: {
+      first_name: enquiry.first_name,
+      last_name: enquiry.last_name,
+      email: enquiry.email,
+      phone: enquiry.phone,
+      preferred_contact_method: enquiry.preferred_contact_method,
+    },
+    property: {
+      listing_id: enquiry.listing_id,
+      address: enquiry.listing_address,
+    },
+    enquiry: {
+      rea_enquiry_id: enquiry.rea_enquiry_id,
+      rea_agency_id: enquiry.rea_agency_id,
+      enquiry_type: enquiry.enquiry_type,
+      comments: enquiry.comments,
+      source: enquiry.source,
+      received_at: enquiry.received_at,
+      processed_at: enquiry.processed_at,
+      postcode: enquiry.postcode,
+      preferred_contact_method: enquiry.preferred_contact_method,
+    },
   }
 }
 
