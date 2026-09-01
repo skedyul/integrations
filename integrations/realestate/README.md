@@ -7,7 +7,7 @@ Skedyul integration for the [REA Partner Platform](https://partner.realestate.co
 - **Multi-agency, one install** — many REA agencies as internal `agency` records; second workplace installs are not supported
 - **Ignite enablement** — `IntegrationCreated` / `Updated` / `Deleted` webhooks plus `check_ignite_integration` tool
 - **Lead webhook** — `EnquiryCreated` events, Ed25519 verify, Leads API fetch, `enquiry.created` app events
-- **CRM maps + workflow** — `lead` entity + `sync-rea-enquiry-from-webhook` for zero-config sync after field mapping
+- **CRM maps + workflow** — `customer`, `property`, `property_ownership`, and `enquiry` entities + `sync-rea-enquiry-from-webhook` for zero-config sync after field mapping
 
 ## Setup
 
@@ -42,9 +42,16 @@ Subscription IDs are stored on the install env by the install hook (not user-ent
 3. Background `Integration*` webhooks keep the agency list in sync as authorizations change.
 4. If Temporal shows no workplace webhook activity, click **Ensure REA webhooks**. That retargets a leftover all-owners `EnquiryCreated` subscription (often a provision-level URL) onto this install.
 
-### Set up Leads (CRM)
+### Set up CRM
 
-Map the `lead` entity to workplace CRM fields and enable the bundled workflow. After mapping, enquiries upsert with no further config.
+Map `customer`, `property`, `enquiry`, and `property_ownership` to workplace CRM fields and enable the bundled workflow. After mapping, an EnquiryCreated webhook upserts:
+
+1. Customer (person)
+2. Property (listing)
+3. Property ownership (customer↔property join; `ownership_key` is `listing_id:phone` or `listing_id:email`)
+4. Enquiry (with customer and property relationships)
+
+Install pages: **Customers**, **Properties**, **Enquiries**.
 
 ## Uninstall
 

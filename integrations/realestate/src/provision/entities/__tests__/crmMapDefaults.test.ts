@@ -2,12 +2,12 @@ import { describe, expect, it } from '@jest/globals'
 import customer from '../customer'
 import property from '../property'
 import enquiry from '../enquiry'
-import lead from '../lead'
+import propertyOwnership from '../property-ownership'
 import {
   customerCrmMapDefaults,
   propertyCrmMapDefaults,
   enquiryCrmMapDefaults,
-  leadCrmMapDefaults,
+  propertyOwnershipCrmMapDefaults,
 } from '../crmMapDefaults'
 
 describe('crmMapDefaults', () => {
@@ -43,11 +43,20 @@ describe('crmMapDefaults', () => {
     ])
   })
 
-  it('keeps the legacy lead map for workplaces that still flatten onto one model', () => {
-    expect(leadCrmMapDefaults.modelHandle).toBe('customer')
-    expect(leadCrmMapDefaults.fieldHandles.listing_address).toBe('listing_address')
-    expect(lead.fields.some((field) => field.handle === 'rea_enquiry_id')).toBe(
-      true,
-    )
+  it('suggests property ownership match on ownership_key with customer and property links', () => {
+    expect(propertyOwnershipCrmMapDefaults.modelHandle).toBe('property_ownership')
+    expect(propertyOwnershipCrmMapDefaults.matchFieldHandle).toBe('ownership_key')
+    expect(propertyOwnershipCrmMapDefaults.relationshipHandles).toEqual({
+      customer: 'customer',
+      property: 'property',
+    })
+    expect(propertyOwnership.fields.map((field) => field.handle)).toEqual([
+      'ownership_key',
+      'role',
+    ])
+    expect(propertyOwnership.relationships?.map((rel) => rel.handle)).toEqual([
+      'customer',
+      'property',
+    ])
   })
 })

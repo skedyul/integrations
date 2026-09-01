@@ -11,18 +11,24 @@ export const connectAgenciesStep = defineSetupStep({
   actionLabel: 'Check Ignite status',
 })
 
-export const setupLeadsStep = defineSetupStep({
-  handle: 'setup_leads',
-  label: 'Set up Leads',
+export const setupCrmStep = defineSetupStep({
+  handle: 'setup_crm',
+  label: 'Set up CRM',
   description:
-    'Map REA enquiry fields to your CRM and enable the lead sync workflow.',
+    'Map customers, properties, enquiries, and property ownership to your CRM and enable the enquiry sync workflow.',
   kind: 'crm',
   requires: ['connect_agencies'],
-  entities: ['lead'],
+  entities: ['customer', 'property', 'enquiry', 'property_ownership'],
   workflowHandles: ['sync-rea-enquiry-from-webhook'],
   listenToCrm: true,
-  capabilities: ['crm.lead', 'realtime.lead'],
-  href: '/leads',
+  capabilities: [
+    'crm.customer',
+    'crm.property',
+    'crm.enquiry',
+    'crm.property_ownership',
+    'realtime.enquiry',
+  ],
+  href: '/customers',
 })
 
-export default [connectAgenciesStep, setupLeadsStep]
+export default [connectAgenciesStep, setupCrmStep]

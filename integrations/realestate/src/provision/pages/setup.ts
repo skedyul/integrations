@@ -34,7 +34,7 @@ export default definePage({
       header: {
         title: 'Setup realestate.com.au',
         description:
-          'Authorize agencies in Ignite, then map leads to your CRM. One install supports many agencies.',
+          'Authorize agencies in Ignite, then map customers, properties, and enquiries to your CRM. One install supports many agencies.',
       },
       form: {
         id: 'install-setup-form',

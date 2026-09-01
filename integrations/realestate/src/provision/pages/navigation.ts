@@ -17,9 +17,21 @@ export default defineNavigation({
             hidden: "{{ capabilities['agency.connected'] != true }}",
           },
           {
-            label: 'Leads',
-            href: '/leads',
+            label: 'Customers',
+            href: '/customers',
             icon: 'Users',
+            hidden: "{{ capabilities['agency.connected'] != true }}",
+          },
+          {
+            label: 'Properties',
+            href: '/properties',
+            icon: 'Home',
+            hidden: "{{ capabilities['agency.connected'] != true }}",
+          },
+          {
+            label: 'Enquiries',
+            href: '/enquiries',
+            icon: 'MessageSquare',
             hidden: "{{ capabilities['agency.connected'] != true }}",
           },
         ],
