@@ -10,6 +10,7 @@ export function toCalendarEntityPayload(
     summary: calendar.summary,
     primary: calendar.primary,
     timezone: calendar.time_zone,
+    color: calendar.color,
     description: calendar.description,
     ...(extras?.sync_enabled !== undefined
       ? { sync_enabled: extras.sync_enabled }

@@ -31,6 +31,7 @@ function toSummary(record: GoogleCalendarRecord): GoogleCalendarSummary {
     access_role: null,
     time_zone: null,
     description: null,
+    color: null,
   }
 }
 

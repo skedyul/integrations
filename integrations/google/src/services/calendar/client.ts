@@ -11,6 +11,7 @@ export interface GoogleCalendarSummary {
   access_role: string | null
   time_zone: string | null
   description: string | null
+  color: string | null
 }
 
 export interface GoogleCalendarEventInput {
@@ -49,6 +50,7 @@ function mapCalendarListEntry(entry: calendar_v3.Schema$CalendarListEntry): Goog
     access_role: entry.accessRole ?? null,
     time_zone: entry.timeZone ?? null,
     description: entry.description ?? null,
+    color: entry.backgroundColor ?? null,
   }
 }
 
