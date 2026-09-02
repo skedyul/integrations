@@ -45,7 +45,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
 ### 3. Install the app (workplace)
 
 1. Install the Google app on a workplace
-2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens. Uninstall a previous Google install and start Import from scratch if you still have leftover calendar rows.
+2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens. Uninstall deletes Google-keyed calendar, event, and attendee CRM rows so a later Import does not create a second set.
 3. Complete **Set up calendars**:
    - Map the `calendar` entity to your workplace calendar model (`google_calendar_id` match key)
    - Run **Import Calendars** on the Calendars page (one batch job)

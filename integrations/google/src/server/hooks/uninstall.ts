@@ -1,4 +1,5 @@
 import type { UninstallHandlerContext, UninstallHandlerResult } from 'skedyul'
+import { deleteGoogleKeyedCrmRows } from '../../lib/cleanup-google-crm'
 import {
   getAuthenticatedOAuthClient,
   revokeGoogleRefreshToken,
@@ -20,6 +21,8 @@ export default async function uninstall(
     }
     await revokeGoogleRefreshToken(env.GOOGLE_REFRESH_TOKEN)
   }
+
+  await deleteGoogleKeyedCrmRows(ctx.log)
 
   ctx.log.info('[Google Uninstall] Completed uninstall cleanup')
   return {}
