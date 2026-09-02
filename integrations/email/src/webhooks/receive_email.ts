@@ -99,6 +99,10 @@ async function handleReceiveEmail(
     to: inboundEmail.to,
     subject: inboundEmail.subject,
     attachmentCount: inboundEmail.attachments.length,
+    attachmentBytes: inboundEmail.attachments.reduce(
+      (sum, attachment) => sum + (attachment.size || 0),
+      0,
+    ),
   })
 
   // Find communication channel by recipient email
@@ -155,18 +159,24 @@ async function handleReceiveEmail(
 
           console.log('[Email Webhook] Processed attachments:', attachments.length)
 
-          if (attachments.length > 0) {
-            const attachResult = await communicationChannel.attachFilesToMessage({
-              messageId,
-              attachments: attachments.map((a) => ({
-                fileId: a.fileId,
-                name: a.name,
-                mimeType: a.mimeType,
-                size: a.size,
-              })),
-            })
-            console.log('[Email Webhook] Linked attachments:', attachResult.attachmentCount)
+          if (attachments.length === 0) {
+            // Fail the webhook so this is visible in Temporal. Timeouts already
+            // retry via callWebhookActivity; a 200 with zero files hid the drop.
+            throw new Error(
+              `Failed to process all ${inboundEmail.attachments.length} email attachment(s)`,
+            )
           }
+
+          const attachResult = await communicationChannel.attachFilesToMessage({
+            messageId,
+            attachments: attachments.map((a) => ({
+              fileId: a.fileId,
+              name: a.name,
+              mimeType: a.mimeType,
+              size: a.size,
+            })),
+          })
+          console.log('[Email Webhook] Linked attachments:', attachResult.attachmentCount)
         }
 
         return messageResult
