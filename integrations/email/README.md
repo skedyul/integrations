@@ -203,8 +203,9 @@ Configure this URL in Mailgun's routing settings.
 ### Attachments not processing
 
 1. Check file size limits (Mailgun has a 25MB limit)
-2. Verify the attachment download URL is accessible
+2. Verify the attachment download URL is accessible with the Mailgun API key
 3. Check Skedyul file upload permissions
+4. Large files must finish download + `file.upload` inside the platform webhook HTTP timeout (default 120s). Look for `[Email] Downloading attachment` without a matching `Processed attachment` / `Linked attachments`, or Temporal `Request aborted (timeout)` on `callWebhook`
 
 ### Send failures
 

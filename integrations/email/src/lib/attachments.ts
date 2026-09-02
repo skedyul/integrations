@@ -71,7 +71,9 @@ export async function processAttachments(
       const contentType = attachment.contentType || 'application/octet-stream'
 
       // Download attachment content using provider
-      console.log(`[Email] Downloading attachment ${i + 1}: ${filename}`)
+      console.log(
+        `[Email] Downloading attachment ${i + 1}: ${filename} (${attachment.size || 0} bytes, ${contentType})`,
+      )
       const content = await provider.fetchAttachment(attachment.url)
 
       // Use provided size or calculate from buffer

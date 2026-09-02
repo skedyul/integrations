@@ -18,8 +18,12 @@ import type {
   SendEmailParams,
   SendEmailResult,
   InboundEmail,
-  InboundAttachment,
 } from '../email_provider'
+import {
+  fetchMailgunAttachment,
+  parseMailgunAttachments,
+  parseMailgunFormBody,
+} from './mailgun_inbound'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mailgun Provider
@@ -159,7 +163,7 @@ export class MailgunProvider implements EmailProvider {
     request: WebhookRequest,
     signingSecret: string,
   ): Promise<boolean> {
-    const body = this.parseFormBody(request.body)
+    const body = parseMailgunFormBody(request.body)
 
     const token = body.token as string | undefined
     const timestamp = body.timestamp as string | undefined
@@ -179,28 +183,8 @@ export class MailgunProvider implements EmailProvider {
   }
 
   async parseInboundEmail(request: WebhookRequest): Promise<InboundEmail> {
-    const body = this.parseFormBody(request.body)
-
-    // Parse attachments JSON if present
-    let attachments: InboundAttachment[] = []
-    if (body.attachments) {
-      try {
-        const parsed = JSON.parse(body.attachments as string) as Array<{
-          name: string
-          'content-type': string
-          size: number
-          url: string
-        }>
-        attachments = parsed.map((att) => ({
-          name: att.name,
-          contentType: att['content-type'],
-          size: att.size,
-          url: att.url,
-        }))
-      } catch {
-        // Ignore parse errors
-      }
-    }
+    const body = parseMailgunFormBody(request.body)
+    const attachments = parseMailgunAttachments(body.attachments)
 
     return {
       from: (body.sender ?? body.from) as string,
@@ -215,49 +199,9 @@ export class MailgunProvider implements EmailProvider {
   }
 
   async fetchAttachment(url: string): Promise<Buffer> {
-    // Try without auth first (storage URLs might be public)
-    let response = await fetch(url, { method: 'GET' })
-
-    // If unauthorized, try with Basic Auth
-    if (response.status === 401 || response.status === 404) {
-      const authString = `api:${this.apiKey}`
-      const authHeader = Buffer.from(authString, 'utf-8').toString('base64')
-
-      response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Basic ${authHeader}`,
-        },
-      })
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch attachment: ${response.status} ${response.statusText}`,
-      )
-    }
-
-    const arrayBuffer = await response.arrayBuffer()
-    return Buffer.from(arrayBuffer)
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Private Helpers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  private parseFormBody(body: unknown): Record<string, unknown> {
-    if (typeof body === 'string') {
-      // URL-encoded form data
-      const params = new URLSearchParams(body)
-      const result: Record<string, unknown> = {}
-      for (const [key, value] of params.entries()) {
-        result[key] = value
-      }
-      return result
-    }
-    if (typeof body === 'object' && body !== null) {
-      return body as Record<string, unknown>
-    }
-    return {}
+    // Storage URLs always require the Mailgun API key. The previous
+    // unauthenticated probe wasted time (and could hang) inside the
+    // platform webhook HTTP budget.
+    return fetchMailgunAttachment(url, this.apiKey)
   }
 }
