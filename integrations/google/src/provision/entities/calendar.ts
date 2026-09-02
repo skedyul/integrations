@@ -24,7 +24,18 @@ export default defineEntity({
     },
     { handle: 'summary', label: 'Name', type: 'string' },
     { handle: 'primary', label: 'Primary', type: 'boolean' },
-    { handle: 'timezone', label: 'Timezone', type: 'string' },
+    {
+      handle: 'timezone',
+      label: 'Timezone',
+      type: 'string',
+      ...({ definition: 'calendar/timezone' } as { definition: string }),
+    },
+    {
+      handle: 'color',
+      label: 'Color',
+      type: 'string',
+      ...({ definition: 'calendar/color' } as { definition: string }),
+    },
     { handle: 'description', label: 'Description', type: 'long_string' },
     {
       handle: 'sync_enabled',

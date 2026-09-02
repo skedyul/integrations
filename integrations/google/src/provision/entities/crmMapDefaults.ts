@@ -14,6 +14,7 @@ export const calendarCrmMapDefaults: EntityCrmMapDefaults = {
     summary: 'name',
     primary: 'primary',
     timezone: 'timezone',
+    color: 'color',
     description: 'description',
     sync_enabled: 'sync_enabled',
     sync_direction: 'sync_direction',

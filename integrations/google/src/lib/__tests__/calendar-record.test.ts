@@ -87,6 +87,7 @@ describe('recordFromGoogleSummary', () => {
         access_role: 'owner',
         time_zone: 'Australia/Sydney',
         description: null,
+        color: null,
       }),
     ).toMatchObject({
       id: 'primary',

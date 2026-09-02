@@ -21,6 +21,7 @@ describe('crmMapDefaults', () => {
     expect(calendarCrmMapDefaults.fieldHandles.watch_channel_id).toBe(
       'watch_channel_id',
     )
+    expect(calendarCrmMapDefaults.fieldHandles.color).toBe('color')
   })
 
   it('suggests an event model with a calendar relationship', () => {
@@ -95,6 +96,18 @@ describe('calendar event entity', () => {
     expect(byHandle.original_start).toMatchObject({
       definition: 'calendar/original_start',
     })
+    expect(byHandle.timezone).toMatchObject({
+      definition: 'calendar/timezone',
+    })
+    expect(byHandle.all_day).toMatchObject({
+      definition: 'calendar/all_day',
+    })
+    expect(byHandle.status).toMatchObject({
+      definition: 'calendar/status',
+    })
+    expect(byHandle.location).toMatchObject({
+      definition: 'calendar/location',
+    })
   })
 })
 
@@ -111,5 +124,17 @@ describe('calendar entity', () => {
         'last_synced_at',
       ]),
     )
+  })
+
+  it('declares iCal timezone and color definitions', () => {
+    const byHandle = Object.fromEntries(
+      calendar.fields.map((field) => [field.handle, field]),
+    )
+    expect(byHandle.timezone).toMatchObject({
+      definition: 'calendar/timezone',
+    })
+    expect(byHandle.color).toMatchObject({
+      definition: 'calendar/color',
+    })
   })
 })
