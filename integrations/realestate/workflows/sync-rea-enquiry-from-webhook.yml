@@ -144,7 +144,7 @@ steps:
     type: task
     name: Build property ownership CRM payload
     timeout: 30 seconds
-    if: "{{ 'model_handle' | realestate: 'present', 'property_ownership' }}"
+    if: "{% assign contact_id = inputs.data.enquiry.phone | default: inputs.data.enquiry.email %}{% if 'model_handle' | realestate: 'present', 'property_ownership' %}{% if steps.upsert-customer.outputs.response.results[0].instanceId != blank and steps.upsert-property.outputs.response.results[0].instanceId != blank and contact_id != blank %}true{% else %}false{% endif %}{% else %}false{% endif %}"
     service:
       name: skedyul/tools
       cmd: liquid.render
@@ -155,15 +155,14 @@ steps:
         {%- assign property_id = steps.upsert-property.outputs.response.results[0].instanceId -%}
         {%- assign listing_id = inputs.data.enquiry.listing_id -%}
         {%- assign contact_id = inputs.data.enquiry.phone | default: inputs.data.enquiry.email -%}
-        {%- if customer_id != blank and property_id != blank and listing_id != blank and contact_id != blank -%}
+        {%- assign ownership_left = listing_id | default: property_id -%}
         {
           "property_ownership": {
-            "ownership_key": {{ listing_id | append: ':' | append: contact_id | json }},
+            "ownership_key": {{ ownership_left | append: ':' | append: contact_id | json }},
             "customer": {{ customer_id | json }},
             "property": {{ property_id | json }}
           }
         }
-        {%- endif -%}
 
   format-property-ownership:
     needs: [build-property-ownership-payload]
