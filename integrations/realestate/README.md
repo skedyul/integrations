@@ -48,7 +48,7 @@ Map `customer`, `property`, `enquiry`, and `property_ownership` to workplace CRM
 
 1. Customer (person)
 2. Property (listing)
-3. Property ownership (customer↔property join; `ownership_key` is `listing_id:phone` or `listing_id:email`)
+3. Property ownership (customer↔property join; `ownership_key` is `listing_id:phone` or `listing_id:email`, or `property_id:phone|email` when the enquiry has no listing id)
 4. Enquiry (with customer and property relationships)
 
 Install pages: **Customers**, **Properties**, **Enquiries**.

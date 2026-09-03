@@ -24,8 +24,38 @@ describe('sync-rea-enquiry-from-webhook', () => {
     expect(yaml).toContain('"listing_id": {{ inputs.data.enquiry.listing_id | json }}')
     expect(yaml).toContain('"address": {{ inputs.data.enquiry.listing_address | json }}')
     expect(yaml).toContain('"rea_enquiry_id": {{ inputs.data.enquiry.rea_enquiry_id | json }}')
-    expect(yaml).toContain('"ownership_key": {{ listing_id | append: \':\' | append: contact_id | json }}')
+    expect(yaml).toContain(
+      '"ownership_key": {{ ownership_left | append: \':\' | append: contact_id | json }}',
+    )
+    expect(yaml).toContain(
+      '{%- assign ownership_left = listing_id | default: property_id -%}',
+    )
     expect(yaml).not.toContain('"listing_address": {{ inputs.data.enquiry.listing_address | json }}')
+  })
+
+  it('builds ownership with a property_id fallback when listing_id is missing', () => {
+    expect(yaml).toContain(
+      '{%- assign ownership_left = listing_id | default: property_id -%}',
+    )
+    expect(yaml).toContain(
+      '"ownership_key": {{ ownership_left | append: \':\' | append: contact_id | json }}',
+    )
+    expect(yaml).not.toContain(
+      'listing_id != blank and contact_id != blank',
+    )
+  })
+
+  it('skips ownership payload when customer, property, or contact is missing', () => {
+    expect(yaml).toContain(
+      "steps.upsert-customer.outputs.response.results[0].instanceId != blank",
+    )
+    expect(yaml).toContain(
+      "steps.upsert-property.outputs.response.results[0].instanceId != blank",
+    )
+    expect(yaml).toContain(
+      "{% assign contact_id = inputs.data.enquiry.phone | default: inputs.data.enquiry.email %}",
+    )
+    expect(yaml).toContain('and contact_id != blank %}true{% else %}false{% endif %}')
   })
 
   it('associates the conversation contact with the customer instance only', () => {
