@@ -244,12 +244,14 @@ describe('calendar_window_pull', () => {
     )
 
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.error.code).toBe('VALIDATION_ERROR')
-      expect(result.error.message).toBe(
-        'Calendar CRM maps are not configured for this installation',
-      )
-    }
+    expect(result).toMatchObject({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message:
+          'Calendar CRM maps are not configured for this installation',
+      },
+    })
     expect(upsertMany).not.toHaveBeenCalled()
     expect(getAuthenticatedOAuthClient).not.toHaveBeenCalled()
   })
