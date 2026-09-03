@@ -1,8 +1,11 @@
-import { instance } from 'skedyul'
-import type { ToolDefinition } from 'skedyul'
-import { z } from 'skedyul'
-import { isRuntimeContext } from 'skedyul'
-import { AppAuthInvalidError } from 'skedyul'
+import {
+  instance,
+  z,
+  isRuntimeContext,
+  AppAuthInvalidError,
+  CalendarWindowPullInputSchema,
+} from 'skedyul'
+import type { ToolDefinition, CalendarWindowPullInput } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { toCalendarWindowPullPayload } from '../lib/seed-google-calendars'
 import {
@@ -20,31 +23,6 @@ import {
 
 const DEFAULT_MAX_RESULTS_PER_CALENDAR = 250
 
-/** Local copy of skedyul CalendarWindowPullInput until the pin includes it. */
-const CalendarWindowPullInputSchema = z.object({
-  window: z.object({
-    startAt: z.string().min(1),
-    endAt: z.string().min(1),
-    timezone: z.string().optional(),
-  }),
-  model: z
-    .object({
-      id: z.string(),
-      handle: z.string().optional(),
-    })
-    .optional(),
-  entity: z
-    .object({
-      handle: z.string(),
-    })
-    .optional(),
-  calendars: z
-    .object({
-      ids: z.array(z.string().min(1)).optional(),
-    })
-    .optional(),
-})
-
 const CalendarWindowPullOutputSchema = z.object({
   calendars_upserted: z.number().int().nonnegative(),
   events_upserted: z.number().int().nonnegative(),
@@ -57,7 +35,6 @@ const CalendarWindowPullOutputSchema = z.object({
   ),
 })
 
-type CalendarWindowPullInput = z.infer<typeof CalendarWindowPullInputSchema>
 type CalendarWindowPullOutput = z.infer<typeof CalendarWindowPullOutputSchema>
 
 function readResultId(row: Record<string, unknown>): string | null {

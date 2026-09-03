@@ -13,9 +13,7 @@ export default defineEntity({
   description:
     'Google Calendar event from app.google.calendar.event.* sync and calendar tools',
   crmMapDefaults: calendarEventCrmMapDefaults,
-  ...({
-    tools: { calendarWindowPull: 'calendar_window_pull' },
-  } as { tools: { calendarWindowPull: string } }),
+  tools: { calendarWindowPull: 'calendar_window_pull' },
   fields: [
     {
       handle: 'google_event_id',
@@ -64,7 +62,7 @@ export default defineEntity({
       handle: 'recurrence',
       label: 'Recurrence Rules',
       type: 'object',
-      // 1.7.26 types omit definition; runtime + schema keep the handle.
+      // Global FieldDefinition handle attached at CRM apply.
       ...({ definition: 'calendar/recurrence' } as { definition: string }),
     },
     {
