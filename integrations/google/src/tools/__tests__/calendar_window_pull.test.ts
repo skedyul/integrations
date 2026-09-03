@@ -72,6 +72,16 @@ const context = {
   env: {},
 }
 
+const windowInput = {
+  window: {
+    startAt: '2026-09-01T00:00:00.000Z',
+    endAt: '2026-09-08T00:00:00.000Z',
+    timezone: 'Pacific/Auckland',
+  },
+  model: { id: 'mdl_event', handle: 'event' },
+  entity: { handle: 'calendar_event' },
+}
+
 const room: GoogleCalendarSummary = {
   calendar_id: 'room@group.calendar.google.com',
   summary: 'Room 2015',
@@ -147,10 +157,7 @@ describe('calendar_window_pull', () => {
       })
 
     const result = await calendarWindowPullRegistry.handler(
-      {
-        time_min: '2026-09-01T00:00:00.000Z',
-        time_max: '2026-09-08T00:00:00.000Z',
-      },
+      windowInput,
       context as never,
     )
 
@@ -211,9 +218,8 @@ describe('calendar_window_pull', () => {
 
     await calendarWindowPullRegistry.handler(
       {
-        time_min: '2026-09-01T00:00:00.000Z',
-        time_max: '2026-09-08T00:00:00.000Z',
-        calendar_ids: ['room@group.calendar.google.com'],
+        ...windowInput,
+        calendars: { ids: ['room@group.calendar.google.com'] },
       },
       context as never,
     )
@@ -235,10 +241,7 @@ describe('calendar_window_pull', () => {
     )
 
     const result = await calendarWindowPullRegistry.handler(
-      {
-        time_min: '2026-09-01T00:00:00.000Z',
-        time_max: '2026-09-08T00:00:00.000Z',
-      },
+      windowInput,
       context as never,
     )
 
@@ -265,10 +268,7 @@ describe('calendar_window_pull', () => {
     })
 
     const result = await calendarWindowPullRegistry.handler(
-      {
-        time_min: '2026-09-01T00:00:00.000Z',
-        time_max: '2026-09-08T00:00:00.000Z',
-      },
+      windowInput,
       context as never,
     )
 

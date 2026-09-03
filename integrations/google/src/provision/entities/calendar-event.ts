@@ -13,6 +13,9 @@ export default defineEntity({
   description:
     'Google Calendar event from app.google.calendar.event.* sync and calendar tools',
   crmMapDefaults: calendarEventCrmMapDefaults,
+  ...({
+    tools: { calendarWindowPull: 'calendar_window_pull' },
+  } as { tools: { calendarWindowPull: string } }),
   fields: [
     {
       handle: 'google_event_id',

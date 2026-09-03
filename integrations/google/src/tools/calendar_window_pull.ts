@@ -20,15 +20,28 @@ import {
 
 const DEFAULT_MAX_RESULTS_PER_CALENDAR = 250
 
+/** Local copy of skedyul CalendarWindowPullInput until the pin includes it. */
 const CalendarWindowPullInputSchema = z.object({
-  time_min: z.string().min(1),
-  time_max: z.string().min(1),
-  calendar_ids: z.array(z.string().min(1)).optional(),
-  max_results_per_calendar: z
-    .number()
-    .int()
-    .positive()
-    .max(2500)
+  window: z.object({
+    startAt: z.string().min(1),
+    endAt: z.string().min(1),
+    timezone: z.string().optional(),
+  }),
+  model: z
+    .object({
+      id: z.string(),
+      handle: z.string().optional(),
+    })
+    .optional(),
+  entity: z
+    .object({
+      handle: z.string(),
+    })
+    .optional(),
+  calendars: z
+    .object({
+      ids: z.array(z.string().min(1)).optional(),
+    })
     .optional(),
 })
 
@@ -154,7 +167,7 @@ export const calendarWindowPullRegistry: ToolDefinition<
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
       const listed = await listGoogleCalendars(client)
-      const requestedIds = input.calendar_ids?.filter((id) => id.length > 0)
+      const requestedIds = input.calendars?.ids?.filter((id) => id.length > 0)
       const requestedSet = requestedIds ? new Set(requestedIds) : null
       const calendars = listed.filter((calendar) => {
         if (!calendar.calendar_id) return false
@@ -173,7 +186,7 @@ export const calendarWindowPullRegistry: ToolDefinition<
       const crmIdByGoogleId = await upsertCalendars(calendars)
       const eventItems: Record<string, unknown>[] = []
       let truncated = false
-      const maxResults = input.max_results_per_calendar ?? DEFAULT_MAX_RESULTS_PER_CALENDAR
+      const maxResults = DEFAULT_MAX_RESULTS_PER_CALENDAR
 
       for (const calendar of calendars) {
         const crmCalendarId = crmIdByGoogleId.get(calendar.calendar_id)
@@ -183,8 +196,8 @@ export const calendarWindowPullRegistry: ToolDefinition<
 
         const page = await listGoogleCalendarEvents(client, {
           calendarId: calendar.calendar_id,
-          timeMin: input.time_min,
-          timeMax: input.time_max,
+          timeMin: input.window.startAt,
+          timeMax: input.window.endAt,
           maxResults,
           singleEvents: false,
         })
