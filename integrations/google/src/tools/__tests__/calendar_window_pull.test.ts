@@ -235,6 +235,25 @@ describe('calendar_window_pull', () => {
     })
   })
 
+  it('returns a validation error when calendar CRM maps are not configured', async () => {
+    isConfigured.mockImplementation(async (handle) => handle !== 'calendar')
+
+    const result = await calendarWindowPullRegistry.handler(
+      windowInput,
+      context as never,
+    )
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.code).toBe('VALIDATION_ERROR')
+      expect(result.error.message).toBe(
+        'Calendar CRM maps are not configured for this installation',
+      )
+    }
+    expect(upsertMany).not.toHaveBeenCalled()
+    expect(getAuthenticatedOAuthClient).not.toHaveBeenCalled()
+  })
+
   it('returns an auth error and does not upsert when Google is disconnected', async () => {
     getAuthenticatedOAuthClient.mockRejectedValue(
       new AppAuthInvalidError('Google account is not connected'),
