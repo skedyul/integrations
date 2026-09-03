@@ -44,23 +44,14 @@ export default definePage({
                 {
                   handle: 'calendar_event',
                   label: 'Events',
-                  importOperationHandle: 'import_calendar_events',
-                  importIcon: 'CalendarDays',
-                  importLabel: 'Import events',
                 },
                 {
                   handle: 'user',
                   label: 'Users',
-                  importOperationHandle: 'import_calendar_events',
-                  importIcon: 'Users',
-                  importLabel: 'Import people',
                 },
                 {
                   handle: 'attendee',
                   label: 'Attendees',
-                  importOperationHandle: 'import_calendar_events',
-                  importIcon: 'UserCheck',
-                  importLabel: 'Import attendees',
                 },
               ],
               eventTypes: [...calendarTypes, ...calendarEventTypes],
