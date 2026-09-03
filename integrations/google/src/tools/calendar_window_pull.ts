@@ -29,8 +29,7 @@ const CalendarWindowPullInputSchema = z.object({
     .int()
     .positive()
     .max(2500)
-    .optional()
-    .default(DEFAULT_MAX_RESULTS_PER_CALENDAR),
+    .optional(),
 })
 
 const CalendarWindowPullOutputSchema = z.object({

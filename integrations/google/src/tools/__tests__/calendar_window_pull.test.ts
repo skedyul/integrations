@@ -274,7 +274,7 @@ describe('calendar_window_pull', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.output.truncated).toBe(true)
+      expect(result.output?.truncated).toBe(true)
     }
   })
 })
