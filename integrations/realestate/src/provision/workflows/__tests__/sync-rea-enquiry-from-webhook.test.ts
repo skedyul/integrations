@@ -55,7 +55,12 @@ describe('sync-rea-enquiry-from-webhook', () => {
     expect(yaml).toContain(
       "{% assign contact_id = inputs.data.enquiry.phone | default: inputs.data.enquiry.email %}",
     )
-    expect(yaml).toContain('and contact_id != blank %}true{% else %}false{% endif %}')
+    expect(yaml).toContain(
+      "{% if 'model_handle' | realestate: 'present', 'property_ownership' %}",
+    )
+    expect(yaml).toContain(
+      'and contact_id != blank %}true{% else %}false{% endif %}{% else %}false{% endif %}',
+    )
   })
 
   it('associates the conversation contact with the customer instance only', () => {

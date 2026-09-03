@@ -144,7 +144,7 @@ steps:
     type: task
     name: Build property ownership CRM payload
     timeout: 30 seconds
-    if: "{% assign contact_id = inputs.data.enquiry.phone | default: inputs.data.enquiry.email %}{% if 'model_handle' | realestate: 'present', 'property_ownership' and steps.upsert-customer.outputs.response.results[0].instanceId != blank and steps.upsert-property.outputs.response.results[0].instanceId != blank and contact_id != blank %}true{% else %}false{% endif %}"
+    if: "{% assign contact_id = inputs.data.enquiry.phone | default: inputs.data.enquiry.email %}{% if 'model_handle' | realestate: 'present', 'property_ownership' %}{% if steps.upsert-customer.outputs.response.results[0].instanceId != blank and steps.upsert-property.outputs.response.results[0].instanceId != blank and contact_id != blank %}true{% else %}false{% endif %}{% else %}false{% endif %}"
     service:
       name: skedyul/tools
       cmd: liquid.render
