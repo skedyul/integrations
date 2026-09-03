@@ -37,3 +37,16 @@ export function toCalendarEntityPayload(
       : {}),
   }
 }
+
+/** Window pull upserts metadata without touching sync_enabled on existing rows. */
+export function toCalendarWindowPullPayload(calendar: GoogleCalendarSummary) {
+  return {
+    google_calendar_id: calendar.calendar_id,
+    summary: calendar.summary,
+    primary: calendar.primary,
+    timezone: calendar.time_zone,
+    color: calendar.color,
+    description: calendar.description,
+    sync_direction: 'both' as const,
+  }
+}
