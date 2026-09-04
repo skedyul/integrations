@@ -6,7 +6,7 @@
 import { defineEntity } from 'skedyul'
 import { attendeeCrmMapDefaults } from './crmMapDefaults'
 
-export default defineEntity({
+const attendee = defineEntity({
   handle: 'attendee',
   label: 'Attendee',
   labelPlural: 'Attendees',
@@ -64,6 +64,11 @@ export default defineEntity({
       ],
     },
   ],
+})
+
+// Extra entity keys are stored on executable.config. The pinned SDK type
+// does not include saveInteractions yet (see skedyul-node PR).
+export default Object.assign(attendee, {
   saveInteractions: [
     {
       handle: 'guest_notifications',
