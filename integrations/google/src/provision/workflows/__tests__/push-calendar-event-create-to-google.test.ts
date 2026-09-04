@@ -47,6 +47,16 @@ describe('push-calendar-event-create-to-google', () => {
     expect(yaml).toContain('if title != blank')
   })
 
+  it('passes attendees and namespaced send_updates into calendar_event_create', () => {
+    expect(yaml).toContain('google:')
+    expect(yaml).toContain(
+      'attendees: "{{ steps.resolve-create.outputs.response.data.attendees | json }}"',
+    )
+    expect(yaml).toContain(
+      "send_updates: \"{{ inputs.google.send_updates | default: 'externalOnly' }}\"",
+    )
+  })
+
   it('writes google_event_id back onto the existing CRM instance', () => {
     expect(yaml).toContain('cmd: instance.update')
     expect(yaml).toContain('instanceId: "{{ inputs.data.record.id }}"')

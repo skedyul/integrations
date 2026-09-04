@@ -40,6 +40,13 @@ describe('push-calendar-event-update-to-google', () => {
     )
   })
 
+  it('forwards namespaced guest notifications into calendar_event_update', () => {
+    expect(yaml).toContain('google:')
+    expect(yaml).toContain(
+      "send_updates: \"{{ inputs.google.send_updates | default: 'externalOnly' }}\"",
+    )
+  })
+
   it('writes google_event_id back when the CRM row had none', () => {
     expect(yaml).toContain('cmd: instance.update')
     expect(yaml).toContain('instanceId: "{{ inputs.data.after.id }}"')

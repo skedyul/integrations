@@ -10,6 +10,11 @@ inputs:
     label: CRM record
     description: Workplace instance.created payload for the model bound on the trigger
     required: true
+  google:
+    type: object
+    label: Google
+    description: App-namespaced context from the calendar_event saveInteraction (not CRM fields)
+    required: false
 
 outputs:
   google-event-id:
@@ -110,7 +115,8 @@ steps:
           "all_day": {{ record.all_day | default: false | json }},
           "google_event_id": {{ record.google_event_id | json }},
           "recurring_event_id": {{ record.recurring_event_id | json }},
-          "original_start": {{ record.original_start | json }}
+          "original_start": {{ record.original_start | json }},
+          "attendees": {{ record.attendees | json }}
         }
         {%- else -%}
         {}
@@ -168,7 +174,8 @@ steps:
           "all_day": {{ steps.build-create.outputs.response.data.all_day | json }},
           "google_event_id": {{ steps.build-create.outputs.response.data.google_event_id | json }},
           "recurring_event_id": {{ steps.build-create.outputs.response.data.recurring_event_id | json }},
-          "original_start": {{ steps.build-create.outputs.response.data.original_start | json }}
+          "original_start": {{ steps.build-create.outputs.response.data.original_start | json }},
+          "attendees": {{ steps.build-create.outputs.response.data.attendees | json }}
         }
         {%- else -%}
         {}
@@ -199,6 +206,8 @@ steps:
       google_event_id: "{{ steps.resolve-create.outputs.response.data.google_event_id | default: '' }}"
       recurring_event_id: "{{ steps.resolve-create.outputs.response.data.recurring_event_id | default: '' }}"
       original_start: "{{ steps.resolve-create.outputs.response.data.original_start | default: '' }}"
+      attendees: "{{ steps.resolve-create.outputs.response.data.attendees | json }}"
+      send_updates: "{{ inputs.google.send_updates | default: 'externalOnly' }}"
       emit_event: "false"
 
   build-writeback:

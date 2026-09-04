@@ -50,4 +50,32 @@ export default defineEntity({
       targetEntity: 'user',
     },
   ],
+  contextFields: [
+    {
+      handle: 'send_updates',
+      label: 'Guest notifications',
+      description:
+        'Google Calendar sendUpdates when this guest is added to the event.',
+      type: 'string',
+      options: [
+        { value: 'all', label: 'Notify all guests' },
+        { value: 'externalOnly', label: 'Notify external guests only' },
+        { value: 'none', label: 'Do not send notifications' },
+      ],
+    },
+  ],
+  saveInteractions: [
+    {
+      handle: 'guest_notifications',
+      when: { onCreate: true },
+      dialog: {
+        title: 'Notify this guest?',
+        message:
+          'Google Calendar can email this person an invitation for the event.',
+        severity: 'warning',
+        fields: ['send_updates'],
+        defaults: { send_updates: 'externalOnly' },
+      },
+    },
+  ],
 })

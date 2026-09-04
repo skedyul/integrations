@@ -28,6 +28,16 @@ export interface GoogleCalendarEventInput {
   google_event_id?: string
   recurring_event_id?: string
   original_start?: string
+  send_updates?: 'all' | 'externalOnly' | 'none'
+}
+
+export function resolveSendUpdates(
+  value: GoogleCalendarEventInput['send_updates'],
+): 'all' | 'externalOnly' | 'none' {
+  if (value === 'all' || value === 'externalOnly' || value === 'none') {
+    return value
+  }
+  return 'externalOnly'
 }
 
 /** Google Calendar event colorId for Peacock (teal/blue). Hardcoded until colors are configurable. */
@@ -169,6 +179,7 @@ export async function createGoogleCalendarEvent(
     const response = await calendar.events.insert({
       calendarId,
       requestBody: toGoogleEventBody(input),
+      sendUpdates: resolveSendUpdates(input.send_updates),
     })
 
     if (!response.data.id) {
@@ -195,6 +206,7 @@ export async function updateGoogleCalendarEvent(
       requestBody: toGoogleEventBody(input, {
         includeRecurrence: input.recurrence != null,
       }),
+      sendUpdates: resolveSendUpdates(input.send_updates),
     })
 
     if (!response.data.id) {

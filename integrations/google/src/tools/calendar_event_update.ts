@@ -61,6 +61,7 @@ const CalendarEventUpdateInputSchema = z.object({
   /** Unformatted calendar_event payload from `| google: "unformat"` */
   before: z.preprocess(blankToUndefined, JsonRecordSchema.optional()),
   after: z.preprocess(blankToUndefined, JsonRecordSchema.optional()),
+  send_updates: z.enum(['all', 'externalOnly', 'none']).optional(),
 })
 
 const CalendarEventUpdateOutputSchema = z.object({
@@ -116,7 +117,10 @@ function resolveWrite(input: CalendarEventUpdateInput): ResolvedWrite {
     }
     const patch = buildCalendarEventUpdatePatch(parseJsonRecord(input.before), after)
     if (patch) {
-      return { kind: 'patch', patch }
+      return {
+        kind: 'patch',
+        patch: { ...patch, send_updates: input.send_updates },
+      }
     }
     const ids = calendarEventIds(after, input.calendar_id)
     if (ids) {
@@ -124,7 +128,10 @@ function resolveWrite(input: CalendarEventUpdateInput): ResolvedWrite {
     }
     const createInput = buildCalendarEventCreateInput(after, input.calendar_id)
     if (createInput) {
-      return { kind: 'insert', input: createInput }
+      return {
+        kind: 'insert',
+        input: { ...createInput, send_updates: input.send_updates },
+      }
     }
     return {
       kind: 'invalid',
@@ -156,6 +163,7 @@ function resolveWrite(input: CalendarEventUpdateInput): ResolvedWrite {
       attendees: attendeeEmails(input.attendees),
       recurrence: input.recurrence,
       status: input.status,
+      send_updates: input.send_updates,
     },
   }
 }
