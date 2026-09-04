@@ -36,6 +36,25 @@ describe('push-calendar-event-create-to-google', () => {
     expect(yaml).toContain('related_mapped.google_calendar_id')
     expect(yaml).toContain('record.calendar')
     expect(yaml).toContain('calendar_instance_id')
+    expect(yaml).toContain('source.calendar_id')
+    expect(yaml).toContain('source.google_calendar_id')
+  })
+
+  it('uses the CRM title when unformat drops summary', () => {
+    expect(yaml).toContain('assign title = record.summary')
+    expect(yaml).toContain('assign title = source.summary')
+    expect(yaml).toContain('assign title = source.name')
+    expect(yaml).toContain('if title != blank')
+  })
+
+  it('passes attendees and namespaced send_updates into calendar_event_create', () => {
+    expect(yaml).toContain('google:')
+    expect(yaml).toContain(
+      'attendees: "{{ steps.resolve-create.outputs.response.data.attendees | json }}"',
+    )
+    expect(yaml).toContain(
+      "send_updates: \"{{ inputs.google.send_updates | default: 'externalOnly' }}\"",
+    )
   })
 
   it('writes google_event_id back onto the existing CRM instance', () => {
