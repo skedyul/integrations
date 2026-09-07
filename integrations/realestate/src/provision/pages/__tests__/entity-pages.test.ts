@@ -60,5 +60,14 @@ describe('CRM entity pages', () => {
       fields?.find((field) => field.id === 'enquiry-crm-map-status')?.props
         ?.entity,
     ).toBe('enquiry')
+    expect(fields?.find((field) => field.id === 'backfill_enquiries')?.component).toBe(
+      'fieldsetting',
+    )
+    expect(enquiriesPage.actions).toEqual([
+      expect.objectContaining({
+        handle: 'backfill_enquiries',
+        handler: 'backfill_enquiries',
+      }),
+    ])
   })
 })

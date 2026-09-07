@@ -33,11 +33,13 @@ describe('Agencies page', () => {
       | undefined
     const refresh = fields?.find((field) => field.id === 'refresh_agencies')
     const ensure = fields?.find((field) => field.id === 'ensure_webhooks')
+    const backfill = fields?.find((field) => field.id === 'backfill_enquiries')
     const list = fields?.find((field) => field.id === 'agencies_list')
 
     expect(refresh?.component).toBe('fieldsetting')
     expect(refresh?.handler).toBe('check_ignite_integration')
     expect(ensure?.handler).toBe('ensure_rea_webhooks')
+    expect(backfill?.component).toBe('fieldsetting')
     expect(list?.component).toBe('list')
     expect(list?.iterable).toBe('{{ agencies }}')
     expect(list?.itemTemplate?.props?.label).toBe('{{ item.agency_id }}')
@@ -55,6 +57,11 @@ describe('Agencies page', () => {
         handle: 'ensure_rea_webhooks',
         handler: 'ensure_rea_webhooks',
         label: 'Ensure REA webhooks',
+      }),
+      expect.objectContaining({
+        handle: 'backfill_enquiries',
+        handler: 'backfill_enquiries',
+        label: 'Backfill REA enquiries',
       }),
     ])
   })

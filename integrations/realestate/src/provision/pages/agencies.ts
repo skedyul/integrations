@@ -8,6 +8,10 @@
 
 import { definePage } from 'skedyul'
 import { IGNITE_INTEGRATIONS_URL } from '../../lib/rea-types'
+import {
+  backfillEnquiriesFieldSetting,
+  backfillEnquiriesPageAction,
+} from './backfill-enquiries-field'
 
 export default definePage({
   handle: 'agencies',
@@ -91,10 +95,11 @@ export default definePage({
               size: 'sm',
             },
           } as never,
+          backfillEnquiriesFieldSetting(3) as never,
           {
             component: 'list',
             id: 'agencies_list',
-            row: 3,
+            row: 4,
             col: 0,
             iterable: '{{ agencies }}',
             itemTemplate: {
@@ -123,6 +128,7 @@ export default definePage({
             { columns: [{ field: 'agencies-info', colSpan: 12 }] },
             { columns: [{ field: 'refresh_agencies', colSpan: 12 }] },
             { columns: [{ field: 'ensure_webhooks', colSpan: 12 }] },
+            { columns: [{ field: 'backfill_enquiries', colSpan: 12 }] },
             { columns: [{ field: 'agencies_list', colSpan: 12 }] },
           ],
         },
@@ -145,5 +151,6 @@ export default definePage({
       icon: 'Webhook',
       variant: 'secondary',
     },
+    backfillEnquiriesPageAction,
   ],
 })

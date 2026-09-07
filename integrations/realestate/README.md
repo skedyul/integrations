@@ -8,6 +8,7 @@ Skedyul integration for the [REA Partner Platform](https://partner.realestate.co
 - **Ignite enablement** — `IntegrationCreated` / `Updated` / `Deleted` webhooks plus `check_ignite_integration` tool
 - **Lead webhook** — `EnquiryCreated` events, Ed25519 verify, Leads API fetch, `enquiry.created` app events
 - **CRM maps + workflow** — `customer`, `property`, `property_ownership`, and `enquiry` entities + `sync-rea-enquiry-from-webhook` for zero-config sync after field mapping
+- **Backfill** — `backfill_enquiries` GETs `/lead/v1/enquiries?since=` (paginated HAL) and re-emits `enquiry.created` for leads CRM does not already have
 
 ## Setup
 
@@ -41,6 +42,7 @@ Subscription IDs are stored on the install env by the install hook (not user-ent
    The tool calls the Integrations API, upserts internal agencies, and completes the `connect_agencies` step when ≥1 lead-capable agency exists.
 3. Background `Integration*` webhooks keep the agency list in sync as authorizations change.
 4. If Temporal shows no workplace webhook activity, click **Ensure REA webhooks**. That retargets a leftover all-owners `EnquiryCreated` subscription (often a provision-level URL) onto this install.
+5. If leads were ignored after HTTP 200 (they will not be retried), click **Backfill enquiries**. Dry-run first: the tool lists GET `/lead/v1/enquiries`, skips CRM rows that already have `rea_enquiry_id`, and only then emits `enquiry.created` with `trigger: backfill`.
 
 ### Set up CRM
 
@@ -89,4 +91,20 @@ Workflow input type: `@app/realestate/enquiry/created`. Bundled handle: `sync-re
 | Tool | Description |
 | ---- | ----------- |
 | `check_ignite_integration` | Reconcile agencies from Integrations API; complete/invalidate setup |
+| `ensure_rea_webhooks` | Point EnquiryCreated at this install and show recent REA deliveries / leads |
+| `backfill_enquiries` | GET Leads API `since` a timestamp and re-emit missing `enquiry.created` (dry-run by default) |
 | `ping` | Health check |
+
+### Backfill missed enquiries
+
+REA does not retry `EnquiryCreated` after HTTP 200. Use this when webhooks were accepted but ignored (for example `agency_not_connected`).
+
+```bash
+# Preview
+skedyul dev invoke backfill_enquiries --args '{"since":"2026-09-04T00:14:00Z","agency_id":"GHBDWE"}'
+
+# Write
+skedyul dev invoke backfill_enquiries --args '{"since":"2026-09-04T00:14:00Z","agency_id":"GHBDWE","dry_run":false}'
+```
+
+The client follows HAL `_links.next` (max 100 per page) and reads both `_embedded.enquiries` and `_embedded.enquiry`. Apply skips existing `rea_enquiry_id` rows so a second run does not duplicate CRM contacts. Live apply still needs an ACTIVE lead-capable CRM agency.

@@ -6,6 +6,10 @@
 
 import { definePage } from 'skedyul'
 import { IGNITE_INTEGRATIONS_URL } from '../../lib/rea-types'
+import {
+  backfillEnquiriesFieldSetting,
+  backfillEnquiriesPageAction,
+} from './backfill-enquiries-field'
 
 export default definePage({
   handle: 'setup',
@@ -113,6 +117,7 @@ export default definePage({
               size: 'sm',
             },
           } as never,
+          backfillEnquiriesFieldSetting(3) as never,
         ],
         layout: {
           type: 'form',
@@ -120,6 +125,7 @@ export default definePage({
             { columns: [{ field: 'ignite-instructions', colSpan: 12 }] },
             { columns: [{ field: 'check_ignite', colSpan: 12 }] },
             { columns: [{ field: 'ensure_webhooks', colSpan: 12 }] },
+            { columns: [{ field: 'backfill_enquiries', colSpan: 12 }] },
           ],
         },
       },
@@ -141,5 +147,6 @@ export default definePage({
       icon: 'Webhook',
       variant: 'secondary',
     },
+    backfillEnquiriesPageAction,
   ],
 })

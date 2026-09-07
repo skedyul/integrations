@@ -138,14 +138,24 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
         ...new Set(leadIntegrations.map((integration) => integration.ownerId).filter(Boolean)),
       ]
       const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-      const recentEnquiries = (
+      let listed = (
         await Promise.all(
           (agencyIds.length > 0 ? agencyIds : [undefined]).map((agencyId) =>
             client.listEnquiries({ since, agencyId }),
           ),
         )
-      )
-        .flat()
+      ).flat()
+
+      // agency_id can 200 with an empty array when unauthorized or when the
+      // HAL body uses _embedded.enquiries on a later page. Fall back unscoped.
+      if (listed.length === 0 && agencyIds.length > 0) {
+        const allowed = new Set(agencyIds.map((id) => id.toUpperCase()))
+        listed = (await client.listEnquiries({ since })).filter((enquiry) =>
+          allowed.has(enquiry.agencyId.trim().toUpperCase()),
+        )
+      }
+
+      const recentEnquiries = listed
         .sort((left, right) => (right.receivedAt ?? '').localeCompare(left.receivedAt ?? ''))
         .slice(0, 10)
         .map((enquiry) => ({

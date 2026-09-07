@@ -17,6 +17,8 @@ interface CachedToken {
 
 let cachedToken: CachedToken | null = null
 
+const DEFAULT_ENQUIRY_LIST_PAGES = 50
+
 export class ReaClient {
   private readonly clientId: string
   private readonly clientSecret: string
@@ -292,19 +294,103 @@ export class ReaClient {
   async listEnquiries(options: {
     since: string
     agencyId?: string
+    maxPages?: number
   }): Promise<ReaEnquiryRecord[]> {
     const params = new URLSearchParams({ since: options.since })
     if (options.agencyId) {
       params.set('agency_id', options.agencyId)
     }
 
-    const data = await this.getJson<{
-      _embedded?: { enquiry?: ReaEnquiryRecord[] }
-      enquiries?: ReaEnquiryRecord[]
-    }>(`${this.baseUrl}/lead/v1/enquiries?${params.toString()}`)
+    const maxPages = options.maxPages ?? DEFAULT_ENQUIRY_LIST_PAGES
+    const enquiries: ReaEnquiryRecord[] = []
+    const seenPages = new Set<string>()
+    let nextUrl: string | null = `${this.baseUrl}/lead/v1/enquiries?${params.toString()}`
 
-    return data._embedded?.enquiry ?? data.enquiries ?? []
+    for (let page = 0; page < maxPages && nextUrl; page++) {
+      const resolved = resolveReaUrl(this.baseUrl, nextUrl)
+      if (seenPages.has(resolved)) break
+      seenPages.add(resolved)
+
+      const data = await this.getJson<unknown>(resolved)
+      enquiries.push(...extractEmbeddedEnquiries(data))
+      nextUrl = extractNextHref(data)
+    }
+
+    return dedupeEnquiriesById(enquiries)
   }
+}
+
+export function extractEmbeddedEnquiries(data: unknown): ReaEnquiryRecord[] {
+  if (data == null || typeof data !== 'object') return []
+
+  const record = data as Record<string, unknown>
+  const embedded =
+    record._embedded && typeof record._embedded === 'object'
+      ? (record._embedded as Record<string, unknown>)
+      : null
+
+  const fromEmbedded = embedded
+    ? [
+        ...asEnquiryRecords(embedded.enquiries),
+        ...asEnquiryRecords(embedded.enquiry),
+      ]
+    : []
+
+  if (fromEmbedded.length > 0) {
+    return dedupeEnquiriesById(fromEmbedded)
+  }
+
+  return asEnquiryRecords(record.enquiries)
+}
+
+export function extractNextHref(data: unknown): string | null {
+  if (data == null || typeof data !== 'object') return null
+
+  const next = (data as { _links?: { next?: unknown } })._links?.next
+  if (next == null) return null
+
+  const href =
+    typeof next === 'string'
+      ? next
+      : typeof next === 'object' && next !== null && 'href' in next
+        ? (next as { href?: unknown }).href
+        : null
+
+  if (typeof href !== 'string') return null
+  const trimmed = href.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+export function resolveReaUrl(baseUrl: string, href: string): string {
+  if (/^https?:\/\//i.test(href)) return href
+  if (href.startsWith('/')) return `${baseUrl}${href}`
+  return `${baseUrl}/${href}`
+}
+
+function asEnquiryRecords(value: unknown): ReaEnquiryRecord[] {
+  if (Array.isArray(value)) {
+    return value.filter(isEnquiryRecord)
+  }
+  return isEnquiryRecord(value) ? [value] : []
+}
+
+function isEnquiryRecord(value: unknown): value is ReaEnquiryRecord {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  const record = value as { id?: unknown; agencyId?: unknown }
+  return typeof record.id === 'string' && typeof record.agencyId === 'string'
+}
+
+function dedupeEnquiriesById(enquiries: ReaEnquiryRecord[]): ReaEnquiryRecord[] {
+  const seen = new Set<string>()
+  const unique: ReaEnquiryRecord[] = []
+  for (const enquiry of enquiries) {
+    if (seen.has(enquiry.id)) continue
+    seen.add(enquiry.id)
+    unique.push(enquiry)
+  }
+  return unique
 }
 
 /** Reset cached token — for tests. */

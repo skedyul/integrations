@@ -222,3 +222,86 @@ describe('ReaClient.findSubscription', () => {
     expect(found?.subscriptionId).toBe('sub-int')
   })
 })
+
+describe('ReaClient.listEnquiries', () => {
+  beforeEach(() => {
+    resetReaClientTokenCache()
+    jest.restoreAllMocks()
+  })
+
+  function tokenThen(handler: (url: string) => Response) {
+    return jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/oauth/token')) {
+        return new Response(JSON.stringify({ access_token: 'token', expires_in: 3600 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return handler(url)
+    })
+  }
+
+  it('reads _embedded.enquiries and follows HAL next pages', async () => {
+    tokenThen((url) => {
+      if (url.includes('/lead/v1/enquiries') && url.includes('page=two')) {
+        return new Response(
+          JSON.stringify({
+            _embedded: {
+              enquiries: [{ id: 'enq-2', agencyId: 'GHBDWE', receivedAt: '2026-09-05T00:00:00Z' }],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      if (url.includes('/lead/v1/enquiries')) {
+        return new Response(
+          JSON.stringify({
+            _embedded: {
+              enquiries: [{ id: 'enq-1', agencyId: 'GHBDWE', receivedAt: '2026-09-04T00:00:00Z' }],
+            },
+            _links: {
+              next: {
+                href: 'https://api.realestate.com.au/lead/v1/enquiries?page=two',
+              },
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      return new Response('not found', { status: 404 })
+    })
+
+    const client = new ReaClient({
+      REA_CLIENT_ID: 'client-id',
+      REA_CLIENT_SECRET: 'client-secret',
+    })
+
+    const enquiries = await client.listEnquiries({ since: '2026-09-04T00:00:00.000Z' })
+    expect(enquiries.map((enquiry) => enquiry.id)).toEqual(['enq-1', 'enq-2'])
+  })
+
+  it('still accepts the singular _embedded.enquiry key', async () => {
+    tokenThen((url) => {
+      if (url.includes('/lead/v1/enquiries')) {
+        return new Response(
+          JSON.stringify({
+            _embedded: {
+              enquiry: [{ id: 'enq-singular', agencyId: 'ABCDEF' }],
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      return new Response('not found', { status: 404 })
+    })
+
+    const client = new ReaClient({
+      REA_CLIENT_ID: 'client-id',
+      REA_CLIENT_SECRET: 'client-secret',
+    })
+
+    const enquiries = await client.listEnquiries({ since: '2026-09-04T00:00:00.000Z' })
+    expect(enquiries[0]?.id).toBe('enq-singular')
+  })
+})

@@ -72,7 +72,7 @@ function mockReaFetch(options: {
       return new Response(
         JSON.stringify({
           _embedded: {
-            enquiry: [
+            enquiries: [
               {
                 id: 'enquiry-recent',
                 agencyId: 'GHBDWE',

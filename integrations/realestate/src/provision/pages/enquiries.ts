@@ -5,6 +5,10 @@
  */
 
 import { definePage } from 'skedyul'
+import {
+  backfillEnquiriesFieldSetting,
+  backfillEnquiriesPageAction,
+} from './backfill-enquiries-field'
 
 export default definePage({
   handle: 'enquiries',
@@ -34,14 +38,15 @@ export default definePage({
             props: {
               title: 'Filled by enquiry sync',
               description:
-                'When an EnquiryCreated webhook arrives, sync-rea-enquiry-from-webhook upserts the enquiry and sets customer and property relationships from the earlier upserts.',
+                'When an EnquiryCreated webhook arrives, sync-rea-enquiry-from-webhook upserts the enquiry and sets customer and property relationships from the earlier upserts. Use Backfill if webhooks were ignored after HTTP 200.',
               icon: 'Info',
             },
           } as never,
+          backfillEnquiriesFieldSetting(1) as never,
           {
             component: 'EntityCrmMapStatus',
             id: 'enquiry-crm-map-status',
-            row: 1,
+            row: 2,
             col: 0,
             props: {
               entity: 'enquiry',
@@ -55,10 +60,13 @@ export default definePage({
           type: 'form',
           rows: [
             { columns: [{ field: 'enquiry-sync-info', colSpan: 12 }] },
+            { columns: [{ field: 'backfill_enquiries', colSpan: 12 }] },
             { columns: [{ field: 'enquiry-crm-map-status', colSpan: 12 }] },
           ],
         },
       },
     },
   ],
+
+  actions: [backfillEnquiriesPageAction],
 })
