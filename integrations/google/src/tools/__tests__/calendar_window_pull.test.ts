@@ -103,6 +103,10 @@ const primary: GoogleCalendarSummary = {
 }
 
 describe('calendar_window_pull', () => {
+  it('declares a 60s timeout so Lambda MCP calls are not aborted at 10s', () => {
+    expect(calendarWindowPullRegistry.timeout).toBe(60_000)
+  })
+
   beforeEach(() => {
     upsertMany.mockReset()
     isConfigured.mockReset().mockResolvedValue(true)
