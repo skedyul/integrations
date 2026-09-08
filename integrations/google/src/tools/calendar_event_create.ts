@@ -3,7 +3,11 @@ import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
 import { AppAuthInvalidError } from 'skedyul'
 import { assertCalendarWritable } from '../lib/calendar_link'
-import { asBoolean, blankToUndefined } from '../lib/calendar-event-update-patch'
+import {
+  asBoolean,
+  attendeeEmails,
+  blankToUndefined,
+} from '../lib/calendar-event-update-patch'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { createGoogleEvent } from '../lib/create-google-event'
 import { createGoogleCalendarEvent } from '../services/calendar/client'
@@ -31,11 +35,21 @@ const CalendarEventCreateInputSchema = z.object({
     blankToUndefined,
     z.union([z.boolean(), z.string()]).optional(),
   ),
-  attendees: z.array(z.string().email()).optional(),
+  attendees: z.preprocess((value) => {
+    if (typeof value === 'string') {
+      try {
+        return attendeeEmails(JSON.parse(value))
+      } catch {
+        return attendeeEmails(value)
+      }
+    }
+    return attendeeEmails(value)
+  }, z.array(z.string().email()).optional()),
   recurrence: z.array(z.string()).optional(),
   google_event_id: optionalString,
   recurring_event_id: optionalString,
   original_start: optionalString,
+  send_updates: z.enum(['all', 'externalOnly', 'none']).optional(),
   /** Set false on CRM outbound create so inbound webhook sync does not duplicate the row. */
   emit_event: z.preprocess(
     blankToUndefined,
@@ -115,6 +129,7 @@ export const calendarEventCreateRegistry: ToolDefinition<
         google_event_id: input.google_event_id,
         recurring_event_id: input.recurring_event_id,
         original_start: input.original_start,
+        send_updates: input.send_updates,
       })
       const normalized = normalizeGoogleCalendarEvent(created)
 

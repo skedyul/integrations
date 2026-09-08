@@ -6,7 +6,7 @@
 import { defineEntity } from 'skedyul'
 import { calendarEventCrmMapDefaults } from './crmMapDefaults'
 
-export default defineEntity({
+const calendarEvent = defineEntity({
   handle: 'calendar_event',
   label: 'Calendar Event',
   labelPlural: 'Calendar Events',
@@ -109,6 +109,41 @@ export default defineEntity({
         { value: 'tool', label: 'Tool' },
         { value: 'import', label: 'Import' },
       ],
+    },
+    {
+      handle: 'send_updates',
+      label: 'Guest notifications',
+      description:
+        'Google Calendar sendUpdates when guests are added or the event is created.',
+      type: 'string',
+      options: [
+        { value: 'all', label: 'Notify all guests' },
+        { value: 'externalOnly', label: 'Notify external guests only' },
+        { value: 'none', label: 'Do not send notifications' },
+      ],
+    },
+  ],
+})
+
+// Extra entity keys are stored on executable.config. The pinned SDK type
+// does not include saveInteractions yet (see skedyul-node PR).
+export default Object.assign(calendarEvent, {
+  saveInteractions: [
+    {
+      handle: 'guest_notifications',
+      when: {
+        onCreate: true,
+        onUpdate: true,
+        fieldsChanged: ['attendees'],
+      },
+      dialog: {
+        title: 'Send guest notifications?',
+        message:
+          'Google Calendar can email invitations when this event is created or guests change.',
+        severity: 'warning',
+        fields: ['send_updates'],
+        defaults: { send_updates: 'externalOnly' },
+      },
     },
   ],
 })

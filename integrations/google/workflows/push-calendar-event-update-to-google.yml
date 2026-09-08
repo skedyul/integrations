@@ -10,6 +10,11 @@ inputs:
     label: CRM record
     description: Workplace instance.updated payload for the model bound on the trigger (before/after/changedFields)
     required: true
+  google:
+    type: object
+    label: Google
+    description: App-namespaced context from the calendar_event saveInteraction (not CRM fields)
+    required: false
 
 outputs:
   google-event-id:
@@ -148,6 +153,7 @@ steps:
       event_id: "{{ steps.resolve-update.outputs.response.data.event_id | default: '' }}"
       before: "{{ steps.resolve-update.outputs.response.data.before | json }}"
       after: "{{ steps.resolve-update.outputs.response.data.after | json }}"
+      send_updates: "{{ inputs.google.send_updates | default: 'externalOnly' }}"
 
   build-writeback:
     needs: [push-google]

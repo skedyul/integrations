@@ -10,6 +10,11 @@ inputs:
     label: CRM record
     description: Workplace instance.created payload for the model bound on the trigger
     required: true
+  google:
+    type: object
+    label: Google
+    description: App-namespaced context from the calendar_event saveInteraction (not CRM fields)
+    required: false
 
 outputs:
   google-event-id:
@@ -72,6 +77,12 @@ steps:
         {%- assign calendar_instance_id = related -%}
         {%- endif -%}
         {%- if calendar_id == blank -%}
+        {%- assign calendar_id = source.calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = source.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
         {%- assign related_mapped = related | google: "unformat", "calendar" -%}
         {%- assign calendar_id = related_mapped.google_calendar_id -%}
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
@@ -84,11 +95,18 @@ steps:
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
         {%- endif -%}
-        {%- if record.summary != blank -%}
+        {%- assign title = record.summary -%}
+        {%- if title == blank -%}
+        {%- assign title = source.summary -%}
+        {%- endif -%}
+        {%- if title == blank -%}
+        {%- assign title = source.name -%}
+        {%- endif -%}
+        {%- if title != blank -%}
         {
           "calendar_id": {{ calendar_id | json }},
           "calendar_instance_id": {{ calendar_instance_id | json }},
-          "summary": {{ record.summary | json }},
+          "summary": {{ title | json }},
           "description": {{ record.description | default: "" | json }},
           "location": {{ record.location | default: "" | json }},
           "start": {{ record.start | json }},
@@ -97,7 +115,8 @@ steps:
           "all_day": {{ record.all_day | default: false | json }},
           "google_event_id": {{ record.google_event_id | json }},
           "recurring_event_id": {{ record.recurring_event_id | json }},
-          "original_start": {{ record.original_start | json }}
+          "original_start": {{ record.original_start | json }},
+          "attendees": {{ record.attendees | json }}
         }
         {%- else -%}
         {}
@@ -155,7 +174,8 @@ steps:
           "all_day": {{ steps.build-create.outputs.response.data.all_day | json }},
           "google_event_id": {{ steps.build-create.outputs.response.data.google_event_id | json }},
           "recurring_event_id": {{ steps.build-create.outputs.response.data.recurring_event_id | json }},
-          "original_start": {{ steps.build-create.outputs.response.data.original_start | json }}
+          "original_start": {{ steps.build-create.outputs.response.data.original_start | json }},
+          "attendees": {{ steps.build-create.outputs.response.data.attendees | json }}
         }
         {%- else -%}
         {}
@@ -186,6 +206,8 @@ steps:
       google_event_id: "{{ steps.resolve-create.outputs.response.data.google_event_id | default: '' }}"
       recurring_event_id: "{{ steps.resolve-create.outputs.response.data.recurring_event_id | default: '' }}"
       original_start: "{{ steps.resolve-create.outputs.response.data.original_start | default: '' }}"
+      attendees: "{{ steps.resolve-create.outputs.response.data.attendees | json }}"
+      send_updates: "{{ inputs.google.send_updates | default: 'externalOnly' }}"
       emit_event: "false"
 
   build-writeback:
