@@ -199,6 +199,8 @@ export const receiveCallRegistry: WebhookDefinition = {
   name: 'receive_call',
   description:
     'Forward inbound voice calls and start Twilio Real-Time Transcription on both tracks',
+  // Twilio inbound voice is configured as POST (update_forwarding_number).
+  // GET remains accepted so numbers not yet resaved still validate.
   methods: ['GET', 'POST'],
   type: 'CALLBACK',
   handler: handleReceiveCall,
