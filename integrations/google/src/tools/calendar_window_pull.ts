@@ -126,6 +126,7 @@ export const calendarWindowPullRegistry: ToolDefinition<
   label: 'Pull Calendar Window',
   description:
     'List Google calendars and in-window events, then upsert them onto the mapped CRM models. Used by calendar LIST views; does not start a batch import.',
+  timeout: 60_000,
   inputSchema: CalendarWindowPullInputSchema,
   outputSchema: CalendarWindowPullOutputSchema,
   handler: async (input, context) => {
