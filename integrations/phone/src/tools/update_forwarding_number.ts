@@ -74,9 +74,11 @@ async function configureTwilioVoiceUrl(
   if (forwardingValue) {
     const resolvedVoiceUrl = voiceUrl ?? (await ensureReceiveCallVoiceUrl())
 
+    // POST: Twilio GET signs the query string, and empty geo params (ToState=,
+    // FromCity=, …) get stripped before receive_call can validate the signature.
     await twilioClient.incomingPhoneNumbers(phoneNumberSid).update({
       voiceUrl: resolvedVoiceUrl,
-      voiceMethod: 'GET',
+      voiceMethod: 'POST',
     })
 
     return { voiceUrl: resolvedVoiceUrl }
