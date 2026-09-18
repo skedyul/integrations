@@ -3,6 +3,7 @@ import { isRuntimeWebhookContext } from 'skedyul'
 import { ReaClient } from '../lib/rea-client'
 import {
   buildEnquiryCreatedPayload,
+  enquiryCreatedCorrelationId,
   normalizeReaWebhookEvents,
 } from '../lib/rea-enquiry'
 import { createReaEvent } from '../lib/create-rea-event'
@@ -122,8 +123,11 @@ const enquiryCreatedHandler: WebhookHandler = async (
     }
 
     try {
+      const correlationId =
+        enquiryCreatedCorrelationId(validatedPayload.enquiry) ??
+        webhookEvent.eventId
       const result = await createReaEvent('enquiry.created', validatedPayload, {
-        correlationId: webhookEvent.eventId,
+        correlationId,
       })
 
       console.log(
