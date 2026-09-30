@@ -3,6 +3,7 @@ import { PETBOOQZ_API_ONE, PETBOOQZ_API_AVAILABILITY, petbooqzBookingTouchPoints
 import { createClientFromEnv } from '../lib/api_client'
 import { isPetbooqzError, getErrorMessage, type PetbooqzErrorResponse } from '../lib/types'
 import { rethrowRateLimitError } from '../lib/response'
+import { buildPatientHistoryTitle, historyLookupTitles } from './patient_history_title'
 
 const PatientHistorySchema = z.object({
   title: z.string(),
@@ -30,20 +31,12 @@ const PatientHistoryCreateOutputSchema = z.object({
 type PatientHistoryCreateInput = z.infer<typeof PatientHistoryCreateInputSchema>
 type PatientHistoryCreateOutput = z.infer<typeof PatientHistoryCreateOutputSchema>
 
-export function buildPatientHistoryTitle(
-  title: string,
-  sourceReportId?: string,
-): string {
-  if (sourceReportId) {
-    return `Skedyul Report ${sourceReportId}`
-  }
-  return title
-}
+export { buildPatientHistoryTitle } from './patient_history_title'
 
-async function findExistingHistoryByTitle(
+async function findExistingHistory(
   apiClient: ReturnType<typeof createClientFromEnv>,
   patientId: string,
-  title: string,
+  titles: string[],
 ): Promise<Record<string, unknown> | undefined> {
   const response = await apiClient.get<Array<Record<string, unknown>> | PetbooqzErrorResponse>(
     `/histories/${patientId}`,
@@ -55,8 +48,9 @@ async function findExistingHistoryByTitle(
     return undefined
   }
 
+  const wanted = new Set(titles)
   const histories = Array.isArray(response) ? response : [response]
-  return histories.find((history) => history.title === title)
+  return histories.find((history) => typeof history.title === 'string' && wanted.has(history.title))
 }
 
 export const patientHistoryCreateRegistry: ToolDefinition<
@@ -83,10 +77,10 @@ export const patientHistoryCreateRegistry: ToolDefinition<
       }))
 
       try {
-        const existing = await findExistingHistoryByTitle(
+        const existing = await findExistingHistory(
           apiClient,
           input.patient_id,
-          effectiveTitle,
+          historyLookupTitles(input.title, input.source_report_id),
         )
 
         if (existing) {
