@@ -1,14 +1,13 @@
 import type { ToolDefinition } from 'skedyul'
 import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
-import { AppAuthInvalidError } from 'skedyul'
 import { ensureCalendarWatch } from '../lib/calendar_link'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { parseSyncDirection } from '../lib/google_install_env'
 import { emitGoogleEvent } from '../lib/emit-google-event'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import {
-  createAuthError,
+  googleAuthToolFailure,
   createGoogleError,
   createNotFoundError,
   createSuccessResponse,
@@ -94,9 +93,8 @@ export const addGoogleCalendarRegistry: ToolDefinition<
         external_read_only: Boolean(input.external_read_only),
       })
     } catch (error) {
-      if (error instanceof AppAuthInvalidError) {
-        return createAuthError(error.message)
-      }
+      const authFailure = googleAuthToolFailure(error)
+      if (authFailure) return authFailure
       return createGoogleError(error instanceof Error ? error.message : String(error))
     }
   },
