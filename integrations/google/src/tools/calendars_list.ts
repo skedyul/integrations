@@ -4,12 +4,11 @@ import { isRuntimeContext } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { listGoogleCalendars } from '../services/calendar/client'
 import {
-  createAuthError,
+  googleAuthToolFailure,
   createGoogleError,
   createSuccessResponse,
   createValidationError,
 } from '../lib/response'
-import { AppAuthInvalidError } from 'skedyul'
 
 const CalendarsListInputSchema = z.object({})
 
@@ -45,9 +44,8 @@ export const calendarsListRegistry: ToolDefinition<CalendarsListInput, Calendars
       const calendars = await listGoogleCalendars(client)
       return createSuccessResponse({ calendars })
     } catch (error) {
-      if (error instanceof AppAuthInvalidError) {
-        return createAuthError(error.message)
-      }
+      const authFailure = googleAuthToolFailure(error)
+      if (authFailure) return authFailure
       return createGoogleError(error instanceof Error ? error.message : String(error))
     }
   },

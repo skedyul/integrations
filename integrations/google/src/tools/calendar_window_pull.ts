@@ -2,7 +2,6 @@ import {
   instance,
   z,
   isRuntimeContext,
-  AppAuthInvalidError,
   CalendarWindowPullInputSchema,
 } from 'skedyul'
 import type { ToolDefinition, CalendarWindowPullInput } from 'skedyul'
@@ -15,7 +14,7 @@ import {
 } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import {
-  createAuthError,
+  googleAuthToolFailure,
   createGoogleError,
   createSuccessResponse,
   createValidationError,
@@ -221,9 +220,8 @@ export const calendarWindowPullRegistry: ToolDefinition<
         })),
       })
     } catch (error) {
-      if (error instanceof AppAuthInvalidError) {
-        return createAuthError(error.message)
-      }
+      const authFailure = googleAuthToolFailure(error)
+      if (authFailure) return authFailure
       return createGoogleError(error instanceof Error ? error.message : String(error))
     }
   },

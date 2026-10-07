@@ -1,12 +1,11 @@
 import type { ToolDefinition } from 'skedyul'
 import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
-import { AppAuthInvalidError } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { listGoogleCalendarEvents } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import {
-  createAuthError,
+  googleAuthToolFailure,
   createGoogleError,
   createSuccessResponse,
   createValidationError,
@@ -85,9 +84,8 @@ export const calendarEventsListRegistry: ToolDefinition<
         next_sync_token: page.nextSyncToken ?? null,
       })
     } catch (error) {
-      if (error instanceof AppAuthInvalidError) {
-        return createAuthError(error.message)
-      }
+      const authFailure = googleAuthToolFailure(error)
+      if (authFailure) return authFailure
       return createGoogleError(error instanceof Error ? error.message : String(error))
     }
   },

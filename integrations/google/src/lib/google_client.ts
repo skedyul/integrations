@@ -1,8 +1,12 @@
 import { google } from 'googleapis'
 import type { OAuth2Client } from 'google-auth-library'
-import { AppAuthInvalidError } from 'skedyul'
+import { AppAuthInvalidError, TokenRefreshRequiredError } from 'skedyul'
 import type { GoogleInstallEnv } from './google_install_env'
 import { getDefaultOAuthScopes } from '../services/scopes'
+
+export const GOOGLE_ACCESS_TOKEN_KEY = 'GOOGLE_ACCESS_TOKEN'
+
+const ACCESS_TOKEN_REFRESH_WINDOW_MS = 60_000
 
 export interface GoogleTokenSet {
   accessToken: string
@@ -77,7 +81,12 @@ export async function exchangeCodeForTokens(
       expiryDate: tokens.expiry_date ?? null,
     }
   } catch (error) {
-    throw mapGoogleAuthError(error)
+    if (error instanceof AppAuthInvalidError) throw error
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.includes('invalid_grant') || message.includes('401')) {
+      throw new AppAuthInvalidError(message)
+    }
+    throw error instanceof Error ? error : new Error(message)
   }
 }
 
@@ -100,12 +109,11 @@ export async function fetchGoogleAccountEmail(accessToken: string): Promise<stri
   return data.email
 }
 
-export async function revokeGoogleRefreshToken(refreshToken: string): Promise<void> {
-  const client = createOAuth2Client({
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    redirectUri: '',
-  })
+export async function revokeGoogleRefreshToken(env: GoogleInstallEnv): Promise<void> {
+  const refreshToken = env.GOOGLE_REFRESH_TOKEN
+  if (!refreshToken) return
+
+  const client = createOAuth2Client(requireGoogleOAuthConfig(env))
 
   try {
     await client.revokeToken(refreshToken)
@@ -114,16 +122,22 @@ export async function revokeGoogleRefreshToken(refreshToken: string): Promise<vo
   }
 }
 
+export function accessTokenNeedsRefresh(env: GoogleInstallEnv, now = Date.now()): boolean {
+  if (!env.GOOGLE_ACCESS_TOKEN) return true
+  const expiry = env.GOOGLE_TOKEN_EXPIRY ? Date.parse(env.GOOGLE_TOKEN_EXPIRY) : NaN
+  if (!Number.isFinite(expiry)) return true
+  return expiry <= now + ACCESS_TOKEN_REFRESH_WINDOW_MS
+}
+
 export function getTokenSetFromEnv(env: GoogleInstallEnv): GoogleTokenSet | null {
   const refreshToken = env.GOOGLE_REFRESH_TOKEN
   const accessToken = env.GOOGLE_ACCESS_TOKEN
 
-  if (!refreshToken || !accessToken) {
+  if (!refreshToken || !accessToken || accessTokenNeedsRefresh(env)) {
     return null
   }
 
-  const expiryRaw = env.GOOGLE_TOKEN_EXPIRY
-  const expiryDate = expiryRaw ? Date.parse(expiryRaw) : null
+  const expiryDate = Date.parse(env.GOOGLE_TOKEN_EXPIRY ?? '')
 
   return {
     accessToken,
@@ -135,11 +149,22 @@ export function getTokenSetFromEnv(env: GoogleInstallEnv): GoogleTokenSet | null
 export async function getAuthenticatedOAuthClient(
   env: GoogleInstallEnv,
 ): Promise<{ client: OAuth2Client; tokens: GoogleTokenSet }> {
+  if (!env.GOOGLE_REFRESH_TOKEN) {
+    throw new AppAuthInvalidError('Google account is not connected')
+  }
+
+  if (accessTokenNeedsRefresh(env)) {
+    throw new TokenRefreshRequiredError('Access token expired', {
+      tokenKey: GOOGLE_ACCESS_TOKEN_KEY,
+    })
+  }
+
   const config = requireGoogleOAuthConfig(env)
   const tokenSet = getTokenSetFromEnv(env)
-
   if (!tokenSet) {
-    throw new AppAuthInvalidError('Google account is not connected')
+    throw new TokenRefreshRequiredError('Access token expired', {
+      tokenKey: GOOGLE_ACCESS_TOKEN_KEY,
+    })
   }
 
   const client = createOAuth2Client({
@@ -153,39 +178,49 @@ export async function getAuthenticatedOAuthClient(
     expiry_date: tokenSet.expiryDate ?? undefined,
   })
 
-  const expiry = tokenSet.expiryDate
-  const needsRefresh = !expiry || expiry <= Date.now() + 60_000
-
-  if (needsRefresh) {
-    try {
-      const { credentials } = await client.refreshAccessToken()
-      if (!credentials.access_token) {
-        throw new AppAuthInvalidError('Failed to refresh Google access token')
-      }
-
-      tokenSet.accessToken = credentials.access_token
-      tokenSet.expiryDate = credentials.expiry_date ?? null
-      client.setCredentials(credentials)
-    } catch (error) {
-      throw mapGoogleAuthError(error)
-    }
-  }
-
   return { client, tokens: tokenSet }
 }
 
+export async function refreshGoogleAccessToken(
+  env: GoogleInstallEnv,
+): Promise<GoogleTokenSet> {
+  const refreshToken = env.GOOGLE_REFRESH_TOKEN
+  if (!refreshToken) {
+    throw new AppAuthInvalidError('Google account is not connected')
+  }
+
+  const client = createOAuth2Client(requireGoogleOAuthConfig(env))
+  client.setCredentials({ refresh_token: refreshToken })
+
+  try {
+    const { credentials } = await client.refreshAccessToken()
+    if (!credentials.access_token) {
+      throw new AppAuthInvalidError('Failed to refresh Google access token')
+    }
+
+    return {
+      accessToken: credentials.access_token,
+      refreshToken: credentials.refresh_token || refreshToken,
+      expiryDate: credentials.expiry_date ?? Date.now() + 3_600_000,
+    }
+  } catch (error) {
+    throw mapGoogleAuthError(error)
+  }
+}
+
 export function mapGoogleAuthError(error: unknown): Error {
-  if (error instanceof AppAuthInvalidError) {
+  if (error instanceof TokenRefreshRequiredError || error instanceof AppAuthInvalidError) {
     return error
   }
 
   const message = error instanceof Error ? error.message : String(error)
-  if (
-    message.includes('invalid_grant') ||
-    message.includes('Invalid Credentials') ||
-    message.includes('401')
-  ) {
+  if (message.includes('invalid_grant')) {
     return new AppAuthInvalidError(message)
+  }
+  if (message.includes('Invalid Credentials') || message.includes('401')) {
+    return new TokenRefreshRequiredError(message, {
+      tokenKey: GOOGLE_ACCESS_TOKEN_KEY,
+    })
   }
 
   return error instanceof Error ? error : new Error(message)
