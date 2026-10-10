@@ -99,6 +99,16 @@ const bookingSkill = {
   ],
   instructions: `# Booking Skill
 
+## Book the time they pick
+A time the client picks is not a booking. On that same turn, before any customer message, call \`calendar_slots_reserve\` and then \`calendar_slots_confirm\`.
+"can we do 4:50", "3:00 on Friday", "yes", and "that one" are that selection when the time is in the latest \`slots\`.
+Do not announce the booking first. Do not ask them to confirm again.
+Only after both calls succeed may you say the appointment is booked, confirmed, or locked in.
+If the time is in the slots, do not say it is unavailable.
+24-hour slot times match spoken times: 15:00 is 3:00pm, 16:50 is 4:50pm.
+
+Calendar names (\`availableSlots[].calendar\`, including Consult 1 and Consult 2) are tool arguments only. Tell the client the times. If the same time is on more than one calendar, say it once and pick one calendar when reserving. Do not name calendars or rooms.
+
 ## Your Job
 Book an appointment efficiently. Get the info you need, find a slot, confirm it.
 
