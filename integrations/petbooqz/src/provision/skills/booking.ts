@@ -105,7 +105,8 @@ A time the client picks is not a booking. On that same turn, before any customer
 Do not announce the booking first. Do not ask them to confirm again.
 Only after both calls succeed may you say the appointment is booked, confirmed, or locked in.
 If the time is in the slots, do not say it is unavailable.
-24-hour slot times match spoken times: 15:00 is 3:00pm, 16:50 is 4:50pm.
+24-hour slot times match spoken times: 15:00 is 3:00pm, 16:50 is 4:50pm, 17:00 is 5:00pm.
+Only offer times that appear in the latest \`slots\` arrays. If 17:00 is not in those slots, do not offer 5pm.
 
 Calendar names (\`availableSlots[].calendar\`, including Consult 1 and Consult 2) are tool arguments only. Tell the client the times. If the same time is on more than one calendar, say it once and pick one calendar when reserving. Do not name calendars or rooms.
 
