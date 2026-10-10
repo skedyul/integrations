@@ -12,6 +12,7 @@ import { models, relationships } from './crm'
 import * as agents from './agents'
 import * as pages from './pages'
 import navigation from './pages/navigation'
+import bookingSkill from './skills/booking'
 
 const config: ProvisionConfig = {
   env,
@@ -22,4 +23,9 @@ const config: ProvisionConfig = {
   relationships,
 }
 
-export default config
+// skills is read by platform provision. The pinned SDK type does not list it,
+// so it is added on the exported object rather than inside the typed literal.
+export default {
+  ...config,
+  skills: [bookingSkill],
+}
