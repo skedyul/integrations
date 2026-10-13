@@ -1,9 +1,11 @@
 export type SmsEncoding = 'GSM-7' | 'UCS-2'
 
-/** Default retail price per SMS segment (AUD). Overridable via COST_PER_SMS provision env. */
+/** Default retail price per SMS segment (USD). Overridable via COST_PER_SMS provision env. */
 export const DEFAULT_COST_PER_SMS = '0.07'
 
-export function parseCostPerSmsAud(value?: string | null): number {
+export const METERED_BILLING_CURRENCY = 'USD'
+
+export function parseCostPerSmsUsd(value?: string | null): number {
   const parsed = parseFloat(value ?? DEFAULT_COST_PER_SMS)
   if (!Number.isFinite(parsed) || parsed < 0) {
     return parseFloat(DEFAULT_COST_PER_SMS)
@@ -12,11 +14,11 @@ export function parseCostPerSmsAud(value?: string | null): number {
 }
 
 export function parseCostPerSmsCents(value?: string | null): number {
-  return Math.round(parseCostPerSmsAud(value) * 100)
+  return Math.round(parseCostPerSmsUsd(value) * 100)
 }
 
-/** Default AU retail price per segment in cents (matches DEFAULT_COST_PER_SMS). */
-export const AU_PRICE_PER_SEGMENT_CENTS = parseCostPerSmsCents()
+/** Default retail price per segment in US cents (matches DEFAULT_COST_PER_SMS). */
+export const USD_PRICE_PER_SEGMENT_CENTS = parseCostPerSmsCents()
 
 const GSM_7_BASIC_CHARS =
   '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà'
@@ -61,9 +63,29 @@ export function countSmsSegments(text: string): {
   return { encoding: 'UCS-2', segments: Math.ceil(ucsLength / 67) }
 }
 
+export function sumSmsSegmentCredits(bodies: readonly string[]): number {
+  return bodies.reduce(
+    (total, body) => total + countSmsSegments(body).segments,
+    0,
+  )
+}
+
 export function segmentsToCostCents(
   segments: number,
-  pricePerSegmentCents: number = AU_PRICE_PER_SEGMENT_CENTS,
+  pricePerSegmentCents: number = USD_PRICE_PER_SEGMENT_CENTS,
 ): number {
   return Math.round(segments * pricePerSegmentCents)
+}
+
+/** Segment count plus the USD amount the platform usage ledger records. */
+export function meteredSmsBilling(
+  segments: number,
+  costPerSms?: string | null,
+): { credits: number; cost: number; currency: typeof METERED_BILLING_CURRENCY } {
+  const pricePerSegmentCents = parseCostPerSmsCents(costPerSms)
+  return {
+    credits: segments,
+    cost: segmentsToCostCents(segments, pricePerSegmentCents) / 100,
+    currency: METERED_BILLING_CURRENCY,
+  }
 }
