@@ -61,6 +61,13 @@ export function countSmsSegments(text: string): {
   return { encoding: 'UCS-2', segments: Math.ceil(ucsLength / 67) }
 }
 
+export function sumSmsSegmentCredits(bodies: readonly string[]): number {
+  return bodies.reduce(
+    (total, body) => total + countSmsSegments(body).segments,
+    0,
+  )
+}
+
 export function segmentsToCostCents(
   segments: number,
   pricePerSegmentCents: number = AU_PRICE_PER_SEGMENT_CENTS,

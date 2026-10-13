@@ -13,6 +13,7 @@ import {
 import { withTwilioAuth } from '../lib/twilio_client'
 import {
   countSmsSegments,
+  sumSmsSegmentCredits,
   parseCostPerSmsCents,
   segmentsToCostCents,
 } from '../lib/sms_segments'
@@ -177,6 +178,9 @@ export const sendSmsBatchRegistry: ToolDefinition<
     }
 
     const rejectedCount = invalid.length
+    const segmentCredits = sumSmsSegmentCredits(
+      valid.map((recipient) => recipient.renderedBody),
+    )
 
     if (context.mode === 'estimate') {
       const pricePerSegmentCents = parseCostPerSmsCents(context.env.COST_PER_SMS)
@@ -203,7 +207,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
           acceptedCount: valid.length,
           rejectedCount,
         },
-        { billing: { credits: valid.length } },
+        { billing: { credits: segmentCredits } },
       )
     }
 
@@ -285,7 +289,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
           acceptedCount: valid.length,
           rejectedCount,
         },
-        { billing: { credits: valid.length } },
+        { billing: { credits: segmentCredits } },
       )
     } catch (err) {
       return createPhoneError(err instanceof Error ? err.message : 'Failed to send SMS batch')

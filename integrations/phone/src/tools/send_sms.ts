@@ -58,6 +58,8 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
       )
     }
 
+    const sms = estimateSmsSegments(input.message.content)
+
     try {
       const client = createTwilioClient(context.env)
 
@@ -74,7 +76,7 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
           status: message.status === 'sent' || message.status === 'delivered' ? 'sent' : 'queued',
           remoteId: message.sid,
         },
-        { billing: { credits: 1 } },
+        { billing: { credits: sms.segments } },
       )
     } catch (err) {
       return createPhoneError(err instanceof Error ? err.message : 'Failed to send SMS')
