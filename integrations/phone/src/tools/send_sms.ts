@@ -14,6 +14,7 @@ import {
 } from '../lib/mock_outbound'
 import { createSuccessResponse, createValidationError, createPhoneError } from '../lib/response'
 import { isValidRecipientAddress } from '../lib/validate_recipient_address'
+import { meteredSmsBilling } from '../lib/sms_segments'
 
 /**
  * Send an SMS message via Twilio.
@@ -39,26 +40,25 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
       )
     }
 
+    const sms = estimateSmsSegments(input.message.content)
+    const billing = meteredSmsBilling(sms.segments, context.env.COST_PER_SMS)
+
     if (context.mode === 'estimate') {
-      const sms = estimateSmsSegments(input.message.content)
       return createSuccessResponse(
         { status: 'queued' },
-        { billing: { credits: sms.segments } },
+        { billing },
       )
     }
 
     if (isMockOutboundMessagesEnabled(context.env)) {
-      const sms = estimateSmsSegments(input.message.content)
       return createSuccessResponse(
         {
           status: 'queued',
           remoteId: createMockSmsRemoteId(),
         },
-        { billing: { credits: sms.segments } },
+        { billing },
       )
     }
-
-    const sms = estimateSmsSegments(input.message.content)
 
     try {
       const client = createTwilioClient(context.env)
@@ -76,7 +76,7 @@ export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput
           status: message.status === 'sent' || message.status === 'delivered' ? 'sent' : 'queued',
           remoteId: message.sid,
         },
-        { billing: { credits: sms.segments } },
+        { billing },
       )
     } catch (err) {
       return createPhoneError(err instanceof Error ? err.message : 'Failed to send SMS')

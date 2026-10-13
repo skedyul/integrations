@@ -16,6 +16,8 @@ import {
   sumSmsSegmentCredits,
   parseCostPerSmsCents,
   segmentsToCostCents,
+  meteredSmsBilling,
+  METERED_BILLING_CURRENCY,
 } from '../lib/sms_segments'
 import { partitionRecipients } from '../lib/validate_recipient_address'
 
@@ -85,13 +87,13 @@ function buildEstimateBilling(
       (totalSegmentsExpected !== undefined
         ? segmentsToCostCents(totalSegmentsExpected, pricePerSegmentCents)
         : computeSkewedExpectedMinorUnits({
-            currency: 'AUD',
+            currency: METERED_BILLING_CURRENCY,
             minorUnitsLow: costCentsLow,
             minorUnitsHigh: costCentsHigh,
           }))
 
     const cost = createMoneyMinorRange({
-      currency: 'AUD',
+      currency: METERED_BILLING_CURRENCY,
       minorUnitsLow: costCentsLow,
       minorUnitsHigh: costCentsHigh,
       minorUnitsExpected,
@@ -102,7 +104,7 @@ function buildEstimateBilling(
         costCentsLow,
         costCentsHigh,
         costCentsExpected: minorUnitsExpected,
-        currency: 'AUD',
+        currency: METERED_BILLING_CURRENCY,
         deliverableCount,
         ...(skippedCount !== undefined ? { skippedCount } : {}),
         estimation: createEstimation({
@@ -122,7 +124,7 @@ function buildEstimateBilling(
   const costCents = segmentsToCostCents(totalSegments, pricePerSegmentCents)
 
   const cost = createMoneyMinorRange({
-    currency: 'AUD',
+    currency: METERED_BILLING_CURRENCY,
     minorUnitsLow: costCents,
     minorUnitsHigh: costCents,
     minorUnitsExpected: costCents,
@@ -130,10 +132,12 @@ function buildEstimateBilling(
 
   return {
     billing: {
+      credits: totalSegments,
+      cost: segmentsToCostCents(totalSegments, pricePerSegmentCents) / 100,
       costCentsLow: costCents,
       costCentsHigh: costCents,
       costCentsExpected: costCents,
-      currency: 'AUD',
+      currency: METERED_BILLING_CURRENCY,
       deliverableCount: recipients.length,
       estimation: createEstimation({
         deliverableCount: recipients.length,
@@ -199,6 +203,11 @@ export const sendSmsBatchRegistry: ToolDefinition<
       )
     }
 
+    const usageBilling = meteredSmsBilling(
+      segmentCredits,
+      context.env.COST_PER_SMS,
+    )
+
     if (isMockOutboundMessagesEnabled(context.env)) {
       return createSuccessResponse(
         {
@@ -207,7 +216,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
           acceptedCount: valid.length,
           rejectedCount,
         },
-        { billing: { credits: segmentCredits } },
+        { billing: usageBilling },
       )
     }
 
@@ -289,7 +298,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
           acceptedCount: valid.length,
           rejectedCount,
         },
-        { billing: { credits: segmentCredits } },
+        { billing: usageBilling },
       )
     } catch (err) {
       return createPhoneError(err instanceof Error ? err.message : 'Failed to send SMS batch')
