@@ -2,6 +2,7 @@ import { server } from 'skedyul'
 import { toolRegistry, webhookRegistry, batchOperationRegistry } from '../registries'
 import installHandler from './hooks/install'
 import oauthCallbackHandler from './hooks/oauth_callback'
+import refreshTokenHandler from './hooks/refresh_token'
 import provisionHandler from './hooks/provision'
 import setupRevalidateHandler from './hooks/setup-revalidate'
 import uninstallHandler from './hooks/uninstall'
@@ -38,6 +39,10 @@ const skedyulServer = server.create({
     oauth_callback: {
       handler: oauthCallbackHandler,
       timeout: 60000,
+    },
+    refresh_token: {
+      handler: refreshTokenHandler,
+      timeout: 30000,
     },
     provision: {
       handler: provisionHandler,

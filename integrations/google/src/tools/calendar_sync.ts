@@ -1,7 +1,6 @@
 import type { ToolDefinition } from 'skedyul'
 import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
-import { AppAuthInvalidError } from 'skedyul'
 import { ensureCalendarWatch } from '../lib/calendar_link'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import {
@@ -13,7 +12,7 @@ import {
   loadLinkedGoogleCalendars,
 } from '../services/calendar/sync'
 import {
-  createAuthError,
+  googleAuthToolFailure,
   createGoogleError,
   createNotFoundError,
   createSuccessResponse,
@@ -93,9 +92,8 @@ export const calendarSyncRegistry: ToolDefinition<
         live_sync_enabled: Boolean(input.enable_live_sync),
       })
     } catch (error) {
-      if (error instanceof AppAuthInvalidError) {
-        return createAuthError(error.message)
-      }
+      const authFailure = googleAuthToolFailure(error)
+      if (authFailure) return authFailure
       if (error instanceof StartAppBatchOperationError) {
         if (error.code === 'PRECONDITION_FAILED') {
           return createValidationError(error.message)

@@ -1,9 +1,6 @@
 import type { UninstallHandlerContext, UninstallHandlerResult } from 'skedyul'
 import { deleteGoogleKeyedCrmRows } from '../../lib/cleanup-google-crm'
-import {
-  getAuthenticatedOAuthClient,
-  revokeGoogleRefreshToken,
-} from '../../lib/google_client'
+import { revokeGoogleRefreshToken } from '../../lib/google_client'
 import type { GoogleInstallEnv } from '../../lib/google_install_env'
 
 export default async function uninstall(
@@ -14,12 +11,7 @@ export default async function uninstall(
   const env = ctx.env as GoogleInstallEnv
 
   if (env.GOOGLE_REFRESH_TOKEN) {
-    try {
-      await getAuthenticatedOAuthClient(env)
-    } catch (error) {
-      ctx.log.warn('[Google Uninstall] Could not refresh Google client:', error)
-    }
-    await revokeGoogleRefreshToken(env.GOOGLE_REFRESH_TOKEN)
+    await revokeGoogleRefreshToken(env)
   }
 
   await deleteGoogleKeyedCrmRows(ctx.log)
