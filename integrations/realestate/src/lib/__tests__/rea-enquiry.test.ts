@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
 import {
   buildEnquiryCreatedPayload,
+  enquiryCreatedCorrelationId,
   normalizeReaWebhookEvents,
   splitReaEnquiryEntities,
   transformReaEnquiryRecord,
@@ -135,5 +136,91 @@ describe('buildEnquiryCreatedPayload', () => {
     expect(payload.agency.agency_id).toBe('ABCDEF')
     expect(payload.enquiry.rea_enquiry_id).toBe('2bb121ad-2849-4b20-bc40-19e4ae371b7e')
     expect(payload.webhook.event_id).toBe('event-1')
+  })
+})
+
+describe('enquiryCreatedCorrelationId', () => {
+  it('fingerprints contact, listing, type, and received_at', () => {
+    expect(
+      enquiryCreatedCorrelationId({
+        rea_enquiry_id: 'ba7525f8-3b9a-47c1-be04-005a2579c2a6',
+        rea_agency_id: 'GHBDWE',
+        enquiry_type: 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST',
+        comments: 'Looking to sell',
+        first_name: 'Justin',
+        last_name: 'Gagalowicz',
+        email: 'Gagz_efxr@yahoo.com.au',
+        phone: '0438931940',
+        postcode: null,
+        preferred_contact_method: 'CALL',
+        received_at: '2026-09-17T23:57:21.000Z',
+        processed_at: '2026-09-17T23:57:22.027Z',
+        listing_id: null,
+        listing_address: '12 Fairwood Rise, Officer, VIC 3809',
+        source: null,
+      }),
+    ).toBe(
+      'enquiry:REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST:gagz_efxr@yahoo.com.au:0438931940:12 fairwood rise, officer, vic 3809:2026-09-17T23:57:21.000Z',
+    )
+  })
+
+  it('collapses two REA ids for the same lead', () => {
+    const first = enquiryCreatedCorrelationId({
+      rea_enquiry_id: 'id-1',
+      rea_agency_id: 'GHBDWE',
+      enquiry_type: 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST',
+      comments: null,
+      first_name: 'Justin',
+      last_name: 'Gagalowicz',
+      email: 'Gagz_efxr@yahoo.com.au',
+      phone: '+61438931940',
+      postcode: null,
+      preferred_contact_method: null,
+      received_at: '2026-09-17T23:57:21.000Z',
+      processed_at: null,
+      listing_id: null,
+      listing_address: '12 Fairwood Rise, Officer, VIC 3809',
+      source: null,
+    })
+    const second = enquiryCreatedCorrelationId({
+      rea_enquiry_id: 'id-2',
+      rea_agency_id: 'GHBDWE',
+      enquiry_type: 'REALESTATE_COM_AU_SALES_APPRAISAL_REQUEST',
+      comments: null,
+      first_name: 'Justin',
+      last_name: 'Gagalowicz',
+      email: 'gagz_efxr@yahoo.com.au',
+      phone: '+61438931940',
+      postcode: null,
+      preferred_contact_method: null,
+      received_at: '2026-09-17T23:57:21.000Z',
+      processed_at: null,
+      listing_id: null,
+      listing_address: '12 Fairwood Rise, Officer, VIC 3809',
+      source: null,
+    })
+    expect(first).toBe(second)
+  })
+
+  it('returns undefined without contact identity', () => {
+    expect(
+      enquiryCreatedCorrelationId({
+        rea_enquiry_id: 'id-1',
+        rea_agency_id: 'GHBDWE',
+        enquiry_type: 'REALESTATE_COM_AU_LISTING',
+        comments: null,
+        first_name: null,
+        last_name: null,
+        email: null,
+        phone: null,
+        postcode: null,
+        preferred_contact_method: null,
+        received_at: '2026-09-17T23:57:21.000Z',
+        processed_at: null,
+        listing_id: '152224800',
+        listing_address: null,
+        source: null,
+      }),
+    ).toBeUndefined()
   })
 })

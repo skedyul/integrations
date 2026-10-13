@@ -165,3 +165,36 @@ export function buildEnquiryCreatedPayload(params: {
     enquiry: transformReaEnquiryRecord(params.enquiry),
   }
 }
+
+/**
+ * Content fingerprint for collapsing REA EnquiryCreated double-fires.
+ * REA can emit two webhooks ~100ms apart with different event_id / enquiry id
+ * but the same contact, listing, type, and received_at.
+ */
+export function enquiryCreatedCorrelationId(
+  enquiry: ReaEnquiryEntity,
+): string | undefined {
+  const email = (enquiry.email ?? '').trim().toLowerCase()
+  const phone = (enquiry.phone ?? '').replace(/\s+/g, '')
+  const listing = (
+    enquiry.listing_id ??
+    enquiry.listing_address ??
+    ''
+  )
+    .trim()
+    .toLowerCase()
+  const receivedAt = enquiry.received_at ?? ''
+  const enquiryType = enquiry.enquiry_type ?? ''
+
+  if (!email && !phone) return undefined
+  if (!receivedAt && !listing) return undefined
+
+  return [
+    'enquiry',
+    enquiryType,
+    email,
+    phone,
+    listing,
+    receivedAt,
+  ].join(':')
+}
