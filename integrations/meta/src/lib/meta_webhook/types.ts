@@ -14,9 +14,17 @@ export type MetaWebhookEntry = {
   standby?: MetaMessengerEvent[]
 }
 
+export type MetaLeadgenChangeValue = {
+  leadgen_id?: string
+  form_id?: string
+  page_id?: string
+  ad_id?: string
+  created_time?: number
+}
+
 export type MetaWebhookChange = {
   field?: string
-  value?: MetaWhatsAppChangeValue
+  value?: MetaWhatsAppChangeValue & MetaLeadgenChangeValue
 }
 
 export type MetaWhatsAppChangeValue = {
@@ -44,6 +52,11 @@ export type MetaWhatsAppMessage = {
   audio?: { id?: string }
   video?: { id?: string; caption?: string }
   group_id?: string
+  referral?: {
+    source_id?: string
+    ad_id?: string
+    source_url?: string
+  }
 }
 
 export type MetaWhatsAppStatus = {
@@ -64,6 +77,12 @@ export type MetaMessengerEvent = {
       type?: string
       payload?: { url?: string }
     }>
+  }
+  referral?: {
+    source_id?: string
+    ad_id?: string
+    ads_context_data?: { ad_title?: string }
+    source_url?: string
   }
 }
 

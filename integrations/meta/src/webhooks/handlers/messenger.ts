@@ -1,4 +1,4 @@
-import { communicationChannel } from 'skedyul'
+import { receiveInbound, referralFromMeta, attachmentsFromMessagingEvent } from '../../lib/inbound_message'
 import { resolveChannelForMetaResource } from '../../lib/meta_webhook/resolve_channel'
 import type { MetaMessengerEvent, MetaWebhookEntry } from '../../lib/meta_webhook/types'
 
@@ -7,8 +7,9 @@ async function processMessengerEvent(event: MetaMessengerEvent): Promise<void> {
   const pageId = event.recipient?.id
   const messageId = event.message?.mid
   const text = event.message?.text
+  const attachments = await attachmentsFromMessagingEvent(event)
 
-  if (!senderId || !pageId || !text) {
+  if (!senderId || !pageId || (!text && attachments.length === 0)) {
     return
   }
 
@@ -24,18 +25,14 @@ async function processMessengerEvent(event: MetaMessengerEvent): Promise<void> {
     return
   }
 
-  await communicationChannel.receiveMessage({
+  await receiveInbound({
     communicationChannelId: resolved.channelId,
     from: senderId,
     to: pageId,
-    contact: {
-      identifierValue: senderId,
-    },
-    message: {
-      message: text,
-      remoteId: messageId,
-    },
+    text: text ?? (attachments.length > 0 ? '[Attachment]' : ''),
     remoteId: messageId,
+    referral: referralFromMeta(event.referral),
+    attachments: attachments.length > 0 ? attachments : undefined,
   })
 
   console.log('[receiveMeta:messenger] Message processed', {

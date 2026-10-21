@@ -171,6 +171,7 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
       phoneNumberInstance = await instance.create(
         'whatsapp_phone_number',
         phoneNumberData,
+        { env: { ACCESS_TOKEN: accessToken } },
       )
 
       console.log(

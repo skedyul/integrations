@@ -1,4 +1,4 @@
-import { communicationChannel } from 'skedyul'
+import { attachmentsFromMessagingEvent, receiveInbound, referralFromMeta } from '../../lib/inbound_message'
 import { resolveChannelForMetaResource } from '../../lib/meta_webhook/resolve_channel'
 import type { MetaMessengerEvent, MetaWebhookEntry } from '../../lib/meta_webhook/types'
 
@@ -7,8 +7,9 @@ async function processInstagramEvent(event: MetaMessengerEvent): Promise<void> {
   const instagramAccountId = event.recipient?.id
   const messageId = event.message?.mid
   const text = event.message?.text
+  const attachments = await attachmentsFromMessagingEvent(event)
 
-  if (!senderId || !instagramAccountId || !text) {
+  if (!senderId || !instagramAccountId || (!text && attachments.length === 0)) {
     return
   }
 
@@ -26,18 +27,14 @@ async function processInstagramEvent(event: MetaMessengerEvent): Promise<void> {
     return
   }
 
-  await communicationChannel.receiveMessage({
+  await receiveInbound({
     communicationChannelId: resolved.channelId,
     from: senderId,
     to: instagramAccountId,
-    contact: {
-      identifierValue: senderId,
-    },
-    message: {
-      message: text,
-      remoteId: messageId,
-    },
+    text: text ?? (attachments.length > 0 ? '[Attachment]' : ''),
     remoteId: messageId,
+    referral: referralFromMeta(event.referral),
+    attachments: attachments.length > 0 ? attachments : undefined,
   })
 
   console.log('[receiveMeta:instagram] Message processed', {

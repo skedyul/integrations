@@ -8,6 +8,7 @@ This package contains official Skedyul integration apps that connect external se
 |-------------|-------------|----------|
 | [Email](./integrations/email/) | Send and receive emails | Auto-provisioned addresses, attachments, Mailgun provider |
 | [Meta](./integrations/meta/) | WhatsApp, Instagram, Messenger | OAuth authentication, message sending/receiving |
+| [Slack](./integrations/slack/) | Slack channels and direct messages | Workspace OAuth, group threads, member email matching |
 | [Phone](./integrations/phone/) | SMS and voice via Twilio | Compliance workflow, call forwarding, webhooks |
 | [realestate.com.au](./integrations/realestate/) | REA Partner Platform leads | Lead webhooks, enquiry sync, agency linking |
 | [Google](./integrations/google/) | Google Calendar sync | OAuth, calendar sync, CRM map, live events, CRUD tools |

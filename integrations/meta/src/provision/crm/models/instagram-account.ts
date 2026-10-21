@@ -53,5 +53,14 @@ export default defineModel({
       description: 'URL to the profile picture',
       owner: 'app',
     },
+    {
+      handle: 'facebook_page_id',
+      label: 'Facebook Page ID',
+      type: 'string',
+      requirement: 'optional',
+      system: true,
+      description: 'Facebook Page that owns this Instagram account. Sends use that page access token.',
+      owner: 'app',
+    },
   ],
 })
