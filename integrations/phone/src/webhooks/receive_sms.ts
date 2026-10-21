@@ -39,9 +39,6 @@ async function captureInboundSmsWithMedia(params: {
   const messageResult = await communicationChannel.receiveMessage({
     communicationChannelId: params.channelId,
     from: params.from,
-    contact: {
-      identifierValue: params.from,
-    },
     message: {
       message: params.body,
       remoteId: params.messageSid || undefined,

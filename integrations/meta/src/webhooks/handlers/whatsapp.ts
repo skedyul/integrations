@@ -88,7 +88,7 @@ async function processWhatsAppMessage(
     text,
     remoteId: messageId,
     displayName,
-    group: groupId ? { externalGroupId: groupId } : undefined,
+    group: groupId ? { identifierValue: groupId } : undefined,
     referral: message.referral
       ? {
           sourceId: message.referral.source_id,

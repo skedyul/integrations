@@ -172,7 +172,6 @@ export const backfillInboundSmsRegistry: ToolDefinition<
           await communicationChannel.receiveMessage({
             communicationChannelId: channel.id,
             from: message.from,
-            contact: { identifierValue: message.from },
             message: {
               message: message.body ?? '',
               remoteId: message.sid,

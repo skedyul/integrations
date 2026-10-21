@@ -26,8 +26,7 @@ export const sendSlackRegistry: ToolDefinition<MessageSendInput, MessageSendOutp
     }
 
     const destination =
-      input.group?.externalGroupId ??
-      input.group?.id ??
+      input.group?.identifierValue ??
       input.subscription?.identifierValue ??
       input.recipient?.address
 

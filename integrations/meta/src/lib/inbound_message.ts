@@ -90,8 +90,7 @@ export async function receiveInbound(input: {
   remoteId?: string
   displayName?: string
   avatarUrl?: string | null
-  email?: string
-  group?: { externalGroupId?: string; groupName?: string; internal?: boolean }
+  group?: { identifierValue?: string; name?: string; internal?: boolean }
   referral?: { sourceId?: string; adId?: string; url?: string }
   threadExternalId?: string
   attachments?: InboundAttachment[]
@@ -100,12 +99,13 @@ export async function receiveInbound(input: {
     communicationChannelId: input.communicationChannelId,
     from: input.from,
     to: input.to,
-    contact: {
-      identifierValue: input.from,
-      displayName: input.displayName,
-      avatarUrl: input.avatarUrl,
-      email: input.email,
-    },
+    contact:
+      input.displayName || input.avatarUrl
+        ? {
+            displayName: input.displayName,
+            avatarUrl: input.avatarUrl,
+          }
+        : undefined,
     message: {
       message: input.text,
       remoteId: input.remoteId,

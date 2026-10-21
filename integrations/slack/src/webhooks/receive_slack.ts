@@ -119,12 +119,13 @@ async function handleReceiveSlack(
     communicationChannelId: resolved.channelId,
     from: event.user,
     to: payload.team_id,
-    contact: {
-      identifierValue: event.user,
-      displayName: profile?.name,
-      email: profile?.email,
-      avatarUrl: profile?.image,
-    },
+    contact:
+      profile?.name || profile?.image
+        ? {
+            displayName: profile?.name,
+            avatarUrl: profile?.image,
+          }
+        : undefined,
     message: {
       message: event.text,
       remoteId: event.ts,
@@ -135,7 +136,7 @@ async function handleReceiveSlack(
     group: isDirect
       ? undefined
       : {
-          externalGroupId: event.channel,
+          identifierValue: event.channel,
           internal: true,
         },
   })

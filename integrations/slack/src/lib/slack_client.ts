@@ -3,7 +3,6 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 export type SlackUserProfile = {
   id: string
   name?: string
-  email?: string
   image?: string
 }
 
@@ -41,14 +40,13 @@ export class SlackClient {
       user?: {
         id?: string
         real_name?: string
-        profile?: { email?: string; image_72?: string; display_name?: string }
+        profile?: { image_72?: string; display_name?: string }
       }
     }
     if (!body.ok || !body.user?.id) return null
     return {
       id: body.user.id,
       name: body.user.profile?.display_name || body.user.real_name,
-      email: body.user.profile?.email,
       image: body.user.profile?.image_72,
     }
   }
