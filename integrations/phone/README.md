@@ -162,28 +162,6 @@ No user-provided credentials required. Compliance documents are submitted throug
 | Messaging | `/phone-numbers/[id]/messaging` | SMS settings |
 | Voice | `/phone-numbers/[id]/voice` | Call forwarding settings |
 
-## Workflows
-
-### send-templated-message
-
-Send templated SMS messages to multiple contacts.
-
-```yaml
-# workflows/send-templated-message.yml
-actions:
-  - label: Send templated message
-    handle: send-templated-sms-message
-    batch: true
-    entityHandle: contact
-    inputs:
-      - key: identifier-value
-        fieldRef: { fieldHandle: phone, entityHandle: contact }
-      - key: communication-channel-id
-        template: '{{ input }}'
-      - key: message
-        template: '{{ input }}'
-```
-
 ## Setup
 
 ### 1. Create Twilio Account

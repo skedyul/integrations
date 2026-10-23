@@ -1,7 +1,8 @@
 /**
  * Workflows index
  *
- * Re-exports all workflow definitions.
+ * Phone no longer ships bundled workflows. Send goes through the
+ * messaging capability on the channel, not a provisioned workflow.
  */
 
-export { default as sendTemplatedMessage } from './send-templated-message'
+export {}
