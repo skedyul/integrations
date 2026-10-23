@@ -1,11 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-export type SlackUserProfile = {
-  id: string
-  name?: string
-  image?: string
-}
-
 export class SlackClient {
   constructor(private readonly botToken: string) {}
 
@@ -27,28 +21,6 @@ export class SlackClient {
       }),
     })
     return (await response.json()) as { ts?: string; ok: boolean; error?: string }
-  }
-
-  async userInfo(userId: string): Promise<SlackUserProfile | null> {
-    const url = new URL('https://slack.com/api/users.info')
-    url.searchParams.set('user', userId)
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${this.botToken}` },
-    })
-    const body = (await response.json()) as {
-      ok?: boolean
-      user?: {
-        id?: string
-        real_name?: string
-        profile?: { image_72?: string; display_name?: string }
-      }
-    }
-    if (!body.ok || !body.user?.id) return null
-    return {
-      id: body.user.id,
-      name: body.user.profile?.display_name || body.user.real_name,
-      image: body.user.profile?.image_72,
-    }
   }
 }
 

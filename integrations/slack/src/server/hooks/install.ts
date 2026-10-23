@@ -27,7 +27,6 @@ export default async function install(
     'groups:history',
     'im:history',
     'mpim:history',
-    'users:read',
   ].join(',')
 
   const url = new URL('https://slack.com/oauth/v2/authorize')
