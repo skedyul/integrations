@@ -1,5 +1,5 @@
 import type { ProvisionHandlerContext, ProvisionHandlerResult } from 'skedyul'
-import { instance, webhook } from 'skedyul'
+import { webhook } from 'skedyul'
 import { ensureMetaAppWebhooks } from '../../lib/meta_app_webhooks'
 
 const RECEIVE_META_WEBHOOK_NAME = 'receive_meta'
@@ -63,13 +63,7 @@ export default async function provision(
     const dashboardUrl = metaAppId
       ? `https://developers.facebook.com/apps/${metaAppId}/webhooks/`
       : 'https://developers.facebook.com/apps/'
-
-    await upsertMetaAppWebhookRecord(ctx, {
-      callbackUrl: webhookUrl,
-      dashboardUrl,
-      setupStatus: 'manual_required',
-      notes: 'Missing provision env vars for automatic Meta webhook configuration',
-    })
+    ctx.log.warn(`[Meta Provision] Meta App Dashboard: ${dashboardUrl}`)
 
     ctx.log.info('[Meta Provision] === COMPLETED ===')
     return {}
@@ -111,50 +105,7 @@ export default async function provision(
     ctx.log.info('[Meta Provision] Meta app webhook subscriptions configured successfully')
   }
 
-  await upsertMetaAppWebhookRecord(ctx, {
-    callbackUrl: webhookUrl,
-    dashboardUrl: setup.dashboardUrl,
-    setupStatus: setup.manualSetupRequired ? 'manual_required' : 'configured',
-    notes: setup.results
-      .map((result) => `${result.object}: ${result.status}${result.message ? ` (${result.message})` : ''}`)
-      .join('; '),
-  })
-
   ctx.log.info('[Meta Provision] === COMPLETED ===')
 
   return {}
-}
-
-async function upsertMetaAppWebhookRecord(
-  ctx: ProvisionHandlerContext,
-  input: {
-    callbackUrl: string
-    dashboardUrl: string
-    setupStatus: 'configured' | 'manual_required' | 'pending'
-    notes: string
-  },
-): Promise<void> {
-  const existing = await instance.list('meta_app_webhook', { limit: 1 })
-
-  if (existing.data.length > 0) {
-    const record = existing.data[0] as { id: string }
-    await instance.update('meta_app_webhook', record.id, {
-      callback_url: input.callbackUrl,
-      dashboard_url: input.dashboardUrl,
-      setup_status: input.setupStatus,
-      notes: input.notes,
-    })
-    ctx.log.info(`[Meta Provision] Updated meta_app_webhook record ${record.id}`)
-    return
-  }
-
-  const created = await instance.create('meta_app_webhook', {
-    callback_url: input.callbackUrl,
-    dashboard_url: input.dashboardUrl,
-    setup_status: input.setupStatus,
-    notes: input.notes,
-  })
-  ctx.log.info(
-    `[Meta Provision] Created meta_app_webhook record ${(created as { id: string }).id}`,
-  )
 }
