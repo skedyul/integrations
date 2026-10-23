@@ -98,6 +98,7 @@ interface InstagramAccountResponse {
     username: string
     name?: string
     profile_picture_url?: string
+    pageId?: string
   }>
 }
 
@@ -306,7 +307,13 @@ export class MetaClient {
   async getInstagramAccounts(accessToken: string): Promise<InstagramAccountResponse> {
     // First, get all pages
     const pagesResponse = await this.getPages(accessToken)
-    const instagramAccounts: Array<{ id: string; username: string; name?: string; profile_picture_url?: string }> = []
+    const instagramAccounts: Array<{
+      id: string
+      username: string
+      name?: string
+      profile_picture_url?: string
+      pageId?: string
+    }> = []
 
     // For each page, try to fetch its Instagram Business Account
     for (const page of pagesResponse.data) {
@@ -335,6 +342,7 @@ export class MetaClient {
               username: pageData.instagram_business_account.username,
               name: pageData.instagram_business_account.name,
               profile_picture_url: pageData.instagram_business_account.profile_picture_url,
+              pageId: page.id,
             })
           }
         } else {
@@ -496,6 +504,38 @@ export class MetaClient {
 
     const data = (await response.json()) as { url?: string }
     return data.url ?? null
+  }
+
+  async getLead(
+    leadId: string,
+    accessToken: string,
+  ): Promise<{
+    id?: string
+    ad_id?: string
+    form_id?: string
+    field_data?: Array<{ name?: string; values?: string[] }>
+  }> {
+    const url = new URL(`${this.baseUrl}/${leadId}`)
+    url.searchParams.set('access_token', accessToken)
+    url.searchParams.set('fields', 'created_time,field_data,ad_id,form_id')
+
+    const response = await fetch(url.toString(), { method: 'GET' })
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      throw new Error(`Failed to fetch lead: ${JSON.stringify(errorResponse)}`)
+    }
+
+    return (await response.json()) as {
+      id?: string
+      ad_id?: string
+      form_id?: string
+      field_data?: Array<{ name?: string; values?: string[] }>
+    }
   }
 
   /**

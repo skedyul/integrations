@@ -7,7 +7,7 @@ export const META_APP_WEBHOOK_SUBSCRIPTIONS = [
   },
   {
     object: 'page',
-    fields: ['messages', 'messaging_postbacks', 'message_reads'],
+    fields: ['messages', 'messaging_postbacks', 'message_reads', 'leadgen'],
   },
   {
     object: 'instagram',

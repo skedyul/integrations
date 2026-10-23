@@ -47,7 +47,7 @@ Inbound webhooks resolve the installation via token exchange (lookup CRM record 
 
 | Tool | Description |
 |------|-------------|
-| `send_whatsapp` | Send WhatsApp message (1:1 or group via `group.externalGroupId`) |
+| `send_whatsapp` | Send WhatsApp message (1:1 or group via `group.identifierValue`) |
 | `send_messenger` | Send Messenger message to a PSID |
 | `send_instagram` | Send Instagram Direct message |
 | `add_whatsapp_number` | Provision WhatsApp channel from WABA number |

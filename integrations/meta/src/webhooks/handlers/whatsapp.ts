@@ -1,8 +1,15 @@
-import { communicationChannel } from 'skedyul'
+import { instance } from 'skedyul'
+import { MetaClient } from '../../lib/meta_client'
+import {
+  loadInstanceAccessToken,
+  receiveInbound,
+  uploadRemoteFile,
+} from '../../lib/inbound_message'
 import { resolveChannelForMetaResource } from '../../lib/meta_webhook/resolve_channel'
 import type {
   MetaWebhookChange,
   MetaWebhookEntry,
+  MetaWhatsAppChangeValue,
   MetaWhatsAppMessage,
 } from '../../lib/meta_webhook/types'
 
@@ -35,6 +42,7 @@ async function processWhatsAppMessage(
   phoneNumberId: string,
   businessPhone: string | undefined,
   message: MetaWhatsAppMessage,
+  contacts: MetaWhatsAppChangeValue['contacts'],
 ): Promise<void> {
   const from = message.from
   const messageId = message.id
@@ -44,6 +52,9 @@ async function processWhatsAppMessage(
     console.log('[receiveMeta:whatsapp] Skipping message without from or content')
     return
   }
+
+  const profile = contacts?.find((contact) => contact.wa_id === from)
+  const displayName = profile?.profile?.name
 
   const resolved = await resolveChannelForMetaResource({
     modelHandle: 'whatsapp_phone_number',
@@ -57,27 +68,35 @@ async function processWhatsAppMessage(
     return
   }
 
+  const rows = await instance.list('whatsapp_phone_number', {
+    filter: { phone_number_id: phoneNumberId },
+    limit: 1,
+  })
+  const recordId = (rows.data[0] as { id?: string } | undefined)?.id
+  const accessToken = recordId ? await loadInstanceAccessToken('whatsapp_phone_number', recordId) : null
+
+  const attachments = accessToken
+    ? await downloadWhatsAppAttachments(message, accessToken)
+    : []
+
   const groupId = message.group_id
 
-  await communicationChannel.receiveMessage({
+  await receiveInbound({
     communicationChannelId: resolved.channelId,
     from,
     to: businessPhone ?? resolved.channelIdentifier,
-    contact: {
-      identifierValue: from,
-    },
-    message: {
-      message: text,
-      remoteId: messageId,
-    },
+    text,
     remoteId: messageId,
-    ...(groupId
+    displayName,
+    group: groupId ? { identifierValue: groupId } : undefined,
+    referral: message.referral
       ? {
-          group: {
-            externalGroupId: groupId,
-          },
+          sourceId: message.referral.source_id,
+          adId: message.referral.ad_id,
+          url: message.referral.source_url,
         }
-      : {}),
+      : undefined,
+    attachments: attachments.length > 0 ? attachments : undefined,
   })
 
   console.log('[receiveMeta:whatsapp] Message processed', {
@@ -86,6 +105,36 @@ async function processWhatsAppMessage(
     groupId: groupId ?? null,
     messageId,
   })
+}
+
+async function downloadWhatsAppAttachments(
+  message: MetaWhatsAppMessage,
+  accessToken: string,
+) {
+  const media =
+    message.image ?? message.document ?? message.audio ?? message.video
+  const mediaId = media && 'id' in media ? media.id : undefined
+  if (!mediaId) return []
+
+  const META_APP_ID = process.env.META_APP_ID
+  const META_APP_SECRET = process.env.META_APP_SECRET
+  const GRAPH_API_VERSION = process.env.GRAPH_API_VERSION
+  if (!META_APP_ID || !META_APP_SECRET || !GRAPH_API_VERSION) return []
+
+  const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
+  const url = await client.getMediaUrl(mediaId, accessToken)
+  if (!url) return []
+
+  const filename =
+    message.document?.filename ??
+    `${message.type ?? 'file'}-${mediaId}`
+  const uploaded = await uploadRemoteFile({
+    url,
+    name: filename,
+    mimeType: 'application/octet-stream',
+    accessToken,
+  })
+  return uploaded ? [uploaded] : []
 }
 
 export async function handleWhatsAppWebhookEntries(
@@ -114,7 +163,12 @@ async function handleWhatsAppChange(change: MetaWebhookChange): Promise<void> {
 
   for (const message of value.messages ?? []) {
     try {
-      await processWhatsAppMessage(phoneNumberId, businessPhone, message)
+      await processWhatsAppMessage(
+      phoneNumberId,
+      businessPhone,
+      message,
+      value.contacts,
+    )
     } catch (err) {
       console.error('[receiveMeta:whatsapp] Failed to process message:', err)
     }

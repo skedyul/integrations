@@ -131,9 +131,6 @@ async function handleReceiveEmail(
         const messageResult = await communicationChannel.receiveMessage({
           communicationChannelId: channel.id,
           from: inboundEmail.from,
-          contact: {
-            identifierValue: inboundEmail.from,
-          },
           message: {
             message: inboundEmail.textBody,
             contentRaw: inboundEmail.htmlBody,

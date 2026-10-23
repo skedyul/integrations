@@ -63,4 +63,12 @@ export default defineModel({
       owner: 'shared',
     },
   ],
+
+  env: {
+    ACCESS_TOKEN: {
+      label: 'WhatsApp Access Token',
+      visibility: 'encrypted',
+      description: 'Business token copied at connect time so inbound media can be downloaded',
+    },
+  },
 })

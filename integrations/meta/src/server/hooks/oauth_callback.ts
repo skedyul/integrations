@@ -1,4 +1,4 @@
-import { instance, token, runWithConfig, getConfig } from 'skedyul'
+import { instance, token, runWithConfig, getConfig, communicationChannel } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import { MetaClient } from '../../lib/meta_client'
 
@@ -77,6 +77,22 @@ export default async function oauthCallback(
 
   const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
+  async function ensureChannel(
+    handle: 'whatsapp' | 'instagram',
+    input: { name: string; identifierValue: string },
+  ) {
+    const existing = await communicationChannel.list({
+      filter: { identifierValue: input.identifierValue },
+      limit: 1,
+    })
+    if (existing.length > 0) return
+    try {
+      await communicationChannel.create(handle, input)
+    } catch (err) {
+      ctx.log.warn(`[Meta OAuth] Failed to create ${handle} channel`, err)
+    }
+  }
+
   try {
     const shortLivedToken = await client.exchangeCodeForToken(code, redirectUri)
     const longLivedToken = await client.exchangeForLongLivedToken(shortLivedToken)
@@ -92,12 +108,19 @@ export default async function oauthCallback(
     ctx.log.info(`[Meta OAuth] Found WABA: ${waba.id} (${waba.name})`)
 
     const phoneNumbersResponse = await client.getPhoneNumbers(waba.id, longLivedToken)
+    let pagesResponse: Awaited<ReturnType<MetaClient['getPages']>> = { data: [] }
+    try {
+      pagesResponse = await client.getPages(longLivedToken)
+    } catch (err) {
+      ctx.log.warn('[Meta OAuth] Failed to fetch Facebook pages:', err)
+    }
 
     let instagramAccounts: Array<{
       id: string
       username: string
       name?: string
       profile_picture_url?: string
+      pageId?: string
     }> = []
 
     try {
@@ -111,7 +134,31 @@ export default async function oauthCallback(
     await runWithConfig(
       { ...currentConfig, apiToken: scopedToken },
       async () => {
+        for (const page of pagesResponse.data) {
+          const existingPages = await instance.list('facebook_page', {
+            filter: { page_id: page.id },
+            limit: 1,
+          })
+          const pageRecord = { page_id: page.id, name: page.name }
+          const pageEnv = page.access_token
+            ? { ACCESS_TOKEN: page.access_token }
+            : undefined
+          if (existingPages.data.length > 0) {
+            const existing = existingPages.data[0] as { id: string }
+            await instance.update('facebook_page', existing.id, pageRecord, { env: pageEnv })
+          } else {
+            await instance.create('facebook_page', pageRecord, { env: pageEnv })
+          }
+        }
+
         for (const instagramData of instagramAccounts) {
+          const record = {
+            instagram_account_id: instagramData.id,
+            username: instagramData.username,
+            name: instagramData.name || null,
+            profile_picture_url: instagramData.profile_picture_url || null,
+            facebook_page_id: instagramData.pageId || null,
+          }
           const existingAccounts = await instance.list('instagram_account', {
             filter: { instagram_account_id: instagramData.id },
             limit: 1,
@@ -119,23 +166,25 @@ export default async function oauthCallback(
 
           if (existingAccounts.data.length > 0) {
             const existing = existingAccounts.data[0] as { id: string }
-            await instance.update('instagram_account', existing.id, {
-              instagram_account_id: instagramData.id,
-              username: instagramData.username,
-              name: instagramData.name || null,
-              profile_picture_url: instagramData.profile_picture_url || null,
-            })
+            await instance.update('instagram_account', existing.id, record)
           } else {
-            await instance.create('instagram_account', {
-              instagram_account_id: instagramData.id,
-              username: instagramData.username,
-              name: instagramData.name || null,
-              profile_picture_url: instagramData.profile_picture_url || null,
-            })
+            await instance.create('instagram_account', record)
           }
+
+          await ensureChannel('instagram', {
+            name: instagramData.name || `@${instagramData.username}`,
+            identifierValue: instagramData.id,
+          })
         }
 
         for (const phoneData of phoneNumbersResponse.data) {
+          const record = {
+            phone: phoneData.display_phone_number,
+            phone_number_id: phoneData.id,
+            display_name: phoneData.verified_name,
+            quality_rating: phoneData.quality_rating,
+          }
+          const phoneEnv = { ACCESS_TOKEN: longLivedToken }
           const existingPhones = await instance.list('whatsapp_phone_number', {
             filter: { phone_number_id: phoneData.id },
             limit: 1,
@@ -143,20 +192,17 @@ export default async function oauthCallback(
 
           if (existingPhones.data.length > 0) {
             const existing = existingPhones.data[0] as { id: string }
-            await instance.update('whatsapp_phone_number', existing.id, {
-              phone: phoneData.display_phone_number,
-              phone_number_id: phoneData.id,
-              display_name: phoneData.verified_name,
-              quality_rating: phoneData.quality_rating,
+            await instance.update('whatsapp_phone_number', existing.id, record, {
+              env: phoneEnv,
             })
           } else {
-            await instance.create('whatsapp_phone_number', {
-              phone: phoneData.display_phone_number,
-              phone_number_id: phoneData.id,
-              display_name: phoneData.verified_name,
-              quality_rating: phoneData.quality_rating,
-            })
+            await instance.create('whatsapp_phone_number', record, { env: phoneEnv })
           }
+
+          await ensureChannel('whatsapp', {
+            name: phoneData.verified_name || `WhatsApp ${phoneData.display_phone_number}`,
+            identifierValue: phoneData.display_phone_number,
+          })
         }
       },
     )

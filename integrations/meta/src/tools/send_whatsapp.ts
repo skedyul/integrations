@@ -45,7 +45,7 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
     }
 
     const channelIdentifier = input.channel.identifierValue
-    const groupId = input.group?.externalGroupId ?? input.group?.id
+    const groupId = input.group?.identifierValue
 
     const phoneNumbers = await instance.list('whatsapp_phone_number', {
       filter: { phone: channelIdentifier },

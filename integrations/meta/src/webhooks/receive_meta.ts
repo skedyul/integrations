@@ -15,6 +15,7 @@ import type { MetaWebhookPayload } from '../lib/meta_webhook/types'
 import { handleWhatsAppWebhookEntries } from './handlers/whatsapp'
 import { handleMessengerWebhookEntries } from './handlers/messenger'
 import { handleInstagramWebhookEntries } from './handlers/instagram'
+import { handleLeadgenWebhookEntries } from './handlers/leadgen'
 
 async function handleReceiveMeta(
   request: WebhookRequest,
@@ -78,6 +79,7 @@ async function handleReceiveMeta(
       break
     case 'page':
       await handleMessengerWebhookEntries(payload.entry)
+      await handleLeadgenWebhookEntries(payload.entry)
       break
     case 'instagram':
       await handleInstagramWebhookEntries(payload.entry)
