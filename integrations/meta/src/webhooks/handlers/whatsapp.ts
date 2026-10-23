@@ -1,6 +1,7 @@
 import { instance } from 'skedyul'
 import { MetaClient } from '../../lib/meta_client'
 import { groupFromWhatsApp } from '../../lib/inbound_group'
+import { describeWhatsAppGroup } from '../../lib/whatsapp_room'
 import {
   loadInstanceAccessToken,
   receiveInbound,
@@ -80,11 +81,24 @@ async function processWhatsAppMessage(
     ? await downloadWhatsAppAttachments(message, accessToken)
     : []
 
+  let roomName = message.group_subject ?? message.subject
+  let members: Array<{ identifierValue: string }> = []
+  if (message.group_id && accessToken) {
+    const room = await describeWhatsAppGroup({
+      accessToken,
+      groupId: message.group_id,
+      graphVersion: process.env.GRAPH_API_VERSION,
+    })
+    roomName = room.name ?? roomName
+    members = room.participants
+  }
+
   const group = groupFromWhatsApp({
     groupId: message.group_id,
-    subject: message.group_subject ?? message.subject,
+    subject: roomName,
     from,
     contacts,
+    members,
   })
 
   await receiveInbound({

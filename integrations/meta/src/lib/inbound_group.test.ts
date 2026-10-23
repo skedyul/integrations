@@ -22,6 +22,24 @@ test('whatsapp group forwards the subject and known people', () => {
   })
 })
 
+test('whatsapp group uses looked-up members and the sender name', () => {
+  const group = groupFromWhatsApp({
+    groupId: 'wa-group',
+    subject: 'Saturday class',
+    from: '15551212',
+    contacts: [{ wa_id: '15551212', profile: { name: 'Grace' } }],
+    members: [{ identifierValue: '15551212' }, { identifierValue: '15550000' }],
+  })
+  assert.deepEqual(group, {
+    identifierValue: 'wa-group',
+    name: 'Saturday class',
+    participants: [
+      { identifierValue: '15551212', displayName: 'Grace' },
+      { identifierValue: '15550000' },
+    ],
+  })
+})
+
 test('whatsapp without a group id stays a direct message', () => {
   assert.equal(
     groupFromWhatsApp({
