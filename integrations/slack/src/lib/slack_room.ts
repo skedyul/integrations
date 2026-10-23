@@ -42,6 +42,26 @@ function personFromUser(user: SlackUser | undefined): SlackPerson | undefined {
   return { identifierValue, displayName, avatarUrl }
 }
 
+function logSlackLookup(method: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  console.log(`[slack] ${method} failed: ${message}`)
+}
+
+/** Channel rooms are external conversations. Direct messages omit the group. */
+export function slackInboundGroup(input: {
+  direct: boolean
+  channelId: string
+  name?: string
+  participants: SlackPerson[]
+}): { identifierValue: string; name?: string; participants: SlackPerson[] } | undefined {
+  if (input.direct) return undefined
+  return {
+    identifierValue: input.channelId,
+    name: input.name,
+    participants: input.participants,
+  }
+}
+
 function roomName(channel: SlackChannel | undefined, people: SlackPerson[]): string | undefined {
   const raw = channel?.name?.trim()
   if (channel?.is_mpim || (raw && raw.startsWith('mpdm-'))) {
@@ -104,7 +124,8 @@ export async function describeSlackConversation(input: {
         signal,
       )
       channel = info.channel
-    } catch {
+    } catch (error) {
+      logSlackLookup('conversations.info', error)
       channel = undefined
     }
   }
@@ -128,7 +149,8 @@ export async function describeSlackConversation(input: {
           if (!memberIds.includes(id) && memberIds.length < MEMBER_CAP) memberIds.push(id)
         }
         cursor = page.response_metadata?.next_cursor || undefined
-      } catch {
+      } catch (error) {
+        logSlackLookup('conversations.members', error)
         cursor = undefined
       }
     } while (cursor)
