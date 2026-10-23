@@ -1,4 +1,4 @@
-import { getConfig, token } from 'skedyul'
+import { token } from 'skedyul'
 import { SlackClient } from './slack_client'
 
 export type SlackPerson = {
@@ -156,37 +156,8 @@ export async function describeSlackConversation(input: {
   }
 }
 
-export async function readInstallationEnv(
+export function readInstallationEnv(
   appInstallationId: string,
 ): Promise<Record<string, string>> {
-  const reader = token as typeof token & {
-    installationEnv?: (id: string) => Promise<Record<string, string>>
-  }
-  if (typeof reader.installationEnv === 'function') {
-    return reader.installationEnv(appInstallationId)
-  }
-
-  const { baseUrl, apiToken } = getConfig()
-  if (!baseUrl || !apiToken) return {}
-  const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/api/core`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiToken}`,
-    },
-    body: JSON.stringify({
-      method: 'token.installationEnv',
-      params: { appInstallationId },
-    }),
-  })
-  const payload = (await response.json()) as {
-    success?: boolean
-    data?: { env?: Record<string, string> }
-    errors?: Array<{ message?: string }>
-  }
-  if (!payload.success) {
-    const message = payload.errors?.map((error) => error.message).filter(Boolean).join('; ')
-    throw new Error(message || 'token.installationEnv failed')
-  }
-  return payload.data?.env ?? {}
+  return token.installationEnv(appInstallationId)
 }
