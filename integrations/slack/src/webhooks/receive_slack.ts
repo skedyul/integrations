@@ -1,12 +1,6 @@
 import type { WebhookDefinition, WebhookRequest, WebhookResponse } from 'skedyul'
-import {
-  communicationChannel,
-  getConfig,
-  instance,
-  runWithConfig,
-  token,
-} from 'skedyul'
-import { SlackClient, verifySlackSignature } from '../lib/slack_client'
+import { communicationChannel } from 'skedyul'
+import { verifySlackSignature } from '../lib/slack_client'
 
 type SlackEventBody = {
   type?: string
@@ -29,37 +23,6 @@ function rawBody(body: WebhookRequest['body']): string {
   if (typeof body === 'string') return body
   if (Buffer.isBuffer(body)) return body.toString('utf8')
   return JSON.stringify(body ?? {})
-}
-
-async function resolveSlackChannel(teamId: string): Promise<{
-  channelId: string
-  botToken: string | null
-} | null> {
-  const rows = await instance.list('slack_workspace', {
-    filter: { team_id: teamId },
-    limit: 1,
-  })
-  const record = rows.data[0] as { id?: string; appInstallationId?: string } | undefined
-  if (!record?.id || !record.appInstallationId) return null
-
-  const full = await instance.get('slack_workspace', record.id, { includeEnv: true })
-  const botToken =
-    typeof full?.env?.ACCESS_TOKEN === 'string' ? full.env.ACCESS_TOKEN : null
-
-  const { token: scopedToken } = await token.exchange(record.appInstallationId)
-  const config = getConfig()
-  const channelId = await runWithConfig(
-    { baseUrl: config.baseUrl, apiToken: scopedToken },
-    async () => {
-      const channels = await communicationChannel.list({
-        filter: { identifierValue: teamId },
-        limit: 1,
-      })
-      return channels[0]?.id ?? null
-    },
-  )
-  if (!channelId) return null
-  return { channelId, botToken }
 }
 
 async function handleReceiveSlack(
@@ -104,28 +67,22 @@ async function handleReceiveSlack(
     return { status: 200, body: { ok: true } }
   }
 
-  const resolved = await resolveSlackChannel(payload.team_id)
-  if (!resolved) {
+  const channels = await communicationChannel.list({
+    filter: { identifierValue: payload.team_id },
+    limit: 1,
+  })
+  const channelId = channels[0]?.id
+  if (!channelId) {
     console.log(`[receiveSlack] No channel for team ${payload.team_id}`)
     return { status: 200, body: { ok: true } }
   }
 
-  const profile = resolved.botToken
-    ? await new SlackClient(resolved.botToken).userInfo(event.user)
-    : null
   const isDirect = event.channel_type === 'im'
 
   await communicationChannel.receiveMessage({
-    communicationChannelId: resolved.channelId,
+    communicationChannelId: channelId,
     from: event.user,
     to: payload.team_id,
-    contact:
-      profile?.name || profile?.image
-        ? {
-            displayName: profile?.name,
-            avatarUrl: profile?.image,
-          }
-        : undefined,
     message: {
       message: event.text,
       remoteId: event.ts,

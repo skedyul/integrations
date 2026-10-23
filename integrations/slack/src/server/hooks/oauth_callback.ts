@@ -1,5 +1,5 @@
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
-import { communicationChannel, getConfig, instance, runWithConfig, token } from 'skedyul'
+import { communicationChannel, getConfig, runWithConfig, token } from 'skedyul'
 import { exchangeSlackCode } from '../../lib/slack_client'
 
 export default async function oauthCallback(
@@ -44,19 +44,6 @@ export default async function oauthCallback(
   const { token: scopedToken } = await token.exchangeRaw(appInstallationId)
   const currentConfig = getConfig()
   await runWithConfig({ ...currentConfig, apiToken: scopedToken }, async () => {
-    const existing = await instance.list('slack_workspace', {
-      filter: { team_id: oauth.teamId },
-      limit: 1,
-    })
-    const record = { team_id: oauth.teamId, team_name: oauth.teamName ?? null }
-    const workspaceEnv = { ACCESS_TOKEN: oauth.accessToken }
-    if (existing.data.length > 0) {
-      const id = (existing.data[0] as { id: string }).id
-      await instance.update('slack_workspace', id, record, { env: workspaceEnv })
-    } else {
-      await instance.create('slack_workspace', record, { env: workspaceEnv })
-    }
-
     const channels = await communicationChannel.list({
       filter: { identifierValue: oauth.teamId },
       limit: 1,
