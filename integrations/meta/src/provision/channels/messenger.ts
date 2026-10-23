@@ -7,10 +7,11 @@
 import { defineChannel } from 'skedyul'
 import { MESSENGER_ICON_URL } from './icons'
 
-const messenger = defineChannel({
+export default defineChannel({
   handle: 'messenger',
   label: 'Messenger',
   icon: 'MessageCircle',
+  iconUrl: MESSENGER_ICON_URL,
 
   fields: [
     {
@@ -52,5 +53,3 @@ const messenger = defineChannel({
     },
   },
 })
-
-export default Object.assign(messenger, { iconUrl: MESSENGER_ICON_URL })

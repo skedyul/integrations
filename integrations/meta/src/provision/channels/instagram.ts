@@ -7,10 +7,11 @@
 import { defineChannel } from 'skedyul'
 import { INSTAGRAM_ICON_URL } from './icons'
 
-const instagram = defineChannel({
+export default defineChannel({
   handle: 'instagram',
   label: 'Instagram',
   icon: 'Instagram',
+  iconUrl: INSTAGRAM_ICON_URL,
 
   fields: [
     {
@@ -52,5 +53,3 @@ const instagram = defineChannel({
     },
   },
 })
-
-export default Object.assign(instagram, { iconUrl: INSTAGRAM_ICON_URL })
