@@ -99,5 +99,8 @@ export const receiveMetaRegistry: WebhookDefinition = {
   description:
     'Unified Meta webhook for WhatsApp, Messenger, and Instagram messaging',
   methods: ['GET', 'POST'],
+  // Meta's verify GET must receive hub.challenge as the HTTP body.
+  // WEBHOOK mode answers the public URL before this handler runs.
+  type: 'CALLBACK',
   handler: handleReceiveMeta,
 }

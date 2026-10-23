@@ -50,6 +50,7 @@ export function handleMetaVerificationChallenge(
     console.log('[receiveMeta] Webhook verification successful')
     return {
       status: 200,
+      headers: { 'Content-Type': 'text/plain' },
       body: challenge ?? '',
     }
   }
