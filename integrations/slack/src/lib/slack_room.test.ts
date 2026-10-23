@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { describeSlackConversation } from './slack_room.ts'
+import { describeSlackConversation, slackInboundGroup } from './slack_room.ts'
 
 test('names the channel and the people in it, skipping bots', async () => {
   const original = globalThis.fetch
@@ -44,7 +44,12 @@ test('names the channel and the people in it, skipping bots', async () => {
 
 test('a failed lookup still returns the sender id', async () => {
   const original = globalThis.fetch
-  globalThis.fetch = (async () => new Response(JSON.stringify({ ok: false, error: 'ratelimited' }), {
+  const logs: unknown[][] = []
+  const originalLog = console.log
+  console.log = (...args: unknown[]) => {
+    logs.push(args)
+  }
+  globalThis.fetch = (async () => new Response(JSON.stringify({ ok: false, error: 'missing_scope' }), {
     status: 200,
     headers: { 'content-type': 'application/json' },
   })) as typeof fetch
@@ -56,7 +61,31 @@ test('a failed lookup still returns the sender id', async () => {
     })
     assert.equal(room.name, undefined)
     assert.deepEqual(room.participants, [{ identifierValue: 'U1' }])
+    const logged = logs.map((args) => args.join(' ')).join('\n')
+    assert.match(logged, /conversations\.info failed: missing_scope/)
+    assert.match(logged, /conversations\.members failed: missing_scope/)
   } finally {
     globalThis.fetch = original
+    console.log = originalLog
   }
+})
+
+test('a channel message is an external group and a direct message is not', () => {
+  const group = slackInboundGroup({
+    direct: false,
+    channelId: 'C0AKFRNMWTY',
+    name: 'chat-chat',
+    participants: [{ identifierValue: 'U1', displayName: 'Av' }],
+  })
+  assert.equal(group?.identifierValue, 'C0AKFRNMWTY')
+  assert.equal(group?.name, 'chat-chat')
+  assert.equal('internal' in (group ?? {}), false)
+  assert.equal(
+    slackInboundGroup({
+      direct: true,
+      channelId: 'D1',
+      participants: [],
+    }),
+    undefined,
+  )
 })
