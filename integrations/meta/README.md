@@ -90,7 +90,7 @@ On each app version deploy, the provision hook:
 
 A WhatsApp group message carries `group_id` and the sender. The handler loads the group with `GET /{group-id}?fields=subject,participants` and uses the subject as the thread title. Participant ids from that call are added to the room. The sender's profile name comes from the message `contacts` list. A failed lookup is logged and the message is still received. The next message after a successful lookup sets the title and adds the people WhatsApp returned.
 
-Meta verifies the callback URL with a GET challenge during that API call, so the webhook must already be registered and reachable.
+Meta verifies the callback URL with a GET challenge during that API call, so the webhook must already be registered and reachable. `receive_meta` is a callback webhook: Skedyul waits for the handler and returns `hub.challenge` as plain text. Each app version gets its own callback URL. After you provision, use the URL from that version. An older registration still answers `{ "status": "accepted" }` and Meta rejects it.
 
 If automatic configuration fails (or provision env vars are missing), open **Account → Webhook Configuration** in the app UI for the callback URL and Meta dashboard link, or configure manually in the [Meta App Dashboard](https://developers.facebook.com/apps/) under **Webhooks**:
 
