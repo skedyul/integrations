@@ -17,7 +17,8 @@ function person(
   const id = identifierValue?.trim()
   if (!id) return undefined
   const name = displayName?.trim()
-  return { identifierValue: id, displayName: name || undefined }
+  if (!name) return { identifierValue: id }
+  return { identifierValue: id, displayName: name }
 }
 
 function dedupe(people: Array<InboundGroupParticipant | undefined>): InboundGroupParticipant[] {
@@ -45,13 +46,21 @@ export function groupFromWhatsApp(input: {
   subject?: string
   from?: string
   contacts?: Array<{ wa_id?: string; profile?: { name?: string } }>
+  members?: Array<{ identifierValue: string; displayName?: string }>
 }): InboundGroup | undefined {
   const identifierValue = input.groupId?.trim()
   if (!identifierValue) return undefined
   const sender = input.contacts?.find((contact) => contact.wa_id === input.from)
+  const named = (waId: string | undefined, fallback?: string) => {
+    const contact = input.contacts?.find((entry) => entry.wa_id === waId)
+    return contact?.profile?.name ?? fallback
+  }
   const participants = dedupe([
     person(input.from, sender?.profile?.name),
     ...(input.contacts ?? []).map((contact) => person(contact.wa_id, contact.profile?.name)),
+    ...(input.members ?? []).map((member) =>
+      person(member.identifierValue, named(member.identifierValue, member.displayName)),
+    ),
   ])
   const name = input.subject?.trim() || undefined
   return { identifierValue, name, participants }
