@@ -1,7 +1,12 @@
 import type { WebhookDefinition, WebhookRequest, WebhookResponse } from 'skedyul'
 import { communicationChannel } from 'skedyul'
 import { verifySlackSignature } from '../lib/slack_client'
-import { describeSlackConversation, readInstallationEnv, type SlackPerson } from '../lib/slack_room'
+import {
+  describeSlackConversation,
+  readInstallationEnv,
+  slackInboundGroup,
+  type SlackPerson,
+} from '../lib/slack_room'
 
 type SlackEventBody = {
   type?: string
@@ -103,14 +108,12 @@ async function handleReceiveSlack(
   }
 
   const sender = participants.find((person) => person.identifierValue === event.user)
-  const group = isDirect
-    ? undefined
-    : {
-        identifierValue: event.channel,
-        internal: true,
-        name: roomName,
-        participants,
-      }
+  const group = slackInboundGroup({
+    direct: isDirect,
+    channelId: event.channel,
+    name: roomName,
+    participants,
+  })
 
   await communicationChannel.receiveMessage({
     communicationChannelId: channelId,
