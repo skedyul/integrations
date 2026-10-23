@@ -5,11 +5,13 @@
  */
 
 import { defineChannel } from 'skedyul'
+import { MESSENGER_ICON_URL } from './icons'
 
 export default defineChannel({
   handle: 'messenger',
   label: 'Messenger',
   icon: 'MessageCircle',
+  iconUrl: MESSENGER_ICON_URL,
 
   fields: [
     {

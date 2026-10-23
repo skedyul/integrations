@@ -78,7 +78,7 @@ export default async function oauthCallback(
   const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
   async function ensureChannel(
-    handle: 'whatsapp' | 'instagram',
+    handle: 'whatsapp' | 'instagram' | 'messenger',
     input: { name: string; identifierValue: string },
   ) {
     const existing = await communicationChannel.list({
@@ -149,6 +149,11 @@ export default async function oauthCallback(
           } else {
             await instance.create('facebook_page', pageRecord, { env: pageEnv })
           }
+
+          await ensureChannel('messenger', {
+            name: page.name || `Messenger ${page.id}`,
+            identifierValue: page.id,
+          })
         }
 
         for (const instagramData of instagramAccounts) {

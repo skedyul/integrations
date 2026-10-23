@@ -1,4 +1,5 @@
 import { communicationChannel, file, instance } from 'skedyul'
+import { profileFromGraph } from './sender_profile'
 
 export type InboundAttachment = {
   fileId: string
@@ -71,6 +72,66 @@ export function referralFromMeta(referral: {
   const url = referral.source_url
   if (!sourceId && !adId && !url) return undefined
   return { sourceId, adId, url }
+}
+
+async function graphGet(
+  path: string,
+  accessToken: string,
+  fields: string,
+): Promise<unknown> {
+  const version = process.env.GRAPH_API_VERSION || 'v24.0'
+  const url = new URL(`https://graph.facebook.com/${version}/${path}`)
+  url.searchParams.set('fields', fields)
+  url.searchParams.set('access_token', accessToken)
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Graph ${path} returned ${response.status}`)
+  }
+  return response.json()
+}
+
+/** Page access token stored on the facebook_page instance. */
+export async function loadPageAccessToken(pageId: string): Promise<string | null> {
+  const pages = await instance.list('facebook_page', {
+    filter: { page_id: pageId },
+    limit: 1,
+  })
+  const recordId = (pages.data[0] as { id?: string } | undefined)?.id
+  if (!recordId) return null
+  return loadInstanceAccessToken('facebook_page', recordId)
+}
+
+/** Instagram sends and profile reads use the linked Facebook page token. */
+export async function loadInstagramPageAccessToken(
+  instagramAccountId: string,
+): Promise<string | null> {
+  const accounts = await instance.list('instagram_account', {
+    filter: { instagram_account_id: instagramAccountId },
+    limit: 1,
+  })
+  const pageId = (accounts.data[0] as { facebook_page_id?: string } | undefined)
+    ?.facebook_page_id
+  if (!pageId) return null
+  return loadPageAccessToken(pageId)
+}
+
+/**
+ * Messenger PSID or Instagram IGSID profile.
+ * A failed call returns an empty profile so the message is still received.
+ */
+export async function loadSenderProfile(input: {
+  userId: string
+  accessToken: string | null
+  logLabel: string
+}): Promise<{ name?: string; avatarUrl?: string }> {
+  if (!input.accessToken) return {}
+  try {
+    const body = await graphGet(input.userId, input.accessToken, 'name,profile_pic')
+    return profileFromGraph(body)
+  } catch (err) {
+    console.warn(`[receiveMeta:${input.logLabel}] Profile lookup failed`, err)
+    return {}
+  }
 }
 
 export async function loadInstanceAccessToken(

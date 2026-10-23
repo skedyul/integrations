@@ -13,12 +13,17 @@ export type InboundGroup = {
 function person(
   identifierValue: string | undefined,
   displayName?: string,
+  avatarUrl?: string,
 ): InboundGroupParticipant | undefined {
   const id = identifierValue?.trim()
   if (!id) return undefined
   const name = displayName?.trim()
-  if (!name) return { identifierValue: id }
-  return { identifierValue: id, displayName: name }
+  const avatar = avatarUrl?.trim()
+  return {
+    identifierValue: id,
+    ...(name ? { displayName: name } : {}),
+    ...(avatar ? { avatarUrl: avatar } : {}),
+  }
 }
 
 function dedupe(people: Array<InboundGroupParticipant | undefined>): InboundGroupParticipant[] {
@@ -75,12 +80,15 @@ export function groupFromMessaging(input: {
   threadName?: string
   senderId?: string
   senderName?: string
+  senderAvatarUrl?: string
 }): InboundGroup | undefined {
   const identifierValue = input.threadId?.trim()
   if (!identifierValue) return undefined
   return {
     identifierValue,
     name: input.threadName?.trim() || undefined,
-    participants: dedupe([person(input.senderId, input.senderName)]),
+    participants: dedupe([
+      person(input.senderId, input.senderName, input.senderAvatarUrl),
+    ]),
   }
 }

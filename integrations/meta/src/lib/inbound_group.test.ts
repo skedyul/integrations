@@ -66,3 +66,25 @@ test('messenger and instagram use a thread id as the room', () => {
   )
   assert.equal(groupFromMessaging({ senderId: 'psid-1', senderName: 'Lin' }), undefined)
 })
+
+test('messenger group keeps the sender photo on that participant', () => {
+  assert.deepEqual(
+    groupFromMessaging({
+      threadId: 'thread-1',
+      senderId: 'psid-1',
+      senderName: 'Lin',
+      senderAvatarUrl: 'https://cdn.example/lin.jpg',
+    }),
+    {
+      identifierValue: 'thread-1',
+      name: undefined,
+      participants: [
+        {
+          identifierValue: 'psid-1',
+          displayName: 'Lin',
+          avatarUrl: 'https://cdn.example/lin.jpg',
+        },
+      ],
+    },
+  )
+})

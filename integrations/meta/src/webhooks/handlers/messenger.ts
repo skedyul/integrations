@@ -1,5 +1,11 @@
 import { groupFromMessaging } from '../../lib/inbound_group'
-import { receiveInbound, referralFromMeta, attachmentsFromMessagingEvent } from '../../lib/inbound_message'
+import {
+  attachmentsFromMessagingEvent,
+  loadPageAccessToken,
+  loadSenderProfile,
+  receiveInbound,
+  referralFromMeta,
+} from '../../lib/inbound_message'
 import { resolveChannelForMetaResource } from '../../lib/meta_webhook/resolve_channel'
 import type { MetaMessengerEvent, MetaWebhookEntry } from '../../lib/meta_webhook/types'
 
@@ -26,18 +32,27 @@ async function processMessengerEvent(event: MetaMessengerEvent): Promise<void> {
     return
   }
 
+  const profile = await loadSenderProfile({
+    userId: senderId,
+    accessToken: await loadPageAccessToken(pageId),
+    logLabel: 'messenger',
+  })
+  const displayName = event.sender?.name?.trim() || profile.name
+
   await receiveInbound({
     communicationChannelId: resolved.channelId,
     from: senderId,
     to: pageId,
     text: text ?? (attachments.length > 0 ? '[Attachment]' : ''),
     remoteId: messageId,
-    displayName: event.sender?.name,
+    displayName,
+    avatarUrl: profile.avatarUrl,
     group: groupFromMessaging({
       threadId: event.thread_id ?? event.thread?.id,
       threadName: event.thread?.name,
       senderId,
-      senderName: event.sender?.name,
+      senderName: displayName,
+      senderAvatarUrl: profile.avatarUrl,
     }),
     referral: referralFromMeta(event.referral),
     attachments: attachments.length > 0 ? attachments : undefined,

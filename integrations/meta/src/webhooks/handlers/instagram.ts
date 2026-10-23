@@ -1,5 +1,11 @@
 import { groupFromMessaging } from '../../lib/inbound_group'
-import { attachmentsFromMessagingEvent, receiveInbound, referralFromMeta } from '../../lib/inbound_message'
+import {
+  attachmentsFromMessagingEvent,
+  loadInstagramPageAccessToken,
+  loadSenderProfile,
+  receiveInbound,
+  referralFromMeta,
+} from '../../lib/inbound_message'
 import { resolveChannelForMetaResource } from '../../lib/meta_webhook/resolve_channel'
 import type { MetaMessengerEvent, MetaWebhookEntry } from '../../lib/meta_webhook/types'
 
@@ -28,18 +34,27 @@ async function processInstagramEvent(event: MetaMessengerEvent): Promise<void> {
     return
   }
 
+  const profile = await loadSenderProfile({
+    userId: senderId,
+    accessToken: await loadInstagramPageAccessToken(instagramAccountId),
+    logLabel: 'instagram',
+  })
+  const displayName = event.sender?.name?.trim() || profile.name
+
   await receiveInbound({
     communicationChannelId: resolved.channelId,
     from: senderId,
     to: instagramAccountId,
     text: text ?? (attachments.length > 0 ? '[Attachment]' : ''),
     remoteId: messageId,
-    displayName: event.sender?.name,
+    displayName,
+    avatarUrl: profile.avatarUrl,
     group: groupFromMessaging({
       threadId: event.thread_id ?? event.thread?.id,
       threadName: event.thread?.name,
       senderId,
-      senderName: event.sender?.name,
+      senderName: displayName,
+      senderAvatarUrl: profile.avatarUrl,
     }),
     referral: referralFromMeta(event.referral),
     attachments: attachments.length > 0 ? attachments : undefined,
