@@ -90,7 +90,16 @@ export async function receiveInbound(input: {
   remoteId?: string
   displayName?: string
   avatarUrl?: string | null
-  group?: { identifierValue?: string; name?: string; internal?: boolean }
+  group?: {
+    identifierValue?: string
+    name?: string
+    internal?: boolean
+    participants?: Array<{
+      identifierValue: string
+      displayName?: string
+      avatarUrl?: string | null
+    }>
+  }
   referral?: { sourceId?: string; adId?: string; url?: string }
   threadExternalId?: string
   attachments?: InboundAttachment[]

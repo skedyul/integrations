@@ -1,6 +1,7 @@
 import type { WebhookDefinition, WebhookRequest, WebhookResponse } from 'skedyul'
 import { communicationChannel } from 'skedyul'
 import { verifySlackSignature } from '../lib/slack_client'
+import { describeSlackConversation, readInstallationEnv, type SlackPerson } from '../lib/slack_room'
 
 type SlackEventBody = {
   type?: string
@@ -79,11 +80,46 @@ async function handleReceiveSlack(
   }
 
   const isDirect = event.channel_type === 'im'
+  let participants: SlackPerson[] = []
+  let roomName: string | undefined
+  const installationId = channels[0]?.appInstallationId
+  if (installationId) {
+    try {
+      const env = await readInstallationEnv(installationId)
+      const botToken = env.SLACK_BOT_TOKEN
+      if (botToken) {
+        const room = await describeSlackConversation({
+          botToken,
+          channelId: event.channel,
+          senderId: event.user,
+          direct: isDirect,
+        })
+        participants = room.participants
+        roomName = room.name
+      }
+    } catch (error) {
+      console.log('[receiveSlack] Room profile lookup failed', error)
+    }
+  }
+
+  const sender = participants.find((person) => person.identifierValue === event.user)
+  const group = isDirect
+    ? undefined
+    : {
+        identifierValue: event.channel,
+        internal: true,
+        name: roomName,
+        participants,
+      }
 
   await communicationChannel.receiveMessage({
     communicationChannelId: channelId,
     from: event.user,
     to: payload.team_id,
+    contact:
+      sender?.displayName || sender?.avatarUrl
+        ? { displayName: sender.displayName, avatarUrl: sender.avatarUrl }
+        : undefined,
     message: {
       message: event.text,
       remoteId: event.ts,
@@ -91,12 +127,7 @@ async function handleReceiveSlack(
     remoteId: event.ts,
     threadExternalId:
       event.thread_ts && event.thread_ts !== event.ts ? event.thread_ts : undefined,
-    group: isDirect
-      ? undefined
-      : {
-          identifierValue: event.channel,
-          internal: true,
-        },
+    group,
   })
 
   return { status: 200, body: { ok: true } }

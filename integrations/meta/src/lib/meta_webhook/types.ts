@@ -52,6 +52,9 @@ export type MetaWhatsAppMessage = {
   audio?: { id?: string }
   video?: { id?: string; caption?: string }
   group_id?: string
+  /** Present when the provider includes a group subject on the message. */
+  group_subject?: string
+  subject?: string
   referral?: {
     source_id?: string
     ad_id?: string
@@ -67,8 +70,10 @@ export type MetaWhatsAppStatus = {
 }
 
 export type MetaMessengerEvent = {
-  sender?: { id?: string }
+  sender?: { id?: string; name?: string }
   recipient?: { id?: string }
+  thread_id?: string
+  thread?: { id?: string; name?: string }
   timestamp?: number
   message?: {
     mid?: string
