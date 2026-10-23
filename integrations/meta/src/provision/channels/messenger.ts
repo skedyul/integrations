@@ -5,8 +5,9 @@
  */
 
 import { defineChannel } from 'skedyul'
+import { MESSENGER_ICON_URL } from './icons'
 
-export default defineChannel({
+const messenger = defineChannel({
   handle: 'messenger',
   label: 'Messenger',
   icon: 'MessageCircle',
@@ -51,3 +52,5 @@ export default defineChannel({
     },
   },
 })
+
+export default Object.assign(messenger, { iconUrl: MESSENGER_ICON_URL })

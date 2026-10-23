@@ -5,8 +5,9 @@
  */
 
 import { defineChannel } from 'skedyul'
+import { WHATSAPP_ICON_URL } from './icons'
 
-export default defineChannel({
+const whatsapp = defineChannel({
   handle: 'whatsapp',
   label: 'WhatsApp',
   icon: 'MessageSquare',
@@ -51,3 +52,5 @@ export default defineChannel({
     },
   },
 })
+
+export default Object.assign(whatsapp, { iconUrl: WHATSAPP_ICON_URL })
