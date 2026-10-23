@@ -19,10 +19,11 @@ type SlackEventBody = {
   }
 }
 
-function rawBody(body: WebhookRequest['body']): string {
-  if (typeof body === 'string') return body
-  if (Buffer.isBuffer(body)) return body.toString('utf8')
-  return JSON.stringify(body ?? {})
+function signedPayload(request: WebhookRequest): string {
+  if (Buffer.isBuffer(request.rawBody)) return request.rawBody.toString('utf8')
+  if (typeof request.body === 'string') return request.body
+  if (Buffer.isBuffer(request.body)) return request.body.toString('utf8')
+  return JSON.stringify(request.body ?? {})
 }
 
 async function handleReceiveSlack(
@@ -34,7 +35,7 @@ async function handleReceiveSlack(
     return { status: 500, body: { error: 'SLACK_SIGNING_SECRET is not configured' } }
   }
 
-  const bodyText = rawBody(request.body)
+  const bodyText = signedPayload(request)
   const timestamp = headerValue(request.headers, 'x-slack-request-timestamp')
   const signature = headerValue(request.headers, 'x-slack-signature')
   if (
