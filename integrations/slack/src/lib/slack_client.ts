@@ -3,6 +3,26 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 export class SlackClient {
   constructor(private readonly botToken: string) {}
 
+  async api<T>(
+    method: string,
+    params: Record<string, string>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    const url = new URL(`https://slack.com/api/${method}`)
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value)
+    }
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${this.botToken}` },
+      signal,
+    })
+    const body = (await response.json()) as T & { ok?: boolean; error?: string }
+    if (!body.ok) {
+      throw new Error(body.error || method)
+    }
+    return body
+  }
+
   async postMessage(input: {
     channel: string
     text: string

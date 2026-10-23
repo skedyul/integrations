@@ -1,5 +1,6 @@
 import { instance } from 'skedyul'
 import { MetaClient } from '../../lib/meta_client'
+import { groupFromWhatsApp } from '../../lib/inbound_group'
 import {
   loadInstanceAccessToken,
   receiveInbound,
@@ -79,7 +80,12 @@ async function processWhatsAppMessage(
     ? await downloadWhatsAppAttachments(message, accessToken)
     : []
 
-  const groupId = message.group_id
+  const group = groupFromWhatsApp({
+    groupId: message.group_id,
+    subject: message.group_subject ?? message.subject,
+    from,
+    contacts,
+  })
 
   await receiveInbound({
     communicationChannelId: resolved.channelId,
@@ -88,7 +94,7 @@ async function processWhatsAppMessage(
     text,
     remoteId: messageId,
     displayName,
-    group: groupId ? { identifierValue: groupId } : undefined,
+    group,
     referral: message.referral
       ? {
           sourceId: message.referral.source_id,
@@ -102,7 +108,7 @@ async function processWhatsAppMessage(
   console.log('[receiveMeta:whatsapp] Message processed', {
     channelId: resolved.channelId,
     from,
-    groupId: groupId ?? null,
+    groupId: group?.identifierValue ?? null,
     messageId,
   })
 }
