@@ -1,4 +1,5 @@
 import type { InstallHandlerContext, InstallHandlerResponseOAuth } from 'skedyul'
+import { buildMetaOAuthUrl } from '../../lib/meta_oauth'
 
 /**
  * Install handler for the Meta app.
@@ -68,33 +69,16 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   }
   const state = Buffer.from(JSON.stringify(stateData)).toString('base64')
 
-  // Construct Meta OAuth URL with all scopes upfront
-  // This requests permissions for WhatsApp, Instagram, and Messenger in one go
-  const scopes = [
-    // Business management (required for accessing WABAs via business ID)
-    'business_management',
-    // WhatsApp scopes
-    'whatsapp_business_management',
-    'whatsapp_business_messaging',
-    // Instagram scopes
-    'instagram_basic',
-    'instagram_manage_messages',
-    'pages_manage_metadata',
-    // Messenger scopes
-    'pages_messaging',
-    'pages_read_engagement',
-  ].join(',')
+  const oauthUrl = buildMetaOAuthUrl({
+    appId: META_APP_ID,
+    graphApiVersion: GRAPH_API_VERSION,
+    redirectUri,
+    state,
+  })
 
-  const oauthUrl = new URL(`https://www.facebook.com/${GRAPH_API_VERSION}/dialog/oauth`)
-  oauthUrl.searchParams.set('client_id', META_APP_ID)
-  oauthUrl.searchParams.set('redirect_uri', redirectUri)
-  oauthUrl.searchParams.set('scope', scopes)
-  oauthUrl.searchParams.set('state', state)
-  oauthUrl.searchParams.set('response_type', 'code')
-
-  console.log(`[Meta Install] Redirecting to Meta OAuth: ${oauthUrl.toString().replace(/state=[^&]+/, 'state=***')}`)
+  console.log(`[Meta Install] Redirecting to Meta OAuth: ${oauthUrl.replace(/state=[^&]+/, 'state=***')}`)
 
   return {
-    redirect: oauthUrl.toString(),
+    redirect: oauthUrl,
   }
 }

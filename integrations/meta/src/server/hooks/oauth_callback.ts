@@ -100,7 +100,7 @@ export default async function oauthCallback(
     const wabasResponse = await client.getWABAs(longLivedToken)
     if (wabasResponse.data.length === 0) {
       throw new Error(
-        'No WhatsApp Business Accounts found. Please ensure your Meta app has a WABA configured.',
+        'No WhatsApp Business Accounts were included in this Meta login. Choose the WhatsApp account when Meta asks. If you just uninstalled, remove Skedyul from Facebook Settings → Business Integrations and install again.',
       )
     }
 
