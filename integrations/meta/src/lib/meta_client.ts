@@ -11,6 +11,7 @@
  */
 
 import { AppAuthInvalidError } from 'skedyul'
+import { GraphPermissionError, lookupWhatsAppBusinessAccounts } from './meta_wabas'
 
 interface MetaErrorResponse {
   error?: {
@@ -210,29 +211,24 @@ export class MetaClient {
   }
 
   /**
-   * Get WhatsApp Business Accounts for the access token
-   * 
-   * According to Meta API docs, WABAs are accessed via business ID:
-   * https://developers.facebook.com/docs/marketing-api/reference/business/owned_whatsapp_business_accounts/
+   * WhatsApp Business Accounts this token can access.
+   *
+   * Checks the accounts granted on the token, then every business the user can
+   * see (owned and shared). The first business alone is not enough: after an
+   * uninstall its owned list is often empty while the grant still names a WABA.
    */
   async getWABAs(accessToken: string): Promise<WABAResponse> {
-    // First, get the user's businesses
-    const businessesResponse = await this.getBusinesses(accessToken)
-    
-    if (businessesResponse.data.length === 0) {
-      throw new Error('No businesses found. Please ensure the user has access to a Business Manager account.')
-    }
-
-    // Use the first business to fetch WABAs
-    // In most cases, users will have one primary business
-    const businessId = businessesResponse.data[0].id
-    
-    const url = new URL(`${this.baseUrl}/${businessId}/owned_whatsapp_business_accounts`)
-    url.searchParams.set('access_token', accessToken)
-
-    const response = await fetch(url.toString(), {
-      method: 'GET',
+    const data = await lookupWhatsAppBusinessAccounts({
+      baseUrl: this.baseUrl,
+      accessToken,
+      appAccessToken: `${this.appId}|${this.appSecret}`,
+      readGraph: (url, errorLabel) => this.readGraph(url, errorLabel),
     })
+    return { data }
+  }
+
+  private async readGraph(url: string, errorLabel: string): Promise<unknown> {
+    const response = await fetch(url, { method: 'GET' })
 
     if (!response.ok) {
       const errorResponse = await parseMetaError(response)
@@ -241,10 +237,13 @@ export class MetaClient {
           errorResponse.error?.message || 'Meta access token is invalid or expired',
         )
       }
-      throw new Error(`Failed to fetch WABAs: ${JSON.stringify(errorResponse)}`)
+      if (errorResponse.error?.code === 200) {
+        throw new GraphPermissionError(errorResponse.error.message || errorLabel)
+      }
+      throw new Error(`${errorLabel}: ${JSON.stringify(errorResponse)}`)
     }
 
-    return (await response.json()) as WABAResponse
+    return (await response.json()) as unknown
   }
 
   /**

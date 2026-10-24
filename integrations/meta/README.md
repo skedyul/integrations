@@ -104,6 +104,8 @@ If automatic configuration fails (or provision env vars are missing), the provis
 - `pages_messaging`, `pages_manage_metadata`
 - `instagram_basic`, `instagram_manage_messages`
 
+Install asks Meta to re-request those permissions (`auth_type=rerequest`), so a reconnect after uninstall can grant the WhatsApp account again. The callback takes the account named on the token, then looks through every business the user can access, including accounts shared with the business rather than owned by the first one.
+
 ### 4. Add channels
 
 After OAuth, add each channel from the app UI:
