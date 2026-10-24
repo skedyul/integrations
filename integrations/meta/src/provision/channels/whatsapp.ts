@@ -5,13 +5,11 @@
  */
 
 import { defineChannel } from 'skedyul'
-import { WHATSAPP_ICON_URL } from './icons'
 
 export default defineChannel({
   handle: 'whatsapp',
   label: 'WhatsApp',
   icon: 'MessageSquare',
-  iconUrl: WHATSAPP_ICON_URL,
 
   fields: [
     {

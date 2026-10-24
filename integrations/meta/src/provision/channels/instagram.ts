@@ -5,13 +5,11 @@
  */
 
 import { defineChannel } from 'skedyul'
-import { INSTAGRAM_ICON_URL } from './icons'
 
 export default defineChannel({
   handle: 'instagram',
   label: 'Instagram',
   icon: 'Instagram',
-  iconUrl: INSTAGRAM_ICON_URL,
 
   fields: [
     {
