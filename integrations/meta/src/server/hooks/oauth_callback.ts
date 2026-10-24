@@ -1,6 +1,7 @@
 import { instance, token, runWithConfig, getConfig, communicationChannel } from 'skedyul'
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import { MetaClient } from '../../lib/meta_client'
+import { phoneDigits, toE164Phone } from '../../lib/meta_webhook/phone_identifier'
 
 /**
  * OAuth callback handler for the Meta app.
@@ -81,13 +82,20 @@ export default async function oauthCallback(
     handle: 'whatsapp' | 'instagram' | 'messenger',
     input: { name: string; identifierValue: string },
   ) {
+    const identifierValue =
+      handle === 'whatsapp' ? toE164Phone(input.identifierValue) : input.identifierValue
     const existing = await communicationChannel.list({
-      filter: { identifierValue: input.identifierValue },
-      limit: 1,
+      filter: { handle },
+      limit: 100,
     })
-    if (existing.length > 0) return
+    const already = existing.some((channel) =>
+      handle === 'whatsapp'
+        ? phoneDigits(channel.identifierValue) === phoneDigits(identifierValue)
+        : channel.identifierValue === identifierValue,
+    )
+    if (already) return
     try {
-      await communicationChannel.create(handle, input)
+      await communicationChannel.create(handle, { name: input.name, identifierValue })
     } catch (err) {
       ctx.log.warn(`[Meta OAuth] Failed to create ${handle} channel`, err)
     }
@@ -183,8 +191,9 @@ export default async function oauthCallback(
         }
 
         for (const phoneData of phoneNumbersResponse.data) {
+          const phone = toE164Phone(phoneData.display_phone_number)
           const record = {
-            phone: phoneData.display_phone_number,
+            phone,
             phone_number_id: phoneData.id,
             display_name: phoneData.verified_name,
             quality_rating: phoneData.quality_rating,
@@ -205,8 +214,8 @@ export default async function oauthCallback(
           }
 
           await ensureChannel('whatsapp', {
-            name: phoneData.verified_name || `WhatsApp ${phoneData.display_phone_number}`,
-            identifierValue: phoneData.display_phone_number,
+            name: phoneData.verified_name || `WhatsApp ${phone}`,
+            identifierValue: phone,
           })
         }
       },

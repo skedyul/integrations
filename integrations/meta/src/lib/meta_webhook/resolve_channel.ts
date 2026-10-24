@@ -5,6 +5,7 @@ import {
   runWithConfig,
   token,
 } from 'skedyul'
+import { pickChannel } from './phone_identifier'
 
 export type ResolveMetaChannelInput = {
   modelHandle: string
@@ -59,12 +60,30 @@ export async function resolveChannelForMetaResource(
   const config = getConfig()
 
   return runWithConfig({ baseUrl: config.baseUrl, apiToken: scopedToken }, async () => {
-    const channels = await communicationChannel.list({
-      filter: { identifierValue: channelIdentifier },
+    const exact = await communicationChannel.list({
+      filter: {
+        identifierValue: channelIdentifier,
+        handle: input.channelHandle,
+      },
       limit: 1,
     })
+    let chosen = pickChannel(exact, {
+      channelHandle: input.channelHandle,
+      channelIdentifier,
+    })
 
-    if (channels.length === 0) {
+    if (!chosen && input.channelHandle === 'whatsapp') {
+      const channels = await communicationChannel.list({
+        filter: { handle: 'whatsapp' },
+        limit: 100,
+      })
+      chosen = pickChannel(channels, {
+        channelHandle: 'whatsapp',
+        channelIdentifier,
+      })
+    }
+
+    if (!chosen) {
       console.log(
         `[resolveChannel] No ${input.channelHandle} channel for ${channelIdentifier}`,
       )
@@ -72,7 +91,7 @@ export async function resolveChannelForMetaResource(
     }
 
     return {
-      channelId: channels[0].id,
+      channelId: chosen.id,
       channelIdentifier,
     }
   })
