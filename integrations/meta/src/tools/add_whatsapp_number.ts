@@ -7,6 +7,7 @@ import {
   requireMetaAccessToken,
   requireMetaWabaId,
 } from '../lib/meta_install_env'
+import { toE164Phone } from '../lib/meta_webhook/phone_identifier'
 import {
   createSuccessResponse,
   createValidationError,
@@ -153,8 +154,9 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
 
     // 4. Create whatsapp_phone_number instance
     console.log('[AddWhatsAppNumber] Creating whatsapp_phone_number instance...')
+    const phone = toE164Phone(phoneNumberDetails.display_phone_number)
     const phoneNumberData = {
-      phone: phoneNumberDetails.display_phone_number,
+      phone,
       phone_number_id: phoneNumberDetails.id,
       display_name: phoneNumberDetails.verified_name,
       quality_rating: phoneNumberDetails.quality_rating,
@@ -196,8 +198,8 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
     console.log('[AddWhatsAppNumber] Creating communication channel...')
     try {
       const channel = await communicationChannel.create('whatsapp', {
-        name: name ?? `WhatsApp ${phoneNumberDetails.display_phone_number}`,
-        identifierValue: phoneNumberDetails.display_phone_number,
+        name: name ?? `WhatsApp ${phone}`,
+        identifierValue: phone,
       })
       console.log(
         '[AddWhatsAppNumber] Channel created:',
@@ -215,9 +217,9 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
     return createSuccessResponse(
       {
         status: 'success',
-        phoneNumber: phoneNumberDetails.display_phone_number,
+        phoneNumber: phone,
         phoneNumberId: phoneNumberDetails.id,
-        message: `Successfully added WhatsApp number ${phoneNumberDetails.display_phone_number}`,
+        message: `Successfully added WhatsApp number ${phone}`,
       },
       {
         billing: { credits: 1 },
