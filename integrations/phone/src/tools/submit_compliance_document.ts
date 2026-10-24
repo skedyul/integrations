@@ -355,6 +355,10 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
 
       // Step 3: Fetch file content and create Supporting Document
       console.log('[Compliance] Getting file URL for download...')
+      const fileInfo = await file.get(fileId).catch((err: unknown) => {
+        console.warn('[Compliance] Could not read file metadata:', err)
+        return null
+      })
       const fileUrlResponse = await file.getUrl(fileId)
       console.log('[Compliance] File URL obtained, expires at:', fileUrlResponse.expiresAt)
 
@@ -366,12 +370,17 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       }
       const fileBuffer = Buffer.from(await fileResponse.arrayBuffer())
       console.log('[Compliance] Downloaded file, size:', fileBuffer.length, 'bytes')
+      if (fileBuffer.length === 0) {
+        throw new Error('The uploaded compliance document is empty')
+      }
 
       console.log('[Compliance] Creating Twilio Supporting Document...')
       const supportingDoc = await createSupportingDocument(twilioClient, {
         friendlyName: `${business_name} - Commercial Register Excerpt`,
         type: 'commercial_registrar_excerpt',
         file: fileBuffer,
+        filename: fileInfo?.name,
+        mimeType: fileInfo?.mimeType || fileResponse.headers.get('content-type') || undefined,
         attributes: {
           business_name: business_name,
           document_number: business_id,
