@@ -1,5 +1,6 @@
 import twilio from 'twilio'
 import { AppAuthInvalidError } from 'skedyul'
+import { uploadSupportingDocument } from './supporting_document_upload'
 
 export type TwilioEnv = {
   TWILIO_ACCOUNT_SID?: string
@@ -120,6 +121,8 @@ export type CreateSupportingDocumentParams = {
   attributes?: Record<string, string | string[]>
   /** File content as Buffer for document uploads */
   file?: Buffer
+  /** Original filename, used so Twilio can identify the proof file */
+  filename?: string
   /** MIME type of the file (e.g., 'application/pdf', 'image/jpeg') */
   mimeType?: string
 }
@@ -173,35 +176,40 @@ export const createEndUser = async (
 
 /**
  * Create a Supporting Document for regulatory compliance.
- * 
- * For document types that require proof (images/PDFs), pass the file content
- * via the `file` parameter. Twilio will validate against the document type.
- * 
+ *
+ * Metadata-only documents use the generated helper. Proof files must be
+ * uploaded as multipart form data to numbers-upload.twilio.com. The generated
+ * `supportingDocuments.create` posts form-urlencoded fields to numbers.twilio.com
+ * and ignores `file`, which leaves the bundle with an empty commercial-register
+ * record.
+ *
  * @see https://www.twilio.com/docs/phone-numbers/regulatory/api/supporting-documents
  */
 export const createSupportingDocument = async (
   client: ReturnType<typeof twilio>,
   params: CreateSupportingDocumentParams,
 ) => {
-  // Build the create parameters
+  if (params.file) {
+    const creds = client as { username?: string; password?: string }
+    return withTwilioAuth(() =>
+      uploadSupportingDocument(
+        { username: creds.username, password: creds.password },
+        params,
+      ),
+    )
+  }
+
   const createParams: {
     friendlyName: string
     type: string
     attributes?: Record<string, string | string[]>
-    file?: Buffer
   } = {
     friendlyName: params.friendlyName,
     type: params.type,
   }
 
-  // Only include attributes if provided and not empty
   if (params.attributes && Object.keys(params.attributes).length > 0) {
     createParams.attributes = params.attributes
-  }
-
-  // Include file if provided (for document uploads with proof)
-  if (params.file) {
-    createParams.file = params.file
   }
 
   return withTwilioAuth(() =>
