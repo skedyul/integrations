@@ -9,6 +9,10 @@ import {
 import { instance } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
 import {
+  phoneDigits,
+  whatsappPhoneLookupKeys,
+} from '../lib/meta_webhook/phone_identifier'
+import {
   createSuccessResponse,
   createValidationError,
   createAuthError,
@@ -47,24 +51,37 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
     const channelIdentifier = input.channel.identifierValue
     const groupId = input.group?.identifierValue
 
-    const phoneNumbers = await instance.list('whatsapp_phone_number', {
-      filter: { phone: channelIdentifier },
-      limit: 1,
-    })
+    const phoneKeys = whatsappPhoneLookupKeys(channelIdentifier)
 
-    if (phoneNumbers.data.length === 0) {
+    let phoneNumber: { phone_number_id?: string } | undefined
+    for (const phoneKey of phoneKeys) {
+      const phoneNumbers = await instance.list('whatsapp_phone_number', {
+        filter: { phone: phoneKey },
+        limit: 1,
+      })
+      if (phoneNumbers.data.length > 0) {
+        phoneNumber = phoneNumbers.data[0] as { phone_number_id?: string }
+        break
+      }
+    }
+
+    if (!phoneNumber) {
       return createNotFoundError('WhatsApp phone number', channelIdentifier)
     }
 
-    const phoneNumber = phoneNumbers.data[0]
-    const phoneNumberId = (phoneNumber as { phone_number_id?: string }).phone_number_id
+    const phoneNumberId = phoneNumber.phone_number_id
     if (!phoneNumberId) {
       return createValidationError(
         `WhatsApp phone number instance missing phone_number_id: ${channelIdentifier}`,
       )
     }
 
-    const recipient = groupId ?? input.subscription?.identifierValue
+    const rawRecipient = groupId ?? input.subscription?.identifierValue
+    const recipient = groupId
+      ? rawRecipient
+      : rawRecipient
+        ? phoneDigits(rawRecipient)
+        : ''
     if (!recipient) {
       return createValidationError('Missing recipient or group ID for WhatsApp send')
     }
