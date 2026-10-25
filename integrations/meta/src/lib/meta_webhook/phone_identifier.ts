@@ -9,6 +9,20 @@ export function toE164Phone(value: string): string {
   return `+${digits}`
 }
 
+/**
+ * Values to try against a CRM phone filter. The filter compares the raw stored
+ * string, which is E.164, while the channel identifier often keeps spaces.
+ */
+export function whatsappPhoneLookupKeys(identifier: string): string[] {
+  return [
+    ...new Set(
+      [identifier.trim(), toE164Phone(identifier), phoneDigits(identifier)].filter(
+        (key) => key.length > 0,
+      ),
+    ),
+  ]
+}
+
 export type ChannelCandidate = {
   id: string
   handle?: string

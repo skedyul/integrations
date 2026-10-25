@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { pickChannel, toE164Phone } from './phone_identifier.ts'
+import {
+  pickChannel,
+  toE164Phone,
+  whatsappPhoneLookupKeys,
+} from './phone_identifier.ts'
 
 const phoneChannel = {
   id: 'comm_phone',
@@ -46,6 +50,13 @@ test('messenger stays on an exact identifier', () => {
   )
 
   assert.equal(picked?.id, 'page')
+})
+
+test('WhatsApp send lookup includes the stored E.164 phone', () => {
+  const keys = whatsappPhoneLookupKeys('+61 485 089 337')
+  assert.ok(keys.includes('+61 485 089 337'))
+  assert.ok(keys.includes('+61485089337'))
+  assert.ok(keys.includes('61485089337'))
 })
 
 test('Meta display numbers become E.164', () => {
