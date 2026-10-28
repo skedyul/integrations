@@ -12,14 +12,16 @@ import { models, relationships } from './crm'
 import * as agents from './agents'
 import * as pages from './pages'
 import navigation from './pages/navigation'
+import bookingSkill from './skills/booking'
 
-const config: ProvisionConfig = {
+const config = {
   env,
   navigation,
   models: Object.values(models),
   agents: Object.values(agents),
   pages: Object.values(pages),
   relationships,
+  skills: [bookingSkill] satisfies NonNullable<ProvisionConfig['skills']>,
 }
 
-export default config
+export default config as ProvisionConfig
