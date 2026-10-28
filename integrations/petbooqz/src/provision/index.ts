@@ -12,8 +12,9 @@ import { models, relationships } from './crm'
 import * as agents from './agents'
 import * as pages from './pages'
 import navigation from './pages/navigation'
+import bookingSkill from './skills/booking'
 
-const config: ProvisionConfig = {
+const config = {
   env,
   navigation,
   models: Object.values(models),
@@ -22,4 +23,8 @@ const config: ProvisionConfig = {
   relationships,
 }
 
-export default config
+// Skills are read from the provision object at deploy time. The published
+// ProvisionConfig type does not list them yet, so they are attached here.
+Object.assign(config, { skills: [bookingSkill] })
+
+export default config as ProvisionConfig
