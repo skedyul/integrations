@@ -4,7 +4,11 @@
  * Live instructions are kept so a deploy does not drop the booking flow.
  */
 
-const bookingSkill = {
+import type { ProvisionConfig } from 'skedyul'
+
+type ProvisionSkill = NonNullable<ProvisionConfig['skills']>[number]
+
+const bookingSkill: ProvisionSkill = {
   "handle": "booking",
   "name": "Booking",
   "description": "Handle the complete appointment booking flow - client lookup, pet selection, reason collection, slot finding, and confirmation.",
@@ -131,6 +135,6 @@ const bookingSkill = {
       "tool_call": "calendar_slots_confirm"
     }
   ]
-} as const
+}
 
 export default bookingSkill

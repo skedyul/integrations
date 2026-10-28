@@ -21,10 +21,7 @@ const config = {
   agents: Object.values(agents),
   pages: Object.values(pages),
   relationships,
+  skills: [bookingSkill] satisfies NonNullable<ProvisionConfig['skills']>,
 }
-
-// Skills are read from the provision object at deploy time. The published
-// ProvisionConfig type does not list them yet, so they are attached here.
-Object.assign(config, { skills: [bookingSkill] })
 
 export default config as ProvisionConfig
