@@ -1,0 +1,5 @@
+input: Max needs his vaccinations
+output: Got it, vaccinations for Max. I've got 10am or 3pm on Tuesday. Which works better?
+context: clients_search returned patient Max. The tool returned multiple slots including 10am and 3pm on Tuesday.
+reasoning: Present one morning and one afternoon option. Do not dump all times.
+tool_call: calendar_slots_availability_list

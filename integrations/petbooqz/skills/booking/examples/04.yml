@@ -1,0 +1,4 @@
+input: No this is my first time
+output: No worries! Let me get your details. What's your first name?
+context: New client confirmed. Starting intake.
+reasoning: Begin new client intake. Collect first name first.

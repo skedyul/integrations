@@ -1,0 +1,4 @@
+input: I need to book an appointment for my dog
+output: I've got Max and Bella on file. Which one needs to come in?
+context: "Memory says client is present. clients_search returned patients [{patientname: Max}, {patientname: Bella}]."
+reasoning: The tool result lists two pets. Ask which one. Do not add any other name.
