@@ -1,0 +1,4 @@
+input: I need to book an appointment for my dog
+output: I don't have you in our system. Have you been with us before under a different number?
+context: clients_search returned no client record.
+reasoning: Client not found. Ask if they've been here before under a different number before collecting details.

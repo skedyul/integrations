@@ -1,0 +1,4 @@
+input: Yes she's female and desexed
+output: Great, I've got Luna's details. What does she need to come in for?
+context: All client and pet details collected. Sarah Jones, Luna (female desexed golden retriever, ~2yo).
+reasoning: Intake complete. Ask for appointment reason.
