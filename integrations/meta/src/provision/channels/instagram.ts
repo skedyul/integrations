@@ -23,23 +23,6 @@ export default defineChannel({
         filters: true,
       },
     },
-    {
-      handle: 'opt_in',
-      label: 'Opt In',
-      definition: 'system/opt_in',
-      required: false,
-      default: ['OPT_IN'],
-      visibility: { data: true, list: true, filters: true },
-      permissions: { read: true, write: true },
-    },
-    {
-      handle: 'last_contacted_at',
-      label: 'Last Contacted At',
-      definition: 'system/last_contacted_at',
-      required: false,
-      visibility: { data: false, list: true, filters: true },
-      permissions: { read: true, write: false },
-    },
   ],
 
   capabilities: {
