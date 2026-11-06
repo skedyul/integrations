@@ -97,7 +97,18 @@ If automatic configuration fails (or provision env vars are missing), the provis
 - Callback URL: the Skedyul `receive_meta` URL from provision
 - Verify token: must match `META_WEBHOOK_VERIFY_TOKEN`
 
-### 3. OAuth scopes
+### 3. Facebook Login for Business configuration
+
+If the Meta app uses **Facebook Login for Business**, create a configuration under Facebook Login for Business → Configurations and set its ID as `META_LOGIN_CONFIG_ID`:
+
+- Login variation: General
+- Access token: User access token (not system-user: the callback needs the user token to read each Page's token)
+- Assets: Pages and Instagram accounts (and WhatsApp accounts if this app connects WhatsApp)
+- Permissions: the scopes below
+
+With `META_LOGIN_CONFIG_ID` set, install sends `config_id` and the configuration decides the permissions. Without it, install sends `scope` (classic Facebook Login). A WhatsApp Embedded Signup configuration with a system-user token is a different thing and does not work here.
+
+### OAuth scopes
 
 - `whatsapp_business_messaging`, `whatsapp_business_management`
 - `business_management`
@@ -137,6 +148,7 @@ OAuth yields a long-lived user token (~60 days). Re-run the Meta OAuth connect f
 | `META_APP_SECRET` | Provision | Facebook App Secret |
 | `META_WEBHOOK_VERIFY_TOKEN` | Provision | Webhook verification token |
 | `GRAPH_API_VERSION` | Provision | e.g. `v24.0` |
+| `META_LOGIN_CONFIG_ID` | Provision | Facebook Login for Business configuration ID (optional; see setup) |
 | `META_ACCESS_TOKEN` | Install | Long-lived token (set by OAuth) |
 | `META_WABA_ID` | Install | Connected WABA ID (set by OAuth) |
 | `META_BUSINESS_NAME` | Install | Business name (set by OAuth) |

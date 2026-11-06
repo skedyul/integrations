@@ -39,6 +39,15 @@ export default defineEnv({
     description: "Meta Graph API version to use (e.g., v21.0, v22.0). Check Meta's Graph API changelog for the latest stable version.",
     placeholder: 'v21.0',
   },
+  META_LOGIN_CONFIG_ID: {
+    label: 'Facebook Login for Business Configuration ID',
+    scope: 'provision',
+    required: false,
+    visibility: 'visible',
+    description:
+      'Configuration ID from Facebook Login for Business → Configurations. Required when the Meta app uses Facebook Login for Business: use a General configuration with a User access token, Pages and Instagram accounts as assets, and the permissions this app requests. Leave empty for classic Facebook Login.',
+    placeholder: '123456789012345',
+  },
   META_ACCESS_TOKEN: {
     label: 'Meta Access Token',
     scope: 'install',
