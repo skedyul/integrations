@@ -17,6 +17,13 @@ const META_OAUTH_SCOPES = [
 /**
  * Facebook Login URL for a Meta installation.
  *
+ * An app on Facebook Login for Business needs `config_id`: a saved login
+ * configuration that holds the permissions and asset types. A plain `scope`
+ * request on those apps can fail with "Facebook Login is currently
+ * unavailable for this app". With `configId` the configuration decides the
+ * permissions, so `scope` and `auth_type` are left out.
+ *
+ * Without `configId` this is a classic Facebook Login request.
  * `auth_type=rerequest` asks again for permissions the user removed when they
  * uninstalled. Without it, a reconnect can return a code that never includes
  * the WhatsApp account.
@@ -26,15 +33,23 @@ export function buildMetaOAuthUrl(input: {
   graphApiVersion: string
   redirectUri: string
   state: string
+  configId?: string
 }): string {
   const oauthUrl = new URL(
     `https://www.facebook.com/${input.graphApiVersion}/dialog/oauth`,
   )
   oauthUrl.searchParams.set('client_id', input.appId)
   oauthUrl.searchParams.set('redirect_uri', input.redirectUri)
-  oauthUrl.searchParams.set('scope', META_OAUTH_SCOPES.join(','))
+  const configId = input.configId?.trim()
+  if (configId) {
+    oauthUrl.searchParams.set('config_id', configId)
+  } else {
+    oauthUrl.searchParams.set('scope', META_OAUTH_SCOPES.join(','))
+  }
   oauthUrl.searchParams.set('state', input.state)
   oauthUrl.searchParams.set('response_type', 'code')
-  oauthUrl.searchParams.set('auth_type', 'rerequest')
+  if (!configId) {
+    oauthUrl.searchParams.set('auth_type', 'rerequest')
+  }
   return oauthUrl.toString()
 }

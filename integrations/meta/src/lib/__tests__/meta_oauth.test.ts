@@ -26,4 +26,37 @@ describe('buildMetaOAuthUrl', () => {
     // Not on the Meta app yet; asking for it blocks Facebook Login.
     assert.ok(!url.searchParams.get('scope')?.split(',').includes('leads_retrieval'))
   })
+
+  it('sends the Facebook Login for Business configuration instead of scopes', () => {
+    const url = new URL(
+      buildMetaOAuthUrl({
+        appId: 'app-id',
+        graphApiVersion: 'v26.0',
+        redirectUri: 'https://admin.skedyul.it/api/callbacks/oauth/meta/prod',
+        state: 'encoded-state',
+        configId: ' 1234567890 ',
+      }),
+    )
+
+    assert.equal(url.searchParams.get('config_id'), '1234567890')
+    assert.equal(url.searchParams.get('scope'), null)
+    assert.equal(url.searchParams.get('auth_type'), null)
+    assert.equal(url.searchParams.get('response_type'), 'code')
+    assert.equal(url.searchParams.get('state'), 'encoded-state')
+  })
+
+  it('uses scopes when the configuration ID is empty', () => {
+    const url = new URL(
+      buildMetaOAuthUrl({
+        appId: 'app-id',
+        graphApiVersion: 'v26.0',
+        redirectUri: 'https://admin.skedyul.it/api/callbacks/oauth/meta/prod',
+        state: 'encoded-state',
+        configId: '  ',
+      }),
+    )
+
+    assert.equal(url.searchParams.get('config_id'), null)
+    assert.ok(url.searchParams.get('scope')?.includes('pages_messaging'))
+  })
 })

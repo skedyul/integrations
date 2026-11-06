@@ -24,6 +24,8 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
   const META_APP_ID = ctx.env.META_APP_ID || process.env.META_APP_ID
   const META_APP_SECRET = ctx.env.META_APP_SECRET || process.env.META_APP_SECRET
   const GRAPH_API_VERSION = ctx.env.GRAPH_API_VERSION || process.env.GRAPH_API_VERSION
+  const META_LOGIN_CONFIG_ID =
+    ctx.env.META_LOGIN_CONFIG_ID || process.env.META_LOGIN_CONFIG_ID
 
   if (!META_APP_ID) {
     console.error('[Meta Install] META_APP_ID not found in ctx.env or process.env')
@@ -43,6 +45,9 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
 
   console.log(`[Meta Install] Installing for workplace ${ctx.workplace.subdomain}`)
   console.log(`[Meta Install] Meta App ID: ${META_APP_ID?.slice(0, 4)}...`)
+  console.log(
+    `[Meta Install] Login: ${META_LOGIN_CONFIG_ID ? 'Facebook Login for Business (config_id)' : 'classic Facebook Login (scope)'}`,
+  )
 
   if (ctx.env.META_ACCESS_TOKEN) {
     throw new Error(
@@ -74,6 +79,7 @@ export default async function install(ctx: InstallHandlerContext): Promise<Insta
     graphApiVersion: GRAPH_API_VERSION,
     redirectUri,
     state,
+    configId: META_LOGIN_CONFIG_ID,
   })
 
   console.log(`[Meta Install] Redirecting to Meta OAuth: ${oauthUrl.replace(/state=[^&]+/, 'state=***')}`)
