@@ -7,6 +7,10 @@ const META_OAUTH_SCOPES = [
   'pages_manage_metadata',
   'pages_messaging',
   'pages_read_engagement',
+  // `/me/accounts` returns no Pages without this, so no Messenger or Instagram.
+  'pages_show_list',
+  // Lead form webhooks (`leadgen`) and `GET /{lead-id}`.
+  'leads_retrieval',
 ]
 
 /**
