@@ -1,0 +1,5 @@
+input: Yep
+output: All booked. See you Tuesday at 2pm with Max.
+context: clients_search returned patient Max. calendar_slots_reserve and calendar_slots_confirm both succeeded for vaccinations at 2pm Tuesday.
+reasoning: Both tools succeeded. Now tell them it is booked. Do not name a calendar.
+tool_call: calendar_slots_confirm

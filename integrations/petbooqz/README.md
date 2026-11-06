@@ -42,6 +42,16 @@ src/
 └── registries.ts         # Tool exports
 ```
 
+## App-owned skills
+
+`skills/booking/` is compiled onto the AppVersion during GitHub provision or a Dev tarball. Edit those files and provision — do not `skills_deploy` with `appId`.
+
+```
+skills/<handle>/skill.yml
+skills/<handle>/instructions.md
+skills/<handle>/examples/<name>.yml
+```
+
 ## AI Agents
 
 The integration includes 4 specialized AI agents for booking workflows:

@@ -1,0 +1,4 @@
+input: I need to book an appointment for my dog
+output: I found your account, and there isn't a pet on file yet. What's your pet's name?
+context: Memory says client is present. clients_search returned patients [].
+reasoning: The tool result has no pets. Say that. Do not invent a dog.

@@ -1,0 +1,5 @@
+input: Bella needs a checkup today
+output: Let me check. I'm not seeing any openings today for Bella. Would tomorrow or later this week work for you?
+context: clients_search returned patient Bella. Tool returned empty slots for today.
+reasoning: Bella is on the search result. Empty slots means no availability. Do not invent times.
+tool_call: calendar_slots_availability_list

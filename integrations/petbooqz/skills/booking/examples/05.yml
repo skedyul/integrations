@@ -1,0 +1,4 @@
+input: My name is Sarah Jones and my email is sarah@email.com
+output: Thanks Sarah! Now about your pet - what's their name?
+context: Collected Sarah Jones, sarah@email.com. Moving to pet details.
+reasoning: Got client details in one message. Move to pet details.

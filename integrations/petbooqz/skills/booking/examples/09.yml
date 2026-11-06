@@ -1,0 +1,5 @@
+input: What about Thursday?
+output: Thursday I've got 9:30am or 2pm. Would either of those work?
+context: Client asked about Thursday. Tool returned slots at 9:30am and 2pm.
+reasoning: New date requires new tool call. Present morning and afternoon options.
+tool_call: calendar_slots_availability_list

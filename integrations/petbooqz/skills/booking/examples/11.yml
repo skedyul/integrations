@@ -1,0 +1,5 @@
+input: can we do 4:50
+output: Friday 16 October at 4:50pm.
+context: The offer was Friday 16 October at 4:50pm, and that time is on more than one calendar. Client and pet are already known. Neither reserve nor confirm has been called.
+reasoning: They picked 4:50. That is not a booking. Pick one calendar from availableSlots[].calendar and call calendar_slots_reserve, then calendar_slots_confirm, on this turn. Do not name the calendar. Do not say booked, confirmed, or locked in until both tools succeed.
+tool_call: calendar_slots_reserve

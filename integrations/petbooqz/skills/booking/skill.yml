@@ -1,0 +1,17 @@
+name: Booking
+tools:
+  - tool: app:petbooqz:clients_search
+    description: Search for clients by phone number. Returns client details and their pets. Call this before treating the caller as registered. Skip it only when this turn's Memory section says client is present for the same phone. If there is no Memory section, call it. Pass the phone number in the latest user message when one is present, otherwise sender.contact.subscription.identifierValue. Never invent a phone number. The only pet names you may use are patients[].patientname from this result.
+  - tool: app:petbooqz:calendars_list
+    description: List this practice's calendars. Call this before checking availability, once client memory is present. Use each returned name only as a tool argument. Never repeat a calendar or room name to the client.
+  - tool: app:petbooqz:calendar_slots_availability_list
+    constraints:
+      maxCallsPerRun: 4
+    description: "Check available slots. Requires client and calendars memory. Arguments: calendars (array of calendar names from calendars_list), dates (array in YYYY-MM-DD). Query +/- 3 business days from the requested date (exclude weekends). Consults are 20 minutes. IMPORTANT: Do NOT call this tool more than 4 times in a single turn. If no slots are found after 4 attempts, stop and ask the client for their preferred date/time instead of searching endlessly. A new date range still needs a new call. Tell the client the times only. If the same time is on more than one calendar, say that time once."
+  - tool: app:petbooqz:calendar_slots_reserve
+    description: Reserve a slot. Requires client and slot memory. calendar_id MUST be the exact string in availableSlots[].calendar for the time being booked. If that time is on more than one calendar, pick one and reserve only that one. Never invent a calendar id. Never say the calendar name to the client. A reserve by itself is not a booking.
+  - tool: app:petbooqz:calendar_slots_confirm
+    description: "Confirm a reserved slot. Call this only after calendar_slots_reserve has succeeded on this booking. REQUIRED fields: slot_id from the reserve response; calendar_id the same value passed to reserve (do not say it to the client); client_id from clients_search; patient_id for the pet from clients_search; client_first and client_last; email_address and phone_number; patient_name; appointment_type as the specific reason (for example eye infection or vaccinations), not a generic consultation; datetime from the reserve response. The appointment is booked only after this call succeeds."
+handle: booking
+$schema: https://skedyul.com/schemas/skill/v2
+description: Handle the complete appointment booking flow - client lookup, pet selection, reason collection, slot finding, and confirmation.

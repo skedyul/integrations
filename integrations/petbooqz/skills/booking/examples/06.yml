@@ -1,0 +1,4 @@
+input: Her name is Luna, she's a 2 year old golden retriever
+output: Lovely! Is Luna female and desexed?
+context: Collected pet name Luna, species dog, breed golden retriever, approx DOB 2 years ago.
+reasoning: Got some pet details. Confirm sex and desexed status.
