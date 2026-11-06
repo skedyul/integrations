@@ -103,7 +103,7 @@ If automatic configuration fails (or provision env vars are missing), the provis
 - `business_management`
 - `pages_messaging`, `pages_manage_metadata`, `pages_read_engagement`, `pages_show_list`
 - `instagram_basic`, `instagram_manage_messages`
-- `leads_retrieval` (lead form webhooks)
+- `leads_retrieval` is not requested yet. Add it, with the lead-ads use case in the Meta app, before lead forms can be read. Facebook Login fails when the request includes a permission the app does not have.
 
 Without `pages_show_list`, `/me/accounts` returns no Pages, so no Messenger or Instagram channels are found.
 
