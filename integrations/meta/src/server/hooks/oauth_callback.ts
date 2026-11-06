@@ -2,6 +2,7 @@ import { instance, token, runWithConfig, getConfig, communicationChannel } from 
 import type { OAuthCallbackContext, OAuthCallbackResult } from 'skedyul'
 import { MetaClient } from '../../lib/meta_client'
 import { phoneDigits, toE164Phone } from '../../lib/meta_webhook/phone_identifier'
+import { missingMessagingAssetsError } from '../../lib/oauth_assets'
 
 /**
  * OAuth callback handler for the Meta app.
@@ -105,17 +106,24 @@ export default async function oauthCallback(
     const shortLivedToken = await client.exchangeCodeForToken(code, redirectUri)
     const longLivedToken = await client.exchangeForLongLivedToken(shortLivedToken)
 
-    const wabasResponse = await client.getWABAs(longLivedToken)
-    if (wabasResponse.data.length === 0) {
-      throw new Error(
-        'No WhatsApp Business Accounts were included in this Meta login. Choose the WhatsApp account when Meta asks. If you just uninstalled, remove Skedyul from Facebook Settings → Business Integrations and install again.',
-      )
+    // WhatsApp is optional: Messenger- or Instagram-only businesses have no WABA.
+    let waba: Awaited<ReturnType<MetaClient['getWABAs']>>['data'][number] | undefined
+    try {
+      waba = (await client.getWABAs(longLivedToken)).data[0]
+    } catch (err) {
+      ctx.log.warn('[Meta OAuth] Failed to fetch WhatsApp Business Accounts:', err)
     }
 
-    const waba = wabasResponse.data[0]
-    ctx.log.info(`[Meta OAuth] Found WABA: ${waba.id} (${waba.name})`)
+    let phoneNumbersResponse: Awaited<ReturnType<MetaClient['getPhoneNumbers']>> = {
+      data: [],
+    }
+    if (waba) {
+      ctx.log.info(`[Meta OAuth] Found WABA: ${waba.id} (${waba.name})`)
+      phoneNumbersResponse = await client.getPhoneNumbers(waba.id, longLivedToken)
+    } else {
+      ctx.log.info('[Meta OAuth] No WhatsApp Business Account in this login')
+    }
 
-    const phoneNumbersResponse = await client.getPhoneNumbers(waba.id, longLivedToken)
     let pagesResponse: Awaited<ReturnType<MetaClient['getPages']>> = { data: [] }
     try {
       pagesResponse = await client.getPages(longLivedToken)
@@ -137,6 +145,15 @@ export default async function oauthCallback(
       ctx.log.info(`[Meta OAuth] Found ${instagramAccounts.length} Instagram accounts`)
     } catch (err) {
       ctx.log.warn('[Meta OAuth] Failed to fetch Instagram (may not have permissions):', err)
+    }
+
+    const missingAssets = missingMessagingAssetsError({
+      wabaCount: waba ? 1 : 0,
+      pageCount: pagesResponse.data.length,
+      instagramAccountCount: instagramAccounts.length,
+    })
+    if (missingAssets) {
+      throw new Error(missingAssets)
     }
 
     await runWithConfig(
@@ -162,6 +179,31 @@ export default async function oauthCallback(
             name: page.name || `Messenger ${page.id}`,
             identifierValue: page.id,
           })
+
+          // Without this Meta sends no Messenger events for the Page, and no
+          // Instagram DMs for the account linked to it.
+          if (page.access_token) {
+            try {
+              const subscription = await client.subscribePageToWebhooks(
+                page.id,
+                page.access_token,
+              )
+              ctx.log.info(
+                `[Meta OAuth] Subscribed page ${page.id} to ${subscription.fields.join(', ')}`,
+              )
+              if (subscription.leadgenError) {
+                ctx.log.warn(
+                  `[Meta OAuth] Page ${page.id} not subscribed to leadgen: ${subscription.leadgenError}`,
+                )
+              }
+            } catch (err) {
+              ctx.log.warn(`[Meta OAuth] Failed to subscribe page ${page.id} to webhooks:`, err)
+            }
+          } else {
+            ctx.log.warn(
+              `[Meta OAuth] Page ${page.id} has no page access token; messages will not arrive`,
+            )
+          }
         }
 
         for (const instagramData of instagramAccounts) {
@@ -227,8 +269,8 @@ export default async function oauthCallback(
       appInstallationId,
       env: {
         META_ACCESS_TOKEN: longLivedToken,
-        META_WABA_ID: waba.id,
-        META_BUSINESS_NAME: waba.name,
+        ...(waba ? { META_WABA_ID: waba.id } : {}),
+        META_BUSINESS_NAME: waba?.name ?? pagesResponse.data[0]?.name ?? '',
         META_CONNECTION_STATUS: 'connected',
       },
     }

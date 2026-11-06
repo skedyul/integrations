@@ -101,12 +101,21 @@ If automatic configuration fails (or provision env vars are missing), the provis
 
 - `whatsapp_business_messaging`, `whatsapp_business_management`
 - `business_management`
-- `pages_messaging`, `pages_manage_metadata`
+- `pages_messaging`, `pages_manage_metadata`, `pages_read_engagement`, `pages_show_list`
 - `instagram_basic`, `instagram_manage_messages`
+- `leads_retrieval` (lead form webhooks)
+
+Without `pages_show_list`, `/me/accounts` returns no Pages, so no Messenger or Instagram channels are found.
 
 Install asks Meta to re-request those permissions (`auth_type=rerequest`), so a reconnect after uninstall can grant the WhatsApp account again. The callback takes the account named on the token, then looks through every business the user can access, including accounts shared with the business rather than owned by the first one.
 
-### 4. Add channels
+### 4. Page subscriptions
+
+The app-level subscription is not enough for Messenger or Instagram. Meta only delivers a Page's messages, and the DMs of the Instagram account linked to it, after `POST /{page-id}/subscribed_apps`. The OAuth callback, `add_facebook_page` and `add_instagram_account` subscribe each Page to `messages`, `messaging_postbacks`, `message_reads` and `leadgen`. When `leadgen` is not permitted, the Page is subscribed to the messaging fields alone.
+
+WhatsApp is optional. A login with only Facebook Pages or Instagram accounts connects without `META_WABA_ID`. A login with none of the three fails.
+
+### 5. Add channels
 
 After OAuth, add each channel from the app UI:
 

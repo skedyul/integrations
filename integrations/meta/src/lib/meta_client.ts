@@ -12,6 +12,7 @@
 
 import { AppAuthInvalidError } from 'skedyul'
 import { GraphPermissionError, lookupWhatsAppBusinessAccounts } from './meta_wabas'
+import { subscribePageFields, type PageSubscriptionResult } from './page_subscriptions'
 
 interface MetaErrorResponse {
   error?: {
@@ -545,29 +546,29 @@ export class MetaClient {
   }
 
   /**
-   * Subscribe a page to webhook fields for messaging.
+   * Subscribe the app to a Page's messaging and lead-form webhooks.
+   *
+   * Required for Messenger and for Instagram DMs of the account linked to the
+   * Page. Falls back to messaging fields when `leadgen` is not permitted.
    */
   async subscribePageToWebhooks(
     pageId: string,
     pageAccessToken: string,
-  ): Promise<void> {
-    const url = new URL(`${this.baseUrl}/${pageId}/subscribed_apps`)
-    url.searchParams.set('access_token', pageAccessToken)
+  ): Promise<PageSubscriptionResult> {
+    return subscribePageFields(async (fields) => {
+      const url = new URL(`${this.baseUrl}/${pageId}/subscribed_apps`)
+      url.searchParams.set('access_token', pageAccessToken)
+      url.searchParams.set('subscribed_fields', fields.join(','))
 
-    const response = await fetch(url.toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscribed_fields: ['messages', 'messaging_postbacks', 'message_reads'],
-      }),
+      const response = await fetch(url.toString(), { method: 'POST' })
+
+      if (!response.ok) {
+        const errorResponse = await parseMetaError(response)
+        throw new Error(
+          `Failed to subscribe page to webhooks: ${JSON.stringify(errorResponse)}`,
+        )
+      }
     })
-
-    if (!response.ok) {
-      const errorResponse = await parseMetaError(response)
-      throw new Error(
-        `Failed to subscribe page to webhooks: ${JSON.stringify(errorResponse)}`,
-      )
-    }
   }
 
   /**

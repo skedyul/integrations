@@ -21,5 +21,8 @@ describe('buildMetaOAuthUrl', () => {
     assert.equal(url.searchParams.get('state'), 'encoded-state')
     assert.ok(url.searchParams.get('scope')?.includes('whatsapp_business_management'))
     assert.ok(url.searchParams.get('scope')?.includes('business_management'))
+    // Without pages_show_list, /me/accounts returns no Pages or Instagram accounts.
+    assert.ok(url.searchParams.get('scope')?.split(',').includes('pages_show_list'))
+    assert.ok(url.searchParams.get('scope')?.split(',').includes('leads_retrieval'))
   })
 })
