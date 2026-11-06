@@ -9,8 +9,9 @@ const META_OAUTH_SCOPES = [
   'pages_read_engagement',
   // `/me/accounts` returns no Pages without this, so no Messenger or Instagram.
   'pages_show_list',
-  // Lead form webhooks (`leadgen`) and `GET /{lead-id}`.
-  'leads_retrieval',
+  // `leads_retrieval` is left out until the app has the lead-ads use case.
+  // Facebook Login refuses the whole request when it asks for a permission
+  // the app does not have.
 ]
 
 /**
