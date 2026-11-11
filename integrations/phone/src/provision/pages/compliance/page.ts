@@ -88,7 +88,7 @@ export default definePage({
             modalForm: {
               header: {
                 title: 'Business Registration',
-                description: 'Provide your business details and upload supporting documents for regulatory compliance.',
+                description: 'Provide your business details, a commercial register excerpt, and a separate proof of address.',
               },
               handler: 'submit_compliance_document',
               fields: [
@@ -163,6 +163,37 @@ export default definePage({
                     leftIcon: 'Upload',
                   },
                 },
+                {
+                  component: 'select',
+                  id: 'address_proof_type',
+                  row: 4,
+                  col: 0,
+                  label: 'Proof of Address Type',
+                  placeholder: 'Select document type',
+                  helpText: 'Choose the document you are uploading. It must show the business name and the address above.',
+                  required: true,
+                  items: [
+                    { label: 'Utility bill', value: 'utility_bill' },
+                    { label: 'Tax notice', value: 'tax_document' },
+                    { label: 'Rent receipt', value: 'rental_receipt' },
+                    { label: 'Title deed', value: 'title_deed' },
+                  ],
+                },
+                {
+                  component: 'filesetting',
+                  id: 'address_proof',
+                  row: 5,
+                  col: 0,
+                  label: 'Proof of Address',
+                  description: 'Upload a utility bill, tax notice, rent receipt, or title deed that shows the business name and address. This is separate from the commercial register excerpt. Accepted formats: PDF, JPG, or PNG (max 10MB).',
+                  accept: '.pdf,.jpg,.jpeg,.png',
+                  required: true,
+                  button: {
+                    label: 'Choose File',
+                    variant: 'outline',
+                    size: 'sm',
+                  },
+                },
               ],
               layout: {
                 type: 'form',
@@ -171,6 +202,8 @@ export default definePage({
                   { columns: [{ field: 'business_email', colSpan: 12 }] },
                   { columns: [{ field: 'country', colSpan: 6 }, { field: 'address', colSpan: 6 }] },
                   { columns: [{ field: 'file', colSpan: 12 }] },
+                  { columns: [{ field: 'address_proof_type', colSpan: 12 }] },
+                  { columns: [{ field: 'address_proof', colSpan: 12 }] },
                 ],
               },
               actions: [

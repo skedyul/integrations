@@ -11,7 +11,10 @@ import {
   fetchBundleStatus,
   submitBundleForReview,
 } from '../lib/twilio_client'
-import { submitComplianceToTwilio } from '../lib/compliance_submission'
+import {
+  ADDRESS_PROOF_DOCUMENT_TYPES,
+  submitComplianceToTwilio,
+} from '../lib/compliance_submission'
 import testData from '../test-data.json'
 import { isMockComplianceAndNumberEnabled } from '../lib/mock_compliance'
 import {
@@ -41,8 +44,14 @@ const SubmitComplianceDocumentInputSchema = z.object({
   country: z.string().length(2).describe('ISO 2-letter country code (e.g., AU, US, GB)'),
   /** Full business address (will be parsed using Google Geocoding API) */
   address: z.string().describe('Full business address (e.g., 123 Main St, Sydney NSW 2000)'),
-  /** File ID of the uploaded document (fl_xxx) */
+  /** File ID of the uploaded commercial register excerpt (fl_xxx) */
   file: z.string().describe('File ID of the uploaded commercial register excerpt'),
+  /** Twilio supporting-document type for the proof of address */
+  address_proof_type: z.enum(ADDRESS_PROOF_DOCUMENT_TYPES).describe(
+    'Proof of address type: utility bill, tax notice, rent receipt, or title deed',
+  ),
+  /** File ID of the uploaded proof of address (fl_xxx) */
+  address_proof: z.string().describe('File ID of the uploaded proof of address'),
 })
 
 /**
@@ -133,6 +142,25 @@ async function parseAddressWithGoogle(
   }
 }
 
+async function downloadComplianceFile(fileId: string): Promise<{
+  buffer: Buffer
+  filename?: string
+}> {
+  const fileInfo = await file.get(fileId).catch((err: unknown) => {
+    console.warn('[Compliance] Could not read file metadata:', err)
+    return null
+  })
+  const fileUrlResponse = await file.getUrl(fileId)
+  const fileResponse = await fetch(fileUrlResponse.url)
+  if (!fileResponse.ok) {
+    throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`)
+  }
+  return {
+    buffer: Buffer.from(await fileResponse.arrayBuffer()),
+    filename: fileInfo?.name,
+  }
+}
+
 const SubmitComplianceDocumentOutputSchema = z.object({
   status: z.string().describe('Submission status'),
   bundleSid: z.string().optional().describe('Twilio compliance bundle SID'),
@@ -165,14 +193,25 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       business_id, 
       country, 
       address,
-      file: fileId 
+      file: fileId,
+      address_proof: addressProofFileId,
+      address_proof_type: addressProofType,
     } = input
     const { appInstallationId, workplace, env } = context
 
     // Validate required input fields
-    if (!business_name || !business_email || !business_id || !country || !address || !fileId) {
+    if (
+      !business_name ||
+      !business_email ||
+      !business_id ||
+      !country ||
+      !address ||
+      !fileId ||
+      !addressProofFileId ||
+      !addressProofType
+    ) {
       return createValidationError(
-        'Missing required fields: business_name, business_email, business_id, country, address, and file are required',
+        'Missing required fields: business_name, business_email, business_id, country, address, file, address_proof_type, and address_proof are required',
       )
     }
 
@@ -218,6 +257,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         country: isoCountry,
         address,
         file: fileId,
+        address_proof: addressProofFileId,
+        address_proof_type: addressProofType,
       })
       complianceRecord = await instance.create(
         'compliance_record',
@@ -228,6 +269,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           country: isoCountry,
           address, // Store the original address input
           file: fileId, // Store only the file ID, not the S3 path
+          address_proof: addressProofFileId,
+          address_proof_type: addressProofType,
           status: 'pending',
         },
       )
@@ -291,11 +334,14 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         country: isoCountry,
         address,
         file: fileId,
+        address_proof: addressProofFileId,
+        address_proof_type: addressProofType,
         status: 'pending_review',
         rejection_reason: '',
         bundle_sid: testData.compliance.bundleSid,
         end_user_sid: testData.compliance.endUserSid,
         document_sid: testData.compliance.documentSid,
+        address_document_sid: testData.compliance.addressDocumentSid,
         address_sid: testData.compliance.addressSid,
       }
 
@@ -336,21 +382,13 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         password: env.TWILIO_AUTH_TOKEN,
       }
 
-      console.log('[Compliance] Getting file URL for download...')
-      const fileInfo = await file.get(fileId).catch((err: unknown) => {
-        console.warn('[Compliance] Could not read file metadata:', err)
-        return null
+      console.log('[Compliance] Downloading registration and address proof...')
+      const registrationFile = await downloadComplianceFile(fileId)
+      const addressProofFile = await downloadComplianceFile(addressProofFileId)
+      console.log('[Compliance] Downloaded files:', {
+        registrationBytes: registrationFile.buffer.length,
+        addressProofBytes: addressProofFile.buffer.length,
       })
-      const fileUrlResponse = await file.getUrl(fileId)
-      console.log('[Compliance] File URL obtained, expires at:', fileUrlResponse.expiresAt)
-
-      console.log('[Compliance] Downloading file content...')
-      const fileResponse = await fetch(fileUrlResponse.url)
-      if (!fileResponse.ok) {
-        throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`)
-      }
-      const fileBuffer = Buffer.from(await fileResponse.arrayBuffer())
-      console.log('[Compliance] Downloaded file, size:', fileBuffer.length, 'bytes')
 
       const outcome = await submitComplianceToTwilio(
         {
@@ -369,8 +407,13 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
             isoCountry,
           },
           proof: {
-            file: fileBuffer,
-            filename: fileInfo?.name,
+            file: registrationFile.buffer,
+            filename: registrationFile.filename,
+          },
+          addressProof: {
+            file: addressProofFile.buffer,
+            filename: addressProofFile.filename,
+            type: addressProofType,
           },
           friendlyBundleName: `${business_name} Compliance Bundle`,
           createStatusCallback: async () => {
@@ -400,15 +443,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
               twilioClient,
               {
                 friendlyName: params.friendlyName,
-                type: 'commercial_registrar_excerpt',
+                type: params.type,
                 file: params.file,
                 filename: params.filename,
                 mimeType: params.mimeType,
-                attributes: {
-                  business_name: params.businessName,
-                  document_number: params.documentNumber,
-                  address_sids: [params.addressSid],
-                },
+                attributes: params.attributes,
               },
               uploadAuth,
             ),
@@ -449,8 +488,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           bundle_sid: outcome.bundleSid,
           end_user_sid: outcome.endUserSid,
           document_sid: outcome.documentSid,
+          address_document_sid: outcome.addressDocumentSid,
           address_sid: outcome.addressSid,
           file: fileId,
+          address_proof: addressProofFileId,
+          address_proof_type: addressProofType,
           status: 'pending',
           rejection_reason: reason,
         })
@@ -463,8 +505,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         bundle_sid: outcome.bundleSid,
         end_user_sid: outcome.endUserSid,
         document_sid: outcome.documentSid,
+        address_document_sid: outcome.addressDocumentSid,
         address_sid: outcome.addressSid,
         file: fileId,
+        address_proof: addressProofFileId,
+        address_proof_type: addressProofType,
         status: 'pending_review',
         rejection_reason: '',
       })
@@ -474,6 +519,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         bundleSid: outcome.bundleSid,
         endUserSid: outcome.endUserSid,
         documentSid: outcome.documentSid,
+        addressDocumentSid: outcome.addressDocumentSid,
         reusedBundle: outcome.reusedBundle,
       })
 
