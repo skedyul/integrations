@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals'
+import { collectEvaluationFailures } from './compliance_evaluation'
 import {
   SUPPORTING_DOCUMENT_UPLOAD_URL,
+  assertAcceptedProofBytes,
   buildSupportingDocumentForm,
   parseSupportingDocumentUpload,
   resolveDocumentMimeType,
@@ -54,6 +56,48 @@ describe('buildSupportingDocumentForm', () => {
     )
     expect(supportingDocumentFilename('extract', 'application/pdf')).toBe('extract.pdf')
     expect(supportingDocumentFilename(undefined, 'image/png')).toBe('commercial-register.png')
+  })
+})
+
+describe('assertAcceptedProofBytes', () => {
+  it('accepts a PDF and rejects a file that is not a document', () => {
+    expect(assertAcceptedProofBytes(Buffer.from('%PDF-1.4 extract'))).toBe('application/pdf')
+    expect(() => assertAcceptedProofBytes(Buffer.from('<Error>AccessDenied</Error>'))).toThrow(
+      'PDF, JPEG, or PNG',
+    )
+  })
+})
+
+describe('collectEvaluationFailures', () => {
+  it('reports a missing commercial register excerpt and does not treat it as compliant', () => {
+    const reasons = collectEvaluationFailures({
+      status: 'noncompliant',
+      results: [
+        {
+          friendly_name: 'Excerpt from the commercial register',
+          passed: false,
+          failure_reason:
+            'An Excerpt from the commercial register is missing. Please add one to the regulatory bundle.',
+          invalid: [
+            {
+              friendly_name: 'Document Number',
+              failure_reason: 'The Document Number is missing.',
+            },
+          ],
+        },
+        {
+          friendly_name: 'Business Name',
+          passed: true,
+          failure_reason: null,
+        },
+      ],
+    })
+
+    expect(reasons).toEqual([
+      'An Excerpt from the commercial register is missing. Please add one to the regulatory bundle.',
+      'The Document Number is missing.',
+    ])
+    expect(collectEvaluationFailures({ status: 'compliant', results: [] })).toEqual([])
   })
 })
 

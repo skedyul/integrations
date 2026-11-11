@@ -58,6 +58,30 @@ export function normalizeDocumentMimeType(
   return mime
 }
 
+const ACCEPTED_PROOF_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+])
+
+/**
+ * Proof sent to Twilio must be a real PDF, JPEG, or PNG. A declared MIME type
+ * is not enough: an S3 error page labeled application/pdf would still be stored
+ * as the commercial-register excerpt.
+ */
+export function assertAcceptedProofBytes(file: Buffer): string {
+  if (!file || file.length === 0) {
+    throw new Error('The uploaded compliance document is empty')
+  }
+  const sniffed = sniffDocumentMimeType(file)
+  if (!sniffed || !ACCEPTED_PROOF_MIME_TYPES.has(sniffed)) {
+    throw new Error(
+      'The compliance document must be a PDF, JPEG, or PNG. The downloaded file is not one of those.',
+    )
+  }
+  return sniffed
+}
+
 export function sniffDocumentMimeType(file: Buffer): string | undefined {
   if (file.length >= 4 && file.subarray(0, 4).toString('utf8') === '%PDF') {
     return 'application/pdf'
