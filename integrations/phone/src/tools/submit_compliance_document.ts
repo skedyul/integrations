@@ -7,8 +7,14 @@ import {
   createSupportingDocument,
   createBundle,
   assignItemToBundle,
+  evaluateBundle,
+  fetchBundleStatus,
   submitBundleForReview,
 } from '../lib/twilio_client'
+import {
+  ADDRESS_PROOF_DOCUMENT_TYPES,
+  submitComplianceToTwilio,
+} from '../lib/compliance_submission'
 import testData from '../test-data.json'
 import { isMockComplianceAndNumberEnabled } from '../lib/mock_compliance'
 import {
@@ -38,8 +44,14 @@ const SubmitComplianceDocumentInputSchema = z.object({
   country: z.string().length(2).describe('ISO 2-letter country code (e.g., AU, US, GB)'),
   /** Full business address (will be parsed using Google Geocoding API) */
   address: z.string().describe('Full business address (e.g., 123 Main St, Sydney NSW 2000)'),
-  /** File ID of the uploaded document (fl_xxx) */
+  /** File ID of the uploaded commercial register excerpt (fl_xxx) */
   file: z.string().describe('File ID of the uploaded commercial register excerpt'),
+  /** Twilio supporting-document type for the proof of address */
+  address_proof_type: z.enum(ADDRESS_PROOF_DOCUMENT_TYPES).describe(
+    'Proof of address type: utility bill, tax notice, rent receipt, or title deed',
+  ),
+  /** File ID of the uploaded proof of address (fl_xxx) */
+  address_proof: z.string().describe('File ID of the uploaded proof of address'),
 })
 
 /**
@@ -130,6 +142,25 @@ async function parseAddressWithGoogle(
   }
 }
 
+async function downloadComplianceFile(fileId: string): Promise<{
+  buffer: Buffer
+  filename?: string
+}> {
+  const fileInfo = await file.get(fileId).catch((err: unknown) => {
+    console.warn('[Compliance] Could not read file metadata:', err)
+    return null
+  })
+  const fileUrlResponse = await file.getUrl(fileId)
+  const fileResponse = await fetch(fileUrlResponse.url)
+  if (!fileResponse.ok) {
+    throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`)
+  }
+  return {
+    buffer: Buffer.from(await fileResponse.arrayBuffer()),
+    filename: fileInfo?.name,
+  }
+}
+
 const SubmitComplianceDocumentOutputSchema = z.object({
   status: z.string().describe('Submission status'),
   bundleSid: z.string().optional().describe('Twilio compliance bundle SID'),
@@ -162,14 +193,25 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       business_id, 
       country, 
       address,
-      file: fileId 
+      file: fileId,
+      address_proof: addressProofFileId,
+      address_proof_type: addressProofType,
     } = input
     const { appInstallationId, workplace, env } = context
 
     // Validate required input fields
-    if (!business_name || !business_email || !business_id || !country || !address || !fileId) {
+    if (
+      !business_name ||
+      !business_email ||
+      !business_id ||
+      !country ||
+      !address ||
+      !fileId ||
+      !addressProofFileId ||
+      !addressProofType
+    ) {
       return createValidationError(
-        'Missing required fields: business_name, business_email, business_id, country, address, and file are required',
+        'Missing required fields: business_name, business_email, business_id, country, address, file, address_proof_type, and address_proof are required',
       )
     }
 
@@ -215,6 +257,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         country: isoCountry,
         address,
         file: fileId,
+        address_proof: addressProofFileId,
+        address_proof_type: addressProofType,
       })
       complianceRecord = await instance.create(
         'compliance_record',
@@ -225,6 +269,8 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           country: isoCountry,
           address, // Store the original address input
           file: fileId, // Store only the file ID, not the S3 path
+          address_proof: addressProofFileId,
+          address_proof_type: addressProofType,
           status: 'pending',
         },
       )
@@ -234,25 +280,25 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       console.log('[Compliance] Existing record fields:', Object.keys(complianceRecord))
     }
 
-    // Check if already submitted and not rejected
+    // In-review and approved bundles stay as they are. Rejected bundles and
+    // drafts left behind by a failed evaluation are updated in place.
     const existingBundleSid = complianceRecord.bundle_sid as string | undefined
+    const existingEndUserSid = complianceRecord.end_user_sid as string | undefined
     const currentStatus = complianceRecord.status as string | undefined
-    
-    // Allow resubmission if status is rejected - user is trying again with new documents
-    const isRejected = currentStatus === 'rejected'
-    const canResubmit = !existingBundleSid || isRejected
-    
-    if (!canResubmit) {
-      // Already submitted and not rejected - block resubmission
+    const awaitingReview =
+      currentStatus === 'pending_review' ||
+      currentStatus === 'submitted' ||
+      currentStatus === 'approved'
+
+    if (existingBundleSid && awaitingReview) {
       return createSuccessResponse({
         status: 'already_submitted',
         bundleSid: existingBundleSid,
         message: 'Compliance bundle already submitted. Use "Refresh Status" to check current status.',
       })
     }
-    
-    // If resubmitting after rejection, log it
-    if (isRejected && existingBundleSid) {
+
+    if (currentStatus === 'rejected' && existingBundleSid) {
       console.log('[Compliance] Resubmitting after rejection:', {
         previousBundleSid: existingBundleSid,
         previousStatus: currentStatus,
@@ -288,11 +334,14 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         country: isoCountry,
         address,
         file: fileId,
+        address_proof: addressProofFileId,
+        address_proof_type: addressProofType,
         status: 'pending_review',
         rejection_reason: '',
         bundle_sid: testData.compliance.bundleSid,
         end_user_sid: testData.compliance.endUserSid,
         document_sid: testData.compliance.documentSid,
+        address_document_sid: testData.compliance.addressDocumentSid,
         address_sid: testData.compliance.addressSid,
       }
 
@@ -327,124 +376,158 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
     console.log('[Compliance] Production mode - submitting to Twilio')
 
     try {
-      // Create Twilio client
       const twilioClient = createTwilioClient(env)
-
-      // Step 1: Create Address (required for business compliance)
-      console.log('[Compliance] Creating Twilio Address with parsed components:', parsedAddress)
-      const twilioAddress = await createAddress(twilioClient, {
-        customerName: business_name,
-        street: parsedAddress.street,
-        city: parsedAddress.city,
-        region: parsedAddress.region,
-        postalCode: parsedAddress.postalCode,
-        isoCountry: isoCountry,
-      })
-      console.log('[Compliance] Created Address:', twilioAddress.sid)
-
-      // Step 2: Create End-User (business entity)
-      console.log('[Compliance] Creating Twilio End-User...')
-      const endUser = await createEndUser(twilioClient, {
-        friendlyName: business_name,
-        type: 'business',
-        attributes: {
-          business_name: business_name,
-        },
-      })
-      console.log('[Compliance] Created End-User:', endUser.sid)
-
-      // Step 3: Fetch file content and create Supporting Document
-      console.log('[Compliance] Getting file URL for download...')
-      const fileInfo = await file.get(fileId).catch((err: unknown) => {
-        console.warn('[Compliance] Could not read file metadata:', err)
-        return null
-      })
-      const fileUrlResponse = await file.getUrl(fileId)
-      console.log('[Compliance] File URL obtained, expires at:', fileUrlResponse.expiresAt)
-
-      // Fetch the actual file content from S3
-      console.log('[Compliance] Downloading file content...')
-      const fileResponse = await fetch(fileUrlResponse.url)
-      if (!fileResponse.ok) {
-        throw new Error(`Failed to download file: ${fileResponse.status} ${fileResponse.statusText}`)
-      }
-      const fileBuffer = Buffer.from(await fileResponse.arrayBuffer())
-      console.log('[Compliance] Downloaded file, size:', fileBuffer.length, 'bytes')
-      if (fileBuffer.length === 0) {
-        throw new Error('The uploaded compliance document is empty')
+      const uploadAuth = {
+        username: env.TWILIO_ACCOUNT_SID,
+        password: env.TWILIO_AUTH_TOKEN,
       }
 
-      console.log('[Compliance] Creating Twilio Supporting Document...')
-      const supportingDoc = await createSupportingDocument(twilioClient, {
-        friendlyName: `${business_name} - Commercial Register Excerpt`,
-        type: 'commercial_registrar_excerpt',
-        file: fileBuffer,
-        filename: fileInfo?.name,
-        mimeType: fileInfo?.mimeType || fileResponse.headers.get('content-type') || undefined,
-        attributes: {
-          business_name: business_name,
-          document_number: business_id,
-          address_sids: [twilioAddress.sid],
-        },
+      console.log('[Compliance] Downloading registration and address proof...')
+      const registrationFile = await downloadComplianceFile(fileId)
+      const addressProofFile = await downloadComplianceFile(addressProofFileId)
+      console.log('[Compliance] Downloaded files:', {
+        registrationBytes: registrationFile.buffer.length,
+        addressProofBytes: addressProofFile.buffer.length,
       })
-      console.log('[Compliance] Created Supporting Document:', supportingDoc.sid)
 
-      // Step 4: Create Regulatory Bundle with dynamic webhook callback
-      console.log('[Compliance] Creating Twilio Regulatory Bundle...')
-      console.log('[Compliance] Creating webhook registration for status callbacks...')
-      const webhookResult = await webhook.create('compliance_status', {
-        complianceRecordId: complianceRecord.id,
-        businessName: business_name,
-      })
-      console.log('[Compliance] Created webhook:', webhookResult.url)
-
-      const bundle = await createBundle(twilioClient, {
-        friendlyName: `${business_name} Compliance Bundle`,
-        email: business_email,
-        statusCallback: webhookResult.url,
-        endUserType: 'business',
-        isoCountry: isoCountry,
-        numberType: 'mobile',
-      })
-      console.log('[Compliance] Created Bundle:', bundle.sid)
-
-      // Step 5: Assign Items to Bundle
-      console.log('[Compliance] Assigning End-User to Bundle...')
-      await assignItemToBundle(twilioClient, bundle.sid, endUser.sid)
-
-      console.log('[Compliance] Assigning Supporting Document to Bundle...')
-      await assignItemToBundle(twilioClient, bundle.sid, supportingDoc.sid)
-
-      // Step 6: Submit Bundle for Review
-      console.log('[Compliance] Submitting Bundle for review...')
-      await submitBundleForReview(twilioClient, bundle.sid)
-      console.log('[Compliance] Bundle submitted for review')
-
-      // Step 7: Update compliance_record with Twilio resource SIDs
-      await instance.update(
-        'compliance_record',
-        complianceRecord.id,
+      const outcome = await submitComplianceToTwilio(
         {
-          bundle_sid: bundle.sid,
-          end_user_sid: endUser.sid,
-          document_sid: supportingDoc.sid,
-          address_sid: twilioAddress.sid,
-          status: 'pending_review',
+          existingBundleSid,
+          existingEndUserSid,
+          businessName: business_name,
+          businessEmail: business_email,
+          businessId: business_id,
+          isoCountry,
+          address: {
+            customerName: business_name,
+            street: parsedAddress.street,
+            city: parsedAddress.city,
+            region: parsedAddress.region,
+            postalCode: parsedAddress.postalCode,
+            isoCountry,
+          },
+          proof: {
+            file: registrationFile.buffer,
+            filename: registrationFile.filename,
+          },
+          addressProof: {
+            file: addressProofFile.buffer,
+            filename: addressProofFile.filename,
+            type: addressProofType,
+          },
+          friendlyBundleName: `${business_name} Compliance Bundle`,
+          createStatusCallback: async () => {
+            console.log('[Compliance] Creating webhook registration for status callbacks...')
+            const webhookResult = await webhook.create('compliance_status', {
+              complianceRecordId: complianceRecord.id,
+              businessName: business_name,
+            })
+            console.log('[Compliance] Created webhook:', webhookResult.url)
+            return webhookResult.url
+          },
+        },
+        {
+          fetchBundleStatus: async (bundleSid) => {
+            const bundle = await fetchBundleStatus(twilioClient, bundleSid)
+            return { status: bundle.status }
+          },
+          createAddress: (address) => createAddress(twilioClient, address),
+          createEndUser: (params) =>
+            createEndUser(twilioClient, {
+              friendlyName: params.friendlyName,
+              type: 'business',
+              attributes: { business_name: params.businessName },
+            }),
+          createSupportingDocument: (params) =>
+            createSupportingDocument(
+              twilioClient,
+              {
+                friendlyName: params.friendlyName,
+                type: params.type,
+                file: params.file,
+                filename: params.filename,
+                mimeType: params.mimeType,
+                attributes: params.attributes,
+              },
+              uploadAuth,
+            ),
+          createBundle: (params) =>
+            createBundle(twilioClient, {
+              friendlyName: params.friendlyName,
+              email: params.email,
+              statusCallback: params.statusCallback,
+              endUserType: 'business',
+              isoCountry: params.isoCountry,
+              numberType: 'mobile',
+            }),
+          assignItem: async (bundleSid, objectSid) => {
+            await assignItemToBundle(twilioClient, bundleSid, objectSid)
+          },
+          evaluateBundle: (bundleSid) => evaluateBundle(twilioClient, bundleSid),
+          submitBundleForReview: async (bundleSid) => {
+            await submitBundleForReview(twilioClient, bundleSid)
+          },
         },
       )
 
+      if (outcome.kind === 'blocked') {
+        return createSuccessResponse({
+          status: 'already_submitted',
+          bundleSid: outcome.bundleSid,
+          message: `Compliance bundle is ${outcome.twilioStatus} and cannot be resubmitted.`,
+        })
+      }
+
+      if (outcome.kind === 'not_compliant') {
+        const reason = outcome.failureReasons.join(' ')
+        console.log('[Compliance] Bundle failed evaluation:', {
+          bundleSid: outcome.bundleSid,
+          reason,
+        })
+        await instance.update('compliance_record', complianceRecord.id, {
+          bundle_sid: outcome.bundleSid,
+          end_user_sid: outcome.endUserSid,
+          document_sid: outcome.documentSid,
+          address_document_sid: outcome.addressDocumentSid,
+          address_sid: outcome.addressSid,
+          file: fileId,
+          address_proof: addressProofFileId,
+          address_proof_type: addressProofType,
+          status: 'pending',
+          rejection_reason: reason,
+        })
+        return createPhoneError(
+          `Compliance documents were not submitted. ${reason}`,
+        )
+      }
+
+      await instance.update('compliance_record', complianceRecord.id, {
+        bundle_sid: outcome.bundleSid,
+        end_user_sid: outcome.endUserSid,
+        document_sid: outcome.documentSid,
+        address_document_sid: outcome.addressDocumentSid,
+        address_sid: outcome.addressSid,
+        file: fileId,
+        address_proof: addressProofFileId,
+        address_proof_type: addressProofType,
+        status: 'pending_review',
+        rejection_reason: '',
+      })
+
       console.log('[Compliance] Compliance submission complete:', {
-        addressSid: twilioAddress.sid,
-        bundleSid: bundle.sid,
-        endUserSid: endUser.sid,
-        documentSid: supportingDoc.sid,
+        addressSid: outcome.addressSid,
+        bundleSid: outcome.bundleSid,
+        endUserSid: outcome.endUserSid,
+        documentSid: outcome.documentSid,
+        addressDocumentSid: outcome.addressDocumentSid,
+        reusedBundle: outcome.reusedBundle,
       })
 
       return createSuccessResponse({
         status: 'pending_review',
-        bundleSid: bundle.sid,
-        endUserSid: endUser.sid,
-        documentSid: supportingDoc.sid,
+        bundleSid: outcome.bundleSid,
+        endUserSid: outcome.endUserSid,
+        documentSid: outcome.documentSid,
         message: 'Document submitted to Twilio for review. This typically takes 1-3 business days.',
       })
     } catch (err) {

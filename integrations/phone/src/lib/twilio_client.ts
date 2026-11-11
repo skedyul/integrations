@@ -188,12 +188,16 @@ export const createEndUser = async (
 export const createSupportingDocument = async (
   client: ReturnType<typeof twilio>,
   params: CreateSupportingDocumentParams,
+  auth?: { username?: string; password?: string },
 ) => {
   if (params.file) {
     const creds = client as { username?: string; password?: string }
     return withTwilioAuth(() =>
       uploadSupportingDocument(
-        { username: creds.username, password: creds.password },
+        {
+          username: auth?.username?.trim() || creds.username,
+          password: auth?.password?.trim() || creds.password,
+        },
         params,
       ),
     )
@@ -250,6 +254,29 @@ export const assignItemToBundle = async (
       .bundles(bundleSid)
       .itemAssignments.create({ objectSid }),
   )
+}
+
+export type BundleEvaluation = {
+  status: string
+  results: unknown
+}
+
+/**
+ * Run a synchronous regulatory evaluation. A noncompliant result means the
+ * commercial-register file or its attributes are still missing, so the bundle
+ * must stay in draft instead of going to review.
+ */
+export const evaluateBundle = async (
+  client: ReturnType<typeof twilio>,
+  bundleSid: string,
+): Promise<BundleEvaluation> => {
+  const evaluation = await withTwilioAuth(() =>
+    client.numbers.v2.regulatoryCompliance.bundles(bundleSid).evaluations.create(),
+  )
+  return {
+    status: typeof evaluation.status === 'string' ? evaluation.status : '',
+    results: evaluation.results,
+  }
 }
 
 /**
