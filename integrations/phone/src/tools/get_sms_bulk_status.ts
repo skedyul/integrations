@@ -116,6 +116,10 @@ export const getSmsBulkStatusRegistry: ToolDefinition<
 > = {
   name: 'get_sms_bulk_status',
   label: 'Get SMS Bulk Status',
+  ui: {
+    title: 'Checked bulk SMS status',
+    activeTitle: 'Checking bulk SMS status',
+  },
   description:
     'Fetch Twilio Bulk Messaging status and per-recipient message statuses by externalChunkId',
   inputSchema: MessageBulkStatusInputSchema,

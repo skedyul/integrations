@@ -16,6 +16,7 @@ import {
 export const sendSlackRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_slack',
   label: 'Send Slack',
+  ui: { title: 'Sent Slack message', activeTitle: 'Sending Slack message' },
   description: 'Post a Slack message to a channel or direct message',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

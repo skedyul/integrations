@@ -21,6 +21,11 @@ export const fetchGoogleConnectionRegistry: ToolDefinition<
 > = {
   name: 'fetch_google_connection',
   label: 'Fetch Google Connection',
+  ui: {
+    title: 'Checked Google connection',
+    activeTitle: 'Checking Google connection',
+    opaque: true,
+  },
   description: 'Returns the connected Google account details stored on the installation env',
   inputSchema: FetchGoogleConnectionInputSchema,
   outputSchema: FetchGoogleConnectionOutputSchema,

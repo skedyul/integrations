@@ -39,6 +39,11 @@ export const addGoogleCalendarRegistry: ToolDefinition<
 > = {
   name: 'add_google_calendar',
   label: 'Add Google Calendar',
+  ui: {
+    title: 'Added calendar',
+    activeTitle: 'Adding calendar',
+    targetArg: 'summary',
+  },
   description:
     'Enable sync for a Google Calendar and optionally register push notifications. CRM rows are written by Import / live workflows.',
   inputSchema: AddGoogleCalendarInputSchema,

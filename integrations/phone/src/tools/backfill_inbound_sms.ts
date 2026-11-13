@@ -74,6 +74,11 @@ export const backfillInboundSmsRegistry: ToolDefinition<
 > = {
   name: 'backfill_inbound_sms',
   label: 'Backfill Inbound SMS',
+  ui: {
+    title: 'Recovered inbound SMS',
+    activeTitle: 'Recovering inbound SMS',
+    targetArg: 'phone_number',
+  },
   description:
     'Re-ingests inbound SMS from Twilio for a phone number over a time window. Used to recover messages dropped while the receive_sms webhook was failing. Safe to re-run: capture is deduplicated on the Twilio MessageSid.',
   inputSchema: BackfillInboundSmsInputSchema,

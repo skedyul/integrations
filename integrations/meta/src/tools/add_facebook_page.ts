@@ -31,6 +31,11 @@ export const addFacebookPageRegistry: ToolDefinition<
 > = {
   name: 'add_facebook_page',
   label: 'Add Facebook Page',
+  ui: {
+    title: 'Added Facebook Page',
+    activeTitle: 'Adding Facebook Page',
+    targetArg: 'name',
+  },
   description:
     'Stores a Facebook Page on the internal model and creates a Messenger communication channel',
   inputSchema: AddFacebookPageInputSchema,

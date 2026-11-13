@@ -98,6 +98,10 @@ export const updateForwardingNumberRegistry: ToolDefinition<
 > = {
   name: 'update_forwarding_number',
   label: 'Update Inbound Voice',
+  ui: {
+    title: 'Updated inbound calling',
+    activeTitle: 'Updating inbound calling',
+  },
   description:
     'Updates inbound voice settings, forwarding number, and Twilio voiceUrl/webhooks',
   inputSchema: UpdateForwardingNumberInputSchema,

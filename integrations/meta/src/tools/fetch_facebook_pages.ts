@@ -34,6 +34,10 @@ export const fetchFacebookPagesRegistry: ToolDefinition<
 > = {
   name: 'fetch_facebook_pages',
   label: 'Fetch Facebook Pages',
+  ui: {
+    title: 'Looked up Facebook Pages',
+    activeTitle: 'Looking up Facebook Pages',
+  },
   description:
     'Lists Facebook Pages from the connected Meta account for provisioning Messenger channels',
   inputSchema: FetchFacebookPagesInputSchema,

@@ -70,6 +70,7 @@ export const calendarSlotsReserveRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_reserve',
   label: 'Reserve Calendar Slot',
+  ui: { title: 'Held a slot', activeTitle: 'Holding a slot' },
   description:
     'Reserve a calendar slot on the Petbooqz calendar. Mutations are serialized per calendar to prevent duplicate bookings. Pass a single datetime for agent bookings, or an ordered datetimes list to try alternatives.',
   inputSchema: CalendarSlotsReserveInputSchema,

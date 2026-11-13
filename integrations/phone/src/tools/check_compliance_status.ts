@@ -53,6 +53,10 @@ export const checkComplianceStatusRegistry: ToolDefinition<
 > = {
   name: 'check_compliance_status',
   label: 'Check Compliance Status',
+  ui: {
+    title: 'Checked compliance status',
+    activeTitle: 'Checking compliance status',
+  },
   description: 'Checks the current compliance status from Twilio',
   inputSchema: CheckComplianceStatusInputSchema,
   outputSchema: CheckComplianceStatusOutputSchema,

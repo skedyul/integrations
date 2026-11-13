@@ -31,6 +31,7 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
 > = {
   name: 'remove_google_calendar',
   label: 'Remove Google Calendar',
+  ui: { title: 'Removed calendar', activeTitle: 'Removing calendar' },
   description:
     'Stop push notifications for a Google Calendar and emit calendar.deleted so CRM workflows can update the mapped row',
   inputSchema: RemoveGoogleCalendarInputSchema,
