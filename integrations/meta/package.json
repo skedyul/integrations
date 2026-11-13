@@ -1,6 +1,6 @@
 {
   "name": "@skedyul-integrations/meta",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "private": true,
   "type": "module",
   "main": "./src/registries.ts",
@@ -9,7 +9,7 @@
     "test": "node --experimental-strip-types --test $(find src -name '*.test.ts')"
   },
   "dependencies": {
-    "skedyul": "1.7.42"
+    "skedyul": "1.7.48"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
