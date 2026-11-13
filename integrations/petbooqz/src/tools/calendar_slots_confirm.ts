@@ -44,6 +44,11 @@ export const calendarSlotsConfirmRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_confirm',
   label: 'Confirm Calendar Slot',
+  ui: {
+    title: 'Confirmed appointment',
+    activeTitle: 'Confirming appointment',
+    targetArg: 'patient_name',
+  },
   description: 'Confirm a calendar slot on the Petbooqz calendar',
   inputSchema: CalendarSlotsConfirmInputSchema,
   outputSchema: CalendarSlotsConfirmOutputSchema,

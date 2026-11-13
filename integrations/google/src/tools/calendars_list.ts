@@ -31,6 +31,7 @@ type CalendarsListOutput = z.infer<typeof CalendarsListOutputSchema>
 export const calendarsListRegistry: ToolDefinition<CalendarsListInput, CalendarsListOutput> = {
   name: 'calendars_list',
   label: 'List Google Calendars',
+  ui: { title: 'Looked up calendars', activeTitle: 'Looking up calendars' },
   description: 'List Google calendars available to the connected account',
   inputSchema: CalendarsListInputSchema,
   outputSchema: CalendarsListOutputSchema,

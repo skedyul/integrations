@@ -58,6 +58,10 @@ export const calendarEventsListRegistry: ToolDefinition<
 > = {
   name: 'calendar_events_list',
   label: 'List Calendar Events',
+  ui: {
+    title: 'Looked up calendar events',
+    activeTitle: 'Looking up calendar events',
+  },
   description: 'List Google Calendar events for a calendar',
   inputSchema: CalendarEventsListInputSchema,
   outputSchema: CalendarEventsListOutputSchema,

@@ -43,6 +43,11 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
 > = {
   name: 'submit_new_phone_number',
   label: 'Purchase Phone Number',
+  ui: {
+    title: 'Purchased phone number',
+    activeTitle: 'Purchasing phone number',
+    targetArg: 'name',
+  },
   description: 'Searches for and purchases an Australian mobile phone number from Twilio',
   inputSchema: SubmitNewPhoneNumberInputSchema,
   outputSchema: SubmitNewPhoneNumberOutputSchema,

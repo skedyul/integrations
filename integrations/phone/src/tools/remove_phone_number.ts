@@ -38,6 +38,7 @@ export const removePhoneNumberRegistry: ToolDefinition<
 > = {
   name: 'remove_phone_number',
   label: 'Remove Phone Number',
+  ui: { title: 'Removed phone number', activeTitle: 'Removing phone number' },
   description: 'Removes a phone number from the account, deleting its SMS channel and subscriptions',
   inputSchema: RemovePhoneNumberInputSchema,
   outputSchema: RemovePhoneNumberOutputSchema,

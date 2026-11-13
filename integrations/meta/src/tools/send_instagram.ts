@@ -21,6 +21,10 @@ import {
 export const sendInstagramRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_instagram',
   label: 'Send Instagram',
+  ui: {
+    title: 'Sent Instagram message',
+    activeTitle: 'Sending Instagram message',
+  },
   description: 'Send an Instagram Direct message via Meta Graph API',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

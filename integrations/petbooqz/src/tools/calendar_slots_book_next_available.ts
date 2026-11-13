@@ -44,6 +44,11 @@ export const calendarSlotsBookNextAvailableRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_book_next_available',
   label: 'Book Next Available Calendar Slot',
+  ui: {
+    title: 'Booked next available slot',
+    activeTitle: 'Booking next available slot',
+    targetArg: 'patient_name',
+  },
   description:
     'Find the earliest available slot in a date window and book it atomically (reserve + confirm under one queue lock)',
   inputSchema: CalendarSlotsBookNextAvailableInputSchema,

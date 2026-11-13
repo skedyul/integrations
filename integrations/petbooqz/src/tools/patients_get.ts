@@ -41,6 +41,7 @@ export const patientsGetRegistry: ToolDefinition<
 > = {
   name: 'patients_get',
   label: 'Get Patient',
+  ui: { title: 'Opened patient', activeTitle: 'Opening patient' },
   description: 'Get patient information by ID on Petbooqz',
   inputSchema: PatientsGetInputSchema,
   outputSchema: PatientsGetOutputSchema,

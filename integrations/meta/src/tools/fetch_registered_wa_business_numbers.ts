@@ -49,6 +49,10 @@ export const fetchRegisteredWABusinessNumbersRegistry: ToolDefinition<
 > = {
   name: 'fetch_registered_wa_business_numbers',
   label: 'Fetch Registered WhatsApp Business Numbers',
+  ui: {
+    title: 'Looked up WhatsApp numbers',
+    activeTitle: 'Looking up WhatsApp numbers',
+  },
   description:
     'Fetches all registered WhatsApp business phone numbers from Meta Graph API for the connected WABA',
   inputSchema: FetchRegisteredWABusinessNumbersInputSchema,

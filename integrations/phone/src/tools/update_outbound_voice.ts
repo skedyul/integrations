@@ -41,6 +41,10 @@ export const updateOutboundVoiceRegistry: ToolDefinition<
 > = {
   name: 'update_outbound_voice',
   label: 'Update Outbound Voice',
+  ui: {
+    title: 'Updated outbound calling',
+    activeTitle: 'Updating outbound calling',
+  },
   description: 'Updates the outbound voice enabled setting for a phone number',
   inputSchema: UpdateOutboundVoiceInputSchema,
   outputSchema: UpdateOutboundVoiceOutputSchema,

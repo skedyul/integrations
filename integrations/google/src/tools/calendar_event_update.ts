@@ -173,6 +173,11 @@ export const calendarEventUpdateRegistry: ToolDefinition<
 > = {
   name: 'calendar_event_update',
   label: 'Update Calendar Event',
+  ui: {
+    title: 'Updated calendar event',
+    activeTitle: 'Updating calendar event',
+    targetArg: 'summary',
+  },
   description:
     'Update a Google Calendar event, or create it when the CRM record has no Google event id yet. Pass mapped fields directly, or unformatted CRM before/after payloads from the install map.',
   inputSchema: CalendarEventUpdateInputSchema,

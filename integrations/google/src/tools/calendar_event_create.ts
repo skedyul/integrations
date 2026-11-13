@@ -98,6 +98,11 @@ export const calendarEventCreateRegistry: ToolDefinition<
 > = {
   name: 'calendar_event_create',
   label: 'Create Calendar Event',
+  ui: {
+    title: 'Created calendar event',
+    activeTitle: 'Creating calendar event',
+    targetArg: 'summary',
+  },
   description: 'Create a Google Calendar event. Set emit_event false when creating from a CRM outbound push so inbound sync does not insert a duplicate row.',
   inputSchema: CalendarEventCreateInputSchema,
   outputSchema: CalendarEventCreateOutputSchema,
