@@ -47,6 +47,11 @@ export const addWhatsAppNumberRegistry: ToolDefinition<
 > = {
   name: 'add_whatsapp_number',
   label: 'Add WhatsApp Number',
+  ui: {
+    title: 'Added WhatsApp number',
+    activeTitle: 'Adding WhatsApp number',
+    targetArg: 'name',
+  },
   description:
     'Adds a registered WhatsApp business phone number to the installation',
   inputSchema: AddWhatsAppNumberInputSchema,

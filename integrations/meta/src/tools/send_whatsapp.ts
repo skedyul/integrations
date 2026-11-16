@@ -25,6 +25,10 @@ import {
 export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_whatsapp',
   label: 'Send WhatsApp',
+  ui: {
+    title: 'Sent WhatsApp message',
+    activeTitle: 'Sending WhatsApp message',
+  },
   description: 'Send a WhatsApp message via Meta Graph API',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

@@ -27,6 +27,10 @@ export const removeInstagramAccountRegistry: ToolDefinition<
 > = {
   name: 'remove_instagram_account',
   label: 'Remove Instagram Account',
+  ui: {
+    title: 'Removed Instagram account',
+    activeTitle: 'Removing Instagram account',
+  },
   description:
     'Removes an Instagram account from the installation, deleting its channel and subscriptions',
   inputSchema: RemoveInstagramAccountInputSchema,

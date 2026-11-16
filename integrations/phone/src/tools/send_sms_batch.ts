@@ -154,6 +154,7 @@ export const sendSmsBatchRegistry: ToolDefinition<
 > = {
   name: 'send_sms_batch',
   label: 'Send SMS Batch',
+  ui: { title: 'Sent bulk SMS', activeTitle: 'Sending bulk SMS' },
   description: 'Send pre-rendered SMS messages to multiple recipients via Twilio Bulk Messaging API',
   inputSchema: MessageBulkSendInputSchema,
   outputSchema: MessageBulkSendOutputSchema,

@@ -41,6 +41,7 @@ export const asapOrdersGetRegistry: ToolDefinition<
 > = {
   name: 'asap_orders_get',
   label: 'Get ASAP Order',
+  ui: { title: 'Opened order', activeTitle: 'Opening order' },
   description: 'Get ASAP order information by ID from Petbooqz',
   inputSchema: AsapOrdersGetInputSchema,
   outputSchema: AsapOrdersGetOutputSchema,

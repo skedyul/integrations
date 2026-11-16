@@ -21,6 +21,10 @@ import {
 export const sendMessengerRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_messenger',
   label: 'Send Messenger',
+  ui: {
+    title: 'Sent Messenger message',
+    activeTitle: 'Sending Messenger message',
+  },
   description: 'Send a Facebook Messenger message via Meta Graph API',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

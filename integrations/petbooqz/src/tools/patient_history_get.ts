@@ -28,6 +28,10 @@ export const patientHistoryGetRegistry: ToolDefinition<
 > = {
   name: 'patient_history_get',
   label: 'Get Patient History',
+  ui: {
+    title: 'Looked up patient history',
+    activeTitle: 'Looking up patient history',
+  },
   description: 'Get patient history on Petbooqz',
   inputSchema: PatientHistoryGetInputSchema,
   outputSchema: PatientHistoryGetOutputSchema,

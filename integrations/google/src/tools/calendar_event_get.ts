@@ -51,6 +51,7 @@ export const calendarEventGetRegistry: ToolDefinition<
 > = {
   name: 'calendar_event_get',
   label: 'Get Calendar Event',
+  ui: { title: 'Opened calendar event', activeTitle: 'Opening calendar event' },
   description: 'Get a single Google Calendar event',
   inputSchema: CalendarEventGetInputSchema,
   outputSchema: CalendarEventGetOutputSchema,

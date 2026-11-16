@@ -29,6 +29,7 @@ export const calendarsListRegistry: ToolDefinition<
 > = {
   name: 'calendars_list',
   label: 'List Calendars',
+  ui: { title: 'Looked up calendars', activeTitle: 'Looking up calendars' },
   description: 'List all calendars on Petbooqz',
   inputSchema: CalendarsListInputSchema,
   outputSchema: CalendarsListOutputSchema,

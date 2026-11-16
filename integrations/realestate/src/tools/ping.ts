@@ -13,6 +13,7 @@ type PingOutput = z.infer<typeof PingOutputSchema>
 export const pingRegistry: ToolDefinition<PingInput, PingOutput> = {
   name: 'ping',
   label: 'Ping',
+  ui: { title: 'Checked connection', activeTitle: 'Checking connection' },
   description: 'Health check for the realestate.com.au integration server',
   inputSchema: PingInputSchema,
   outputSchema: PingOutputSchema,

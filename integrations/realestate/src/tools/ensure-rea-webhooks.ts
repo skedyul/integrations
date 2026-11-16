@@ -112,6 +112,7 @@ export const ensureReaWebhooksRegistry: ToolDefinition<
 > = {
   name: 'ensure_rea_webhooks',
   label: 'Ensure REA webhooks',
+  ui: { title: 'Set up REA webhooks', activeTitle: 'Setting up REA webhooks' },
   description:
     'List REA webhook subscriptions and point EnquiryCreated (lead only) at this install URL.',
   inputSchema: EnsureReaWebhooksInputSchema,

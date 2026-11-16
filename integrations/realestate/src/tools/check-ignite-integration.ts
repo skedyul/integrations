@@ -41,6 +41,7 @@ export const checkIgniteIntegrationRegistry: ToolDefinition<
 > = {
   name: 'check_ignite_integration',
   label: 'Check Ignite Status',
+  ui: { title: 'Checked Ignite access', activeTitle: 'Checking Ignite access' },
   description:
     'Check whether agencies have authorized this partner in Ignite and sync agency records for lead webhooks.',
   inputSchema: CheckIgniteInputSchema,

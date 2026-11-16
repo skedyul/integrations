@@ -49,6 +49,7 @@ export const clientsGetRegistry: ToolDefinition<
 > = {
   name: 'clients_get',
   label: 'Get Client',
+  ui: { title: 'Opened client', activeTitle: 'Opening client' },
   description: 'Get client information by ID on Petbooqz',
   inputSchema: ClientsGetInputSchema,
   outputSchema: ClientsGetOutputSchema,

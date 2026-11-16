@@ -28,6 +28,10 @@ export const removeWhatsAppNumberRegistry: ToolDefinition<
 > = {
   name: 'remove_whatsapp_number',
   label: 'Remove WhatsApp Number',
+  ui: {
+    title: 'Removed WhatsApp number',
+    activeTitle: 'Removing WhatsApp number',
+  },
   description:
     'Removes a WhatsApp number from the installation, deleting its channel and subscriptions',
   inputSchema: RemoveWhatsAppNumberInputSchema,

@@ -63,6 +63,11 @@ export const addInstagramAccountRegistry: ToolDefinition<
 > = {
   name: 'add_instagram_account',
   label: 'Add Instagram Account',
+  ui: {
+    title: 'Added Instagram account',
+    activeTitle: 'Adding Instagram account',
+    targetArg: 'name',
+  },
   description: 'Adds an Instagram Business account as a Direct messaging channel',
   inputSchema: AddInstagramAccountInputSchema,
   outputSchema: AddInstagramAccountOutputSchema,

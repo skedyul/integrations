@@ -42,6 +42,7 @@ export const calendarSyncRegistry: ToolDefinition<
 > = {
   name: 'calendar_sync',
   label: 'Sync Google Calendar',
+  ui: { title: 'Synced calendar', activeTitle: 'Syncing calendar' },
   description:
     'Start one calendar-event import batch for a Google calendar or every calendar on the connected account. Does not emit per-event webhooks.',
   inputSchema: CalendarSyncInputSchema,

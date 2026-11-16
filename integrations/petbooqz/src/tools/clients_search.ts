@@ -96,6 +96,11 @@ export const clientsSearchRegistry: ToolDefinition<
 > = {
   name: 'clients_search',
   label: 'Search Clients',
+  ui: {
+    title: 'Searched clients',
+    activeTitle: 'Searching clients',
+    targetArg: 'phone',
+  },
   description: 'Search for clients by phone number on Petbooqz',
   inputSchema: ClientsSearchInputSchema,
   outputSchema: ClientsSearchOutputSchema,

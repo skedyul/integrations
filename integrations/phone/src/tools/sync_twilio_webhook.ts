@@ -37,6 +37,11 @@ export const syncTwilioWebhookRegistry: ToolDefinition<
 > = {
   name: 'sync_twilio_webhook',
   label: 'Sync Twilio Webhook',
+  ui: {
+    title: 'Synced SMS webhook',
+    activeTitle: 'Syncing SMS webhook',
+    targetArg: 'phone_number',
+  },
   description: 'Syncs the SMS webhook URL to Twilio for a given phone number. Updates the Twilio phone number configuration to point to the correct receive_sms webhook endpoint.',
   inputSchema: SyncTwilioWebhookInputSchema,
   outputSchema: SyncTwilioWebhookOutputSchema,

@@ -38,6 +38,7 @@ export const calendarFreeBusyQueryRegistry: ToolDefinition<
 > = {
   name: 'calendar_freebusy_query',
   label: 'Query Calendar Free/Busy',
+  ui: { title: 'Checked availability', activeTitle: 'Checking availability' },
   description: 'Query busy intervals for one or more Google calendars',
   inputSchema: CalendarFreeBusyInputSchema,
   outputSchema: CalendarFreeBusyOutputSchema,

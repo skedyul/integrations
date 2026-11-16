@@ -33,6 +33,7 @@ async function fetchAttachmentContent(url: string): Promise<Buffer> {
 export const sendEmailRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_email',
   label: 'Send Email',
+  ui: { title: 'Sent email', activeTitle: 'Sending email' },
   description: 'Send an email message',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

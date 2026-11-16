@@ -38,6 +38,11 @@ export const calendarSlotsBookRegistry: ToolDefinition<
 > = {
   name: 'calendar_slots_book',
   label: 'Book Calendar Slot',
+  ui: {
+    title: 'Booked appointment',
+    activeTitle: 'Booking appointment',
+    targetArg: 'patient_name',
+  },
   description:
     'Book a calendar slot on the Petbooqz calendar (atomic reserve + confirm, serialized per calendar)',
   inputSchema: CalendarSlotsBookInputSchema,

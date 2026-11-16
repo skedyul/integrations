@@ -20,6 +20,11 @@ export const reconnectGoogleRegistry: ToolDefinition<
 > = {
   name: 'reconnect_google',
   label: 'Reconnect Google',
+  ui: {
+    title: 'Reconnected Google',
+    activeTitle: 'Reconnecting Google',
+    opaque: true,
+  },
   description: 'Restart Google OAuth to persist or replace the connected account tokens',
   inputSchema: ReconnectGoogleInputSchema,
   outputSchema: ReconnectGoogleOutputSchema,

@@ -25,6 +25,11 @@ export const fetchMetaConnectionRegistry: ToolDefinition<
 > = {
   name: 'fetch_meta_connection',
   label: 'Fetch Meta Connection',
+  ui: {
+    title: 'Checked Meta connection',
+    activeTitle: 'Checking Meta connection',
+    opaque: true,
+  },
   description:
     'Returns the connected Meta account details stored on the installation env',
   inputSchema: FetchMetaConnectionInputSchema,

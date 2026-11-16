@@ -34,6 +34,11 @@ export const updateEmailAddressRegistry: ToolDefinition<
 > = {
   name: 'update_email_address',
   label: 'Update Email Address',
+  ui: {
+    title: 'Updated email address',
+    activeTitle: 'Updating email address',
+    targetArg: 'name',
+  },
   description: 'Updates the email address details (name) in both the email_address model and the communication channel',
   inputSchema: UpdateEmailAddressInputSchema,
   outputSchema: UpdateEmailAddressOutputSchema,

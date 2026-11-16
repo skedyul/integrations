@@ -59,6 +59,11 @@ export const patientHistoryCreateRegistry: ToolDefinition<
 > = {
   name: 'patient_history_create',
   label: 'Create Patient History',
+  ui: {
+    title: 'Added patient history',
+    activeTitle: 'Adding patient history',
+    targetArg: 'title',
+  },
   description: 'Create patient history entry on Petbooqz',
   inputSchema: PatientHistoryCreateInputSchema,
   outputSchema: PatientHistoryCreateOutputSchema,

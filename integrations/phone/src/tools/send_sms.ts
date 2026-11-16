@@ -23,6 +23,7 @@ import { meteredSmsBilling } from '../lib/sms_segments'
 export const sendSmsRegistry: ToolDefinition<MessageSendInput, MessageSendOutput> = {
   name: 'send_sms',
   label: 'Send SMS',
+  ui: { title: 'Sent SMS', activeTitle: 'Sending SMS' },
   description: 'Send an SMS message via Twilio',
   inputSchema: MessageSendInputSchema,
   outputSchema: MessageSendOutputSchema,

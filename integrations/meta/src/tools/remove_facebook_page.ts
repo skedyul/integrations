@@ -27,6 +27,7 @@ export const removeFacebookPageRegistry: ToolDefinition<
 > = {
   name: 'remove_facebook_page',
   label: 'Remove Facebook Page',
+  ui: { title: 'Removed Facebook Page', activeTitle: 'Removing Facebook Page' },
   description:
     'Removes a Facebook Page from the installation, deleting its Messenger channel and subscriptions',
   inputSchema: RemoveFacebookPageInputSchema,

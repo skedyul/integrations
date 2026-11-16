@@ -38,6 +38,10 @@ export const calendarEventDeleteRegistry: ToolDefinition<
 > = {
   name: 'calendar_event_delete',
   label: 'Delete Calendar Event',
+  ui: {
+    title: 'Deleted calendar event',
+    activeTitle: 'Deleting calendar event',
+  },
   description: 'Delete a Google Calendar event',
   inputSchema: CalendarEventDeleteInputSchema,
   outputSchema: CalendarEventDeleteOutputSchema,
