@@ -1,9 +1,0 @@
-[
-  {
-    "name": "enquiry.created",
-    "label": "Enquiry created",
-    "description": "A realestate.com.au lead enquiry arrived",
-    "group": "Enquiries",
-    "icon": "Inbox"
-  }
-]

@@ -3,7 +3,6 @@ import pkg from './package.json' with { type: 'json' }
 import catalogMeta from './src/events/catalog.json' with { type: 'json' }
 import catalogExamples from './src/events/catalog-examples.json' with { type: 'json' }
 import catalogContextFields from './src/events/catalog-context-fields.json' with { type: 'json' }
-import signals from './src/events/signals.json' with { type: 'json' }
 
 const events = catalogMeta.map((entry) => {
   const examplePayload = catalogExamples[entry.name as keyof typeof catalogExamples]
@@ -29,7 +28,6 @@ export default defineConfig({
   webhooks: import('./src/registries'),
 
   provision: import('./src/provision'),
+  // Also the signal catalog: workflows post these to timelines as realestate:<name>.
   events,
-  // Timeline signals realestate workflows emit, referenced as realestate:<name>.
-  signals,
 })
