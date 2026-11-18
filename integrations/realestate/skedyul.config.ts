@@ -28,5 +28,6 @@ export default defineConfig({
   webhooks: import('./src/registries'),
 
   provision: import('./src/provision'),
+  // Also the signal catalog: workflows post these to timelines as realestate:<name>.
   events,
 })

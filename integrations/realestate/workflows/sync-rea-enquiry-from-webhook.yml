@@ -358,8 +358,7 @@ steps:
     inputs:
       contact-id: "{% if steps.resolve-contact.outputs.response.contact-id != blank %}{{ steps.resolve-contact.outputs.response.contact-id }}{% else %}{{ steps.ensure-contact.outputs.response.data.id }}{% endif %}"
       description: "{{ steps.build-enquiry-signal-description.outputs.response }}"
-      app-handle: realestate
-      handle: enquiry-created
+      signal: realestate:enquiry.created
       metadata:
         event-type: "{{ context.event.type }}"
         event-id: "{{ context.event.id }}"
