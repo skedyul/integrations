@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       skedyul:
-        specifier: 1.7.48
-        version: 1.7.48
+        specifier: 1.7.50
+        version: 1.7.50
     devDependencies:
       '@types/node':
         specifier: ^20.0.0
@@ -1110,8 +1110,8 @@ packages:
     resolution: {integrity: sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==}
     engines: {node: '>= 0.4'}
 
-  skedyul@1.7.48:
-    resolution: {integrity: sha512-hOfa3Z9WClNvG+LjP0zxvVn5sryJne9ECzE2vY+eTXyjTr8UwmJL1Hd+M+k+luhCdBS+0++yFsLyTtKnS5bVvw==}
+  skedyul@1.7.50:
+    resolution: {integrity: sha512-T2NrQcqOTWlYjVtCHTWCAq9OCOtlpHtth+GKld7JkzpttfBqkbdj/axSKLIeQbOU2LgV4hHv/lblwTGXWaAiFg==}
     hasBin: true
 
   source-map@0.7.6:
@@ -2126,7 +2126,7 @@ snapshots:
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
 
-  skedyul@1.7.48:
+  skedyul@1.7.50:
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.2(zod@4.6.7)
       esbuild: 0.27.7
