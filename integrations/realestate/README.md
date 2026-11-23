@@ -44,14 +44,14 @@ Subscription IDs are stored on the install env by the install hook (not user-ent
 
 ### Set up CRM
 
-Map `customer`, `property`, `enquiry`, and `property_ownership` to workplace CRM fields and enable the bundled workflow. After mapping, an EnquiryCreated webhook upserts:
+On **Setup**, **Set up in CRM Sources** opens Settings → CRM → Sources. Map `customer`, `property`, `enquiry`, and `property_ownership` to workplace CRM fields there and turn on live updates (the bundled enquiry sync workflow). After mapping, an EnquiryCreated webhook upserts:
 
 1. Customer (person)
 2. Property (listing)
 3. Property ownership (customer↔property join; `ownership_key` is `listing_id:phone` or `listing_id:email`, or `property_id:phone|email` when the enquiry has no listing id)
 4. Enquiry (with customer and property relationships)
 
-Install pages: **Customers**, **Properties**, **Enquiries**.
+Install pages: **Setup** and **Agencies**. CRM mapping has no app page; it lives in CRM Sources.
 
 ## Uninstall
 

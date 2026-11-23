@@ -9,9 +9,6 @@ import * as workflows from './workflows'
 
 import setupPage from './pages/setup'
 import agenciesPage from './pages/agencies'
-import customersPage from './pages/customers'
-import propertiesPage from './pages/properties'
-import enquiriesPage from './pages/enquiries'
 
 const config: ProvisionConfig = {
   env,
@@ -24,9 +21,6 @@ const config: ProvisionConfig = {
   pages: [
     setupPage,
     agenciesPage,
-    customersPage,
-    propertiesPage,
-    enquiriesPage,
   ],
 }
 

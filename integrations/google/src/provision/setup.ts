@@ -15,21 +15,20 @@ export const setupCalendarsStep = defineSetupStep({
   handle: 'setup_calendars',
   label: 'Set up calendars',
   description:
-    'Map Google calendars to your CRM, then use Import on the Calendars hub for history. Live wiring is for later single calendar changes, not backfill.',
+    'Map Google calendars to your CRM in Settings → CRM → Sources, then use Import on the Google Calendar page for history. Live updates (turned on in CRM Sources) cover later single calendar changes, not backfill.',
   kind: 'crm',
   requires: ['connect_google'],
   entities: ['calendar'],
   workflowHandles: ['sync-google-calendar-from-webhook'],
   listenToCrm: true,
   capabilities: ['crm.calendar', 'realtime.calendar'],
-  href: '/calendars',
 })
 
 export const setupCalendarEventsStep = defineSetupStep({
   handle: 'setup_calendar_events',
   label: 'Set up calendar events',
   description:
-    'Map Google Calendar events and people (users, attendees) to your CRM, then use Import on the Events hub for history. Live event wiring is for later single changes, not pull sync.',
+    'Map Google Calendar events and people (users, attendees) to your CRM in Settings → CRM → Sources, then use Import on the Google Calendar page for history. Live updates (turned on in CRM Sources) cover later single changes, not pull sync.',
   kind: 'crm',
   requires: ['setup_calendars'],
   entities: ['calendar_event', 'user', 'attendee'],
@@ -40,7 +39,6 @@ export const setupCalendarEventsStep = defineSetupStep({
   ],
   listenToCrm: true,
   capabilities: ['crm.calendar_event', 'realtime.calendar_event'],
-  href: '/events',
 })
 
 export const setupCalendarPeopleStep = defineSetupStep({

@@ -12,9 +12,9 @@ Future Google services (Gmail, Drive) are stubbed under `src/services/` but not 
 - History backfill is one `import_calendars` job (calendars, then events/people/attendees when those maps are ready). Incremental pull and live Google push use `import_calendar_events` (sync-token aware, stored on the mapped calendar). Never emit one app event per listed row
 - Optional live Google push: one ping starts one batch job after the user enables watches
 - Typed app events for later single changes (`app.google.calendar.created/updated/deleted`)
-- Install-time CRM maps for `calendar`, `calendar_event`, `user`, and `attendee`. Map `user` onto a workplace people model (customer/client/contact). Attendees are event×email RSVP rows related to the event and user.
-- Bundled workflows with event wiring UI (not a backfill path)
-- Admin pages for setup, account, calendars, linked sync state, and event CRM mapping
+- CRM maps for `calendar`, `calendar_event`, `user`, and `attendee`, set up by the workplace in Settings → CRM → Sources (the Setup checklist links there). Map `user` onto a workplace people model (customer/client/contact). Attendees are event×email RSVP rows related to the event and user.
+- Bundled workflows; live updates are turned on per setup step in CRM Sources (not a backfill path)
+- Admin pages for setup, account, the Google Calendar import hub, and linked sync state
 
 ## Setup
 
@@ -46,17 +46,17 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
 
 1. Install the Google app on a workplace
 2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens. Uninstall deletes Google-keyed calendar, event, and attendee CRM rows so a later Import does not create a second set.
-3. Complete **Set up calendars**:
+3. Complete **Set up calendars** (its button opens Settings → CRM → Sources):
    - Map the `calendar` entity to your workplace calendar model (`google_calendar_id` match key)
    - Run **Import calendars** on the Google Calendar hub (one batch job). That job also imports events, people, and attendees when those maps are ready
-   - Optionally wire `app.google.calendar.created/updated/deleted` for later single changes — not for history
-4. Complete **Set up calendar events**:
+   - Optionally turn on live updates in CRM Sources (`app.google.calendar.created/updated/deleted`) for later single changes — not for history
+4. Complete **Set up calendar events** (in CRM Sources):
    - Map the `calendar_event` entity to your workplace event model
    - Set composite match fields: `google_event_id` + `calendar_id` (match keys only — not required on Skedyul create)
    - Map the `calendar` relationship so Calendar LIST view can section by calendar
    - Keep the event `attendees` Google JSON on a field such as `attendee_emails` (do not map that object onto a people relation). RSVP rows live on the `attendee` model.
-   - Optionally wire `app.google.calendar.event.*` for a later 1:1 payload — not for pull sync
-5. Complete **Set up calendar people**:
+   - Optionally turn on live updates in CRM Sources (`app.google.calendar.event.*`) for a later 1:1 payload — not for pull sync
+5. Complete **Set up calendar people** (in CRM Sources):
    - Map `user` onto customer/client/contact (match `email`)
    - Map `attendee` onto an RSVP/guest model (match `event_attendee_key`)
    - Map attendee `event` → event and `user` → the workplace people field

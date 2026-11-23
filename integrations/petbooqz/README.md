@@ -137,35 +137,14 @@ Agent: 1. Get appointment details
 | `asap_orders_get` | Get ASAP/urgent orders |
 | `verify_credentials` | Validate API credentials |
 
-## Models
+## Entities
 
-### client (SHARED)
+Petbooqz declares `client` and `patient` as entities (`src/provision/entities`). The workplace maps them onto its own CRM models in **Settings → CRM → Sources**; the defaults match Vetnostics and Zoetis (`client` / `patient` models, matched on `petbooqz_id`).
 
-Client/Owner records mapped to user's existing model.
-
-| Field | Type | Owner | Description |
-|-------|------|-------|-------------|
-| `petbooqz_id` | STRING | APP | External ID from Petbooqz |
-
-### patient (SHARED)
-
-Patient/Pet records mapped to user's existing model.
-
-| Field | Type | Owner | Description |
-|-------|------|-------|-------------|
-| `petbooqz_id` | STRING | APP | External ID from Petbooqz |
-
-**Relationship**: Many patients to one client (owner)
-
-### appointment (SHARED)
-
-Appointment records mapped to user's existing model.
-
-| Field | Type | Owner | Description |
-|-------|------|-------|-------------|
-| `petbooqz_id` | STRING | APP | External ID from Petbooqz |
-
-**Relationship**: Many appointments to one patient
+| Entity | Default CRM model | Match | Relationship |
+|--------|-------------------|-------|--------------|
+| `client` | `client` | `petbooqz_id` | `patients` → patient |
+| `patient` | `patient` | `petbooqz_id` | `client` → owner |
 
 ## Environment Variables
 
@@ -185,18 +164,14 @@ No provision-level environment variables required.
 
 ## Pages
 
-| Page | Path | Description |
-|------|------|-------------|
-| Clients | `/clients` | Configure client model mapping (default) |
-| Patients | `/patients` | Configure patient model mapping |
-| Appointments | `/appointments` | Configure appointment model mapping |
+None. CRM mapping lives in Settings → CRM → Sources.
 
 ## Install Flow
 
 1. User provides Petbooqz server URL and credentials
 2. Install handler validates credentials via `verify_credentials`
 3. URL is normalized (adds `http://` if missing)
-4. Models are mapped to user's existing data
+4. The workplace maps clients and patients in Settings → CRM → Sources
 
 ```ts
 // src/server/hooks/install.ts

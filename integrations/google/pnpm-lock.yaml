@@ -15,8 +15,8 @@ importers:
         specifier: 173.0.0
         version: 173.0.0
       skedyul:
-        specifier: 1.7.48
-        version: 1.7.48
+        specifier: 1.7.50
+        version: 1.7.50
     devDependencies:
       '@jest/globals':
         specifier: ^29.7.0
@@ -2026,8 +2026,8 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  skedyul@1.7.48:
-    resolution: {integrity: sha512-hOfa3Z9WClNvG+LjP0zxvVn5sryJne9ECzE2vY+eTXyjTr8UwmJL1Hd+M+k+luhCdBS+0++yFsLyTtKnS5bVvw==}
+  skedyul@1.7.50:
+    resolution: {integrity: sha512-T2NrQcqOTWlYjVtCHTWCAq9OCOtlpHtth+GKld7JkzpttfBqkbdj/axSKLIeQbOU2LgV4hHv/lblwTGXWaAiFg==}
     hasBin: true
 
   slash@3.0.0:
@@ -4492,7 +4492,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  skedyul@1.7.48:
+  skedyul@1.7.50:
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
       esbuild: 0.27.7
