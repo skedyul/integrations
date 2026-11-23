@@ -15,7 +15,7 @@ export const setupCrmStep = defineSetupStep({
   handle: 'setup_crm',
   label: 'Set up CRM',
   description:
-    'Map customers, properties, enquiries, and property ownership to your CRM and enable the enquiry sync workflow.',
+    'Map customers, properties, enquiries, and property ownership to your CRM in Settings → CRM → Sources, and turn on the enquiry sync there.',
   kind: 'crm',
   requires: ['connect_agencies'],
   entities: ['customer', 'property', 'enquiry', 'property_ownership'],
@@ -28,7 +28,6 @@ export const setupCrmStep = defineSetupStep({
     'crm.property_ownership',
     'realtime.enquiry',
   ],
-  href: '/customers',
 })
 
 export default [connectAgenciesStep, setupCrmStep]

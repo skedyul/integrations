@@ -5,11 +5,10 @@
  * This is the main configuration file for the Petbooqz app.
  * Resources are auto-discovered from the following locations:
  *
- *   models/        - Model definitions (scope declared in each model)
- *   agents/        - Agent definitions
- *   pages/         - Page definitions (file-based routing)
- *   env.ts         - Environment variables (with scope property)
- *   navigation.ts  - Base navigation configuration
+ *   src/provision/entities/ - Client and patient entities (mapped in
+ *                             Settings → CRM → Sources)
+ *   src/provision/agents/   - Agent definitions
+ *   src/provision/env.ts    - Environment variables (with scope property)
  *   src/tools/     - Tool definitions
  *   src/server/    - Lifecycle hooks (install, provision, uninstall)
  */
