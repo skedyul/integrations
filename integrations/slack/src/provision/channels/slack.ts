@@ -22,15 +22,17 @@ export default defineChannel({
       receive: 'receive_slack',
       send: 'send_slack',
     },
-    // DMs to the Skedyul app go to Ask Skedyul. Channel and group messages
-    // keep the messaging path above. The Slack team belongs to one workplace,
-    // and the sender is matched to a member by their Slack profile email.
+    // Each Slack workspace is one workplace's own team, so every Slack
+    // conversation is an Ask Skedyul thread: DMs reply to everything,
+    // channels reply when the app is @mentioned (all messages are kept for
+    // context). Senders are matched to members by Slack profile email.
     askSkedyul: {
       label: 'Slack',
       icon: 'MessageSquare',
-      conversations: ['direct'],
+      conversations: ['direct', 'group'],
       addressing: 'installation',
       matchMemberBy: ['email'],
+      groupReplies: 'mentioned',
       send: 'send_slack',
     },
   },
