@@ -89,3 +89,30 @@ test('a channel message is an external group and a direct message is not', () =>
     undefined,
   )
 })
+
+test('returns the sender email for a direct message without putting emails on the roster', async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        ok: true,
+        user: { id: 'U1', real_name: 'Sam', profile: { email: 'sam@example.com' } },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )) as typeof fetch
+
+  try {
+    const room = await describeSlackConversation({
+      botToken: 'xoxb-test',
+      channelId: 'D1',
+      senderId: 'U1',
+      direct: true,
+    })
+    assert.equal(room.senderEmail, 'sam@example.com')
+    assert.deepEqual(room.participants, [
+      { identifierValue: 'U1', displayName: 'Sam', avatarUrl: undefined },
+    ])
+  } finally {
+    globalThis.fetch = original
+  }
+})

@@ -87,6 +87,7 @@ async function handleReceiveSlack(
   const isDirect = event.channel_type === 'im'
   let participants: SlackPerson[] = []
   let roomName: string | undefined
+  let senderEmail: string | undefined
   const installationId = channels[0]?.appInstallationId
   if (installationId) {
     try {
@@ -101,6 +102,7 @@ async function handleReceiveSlack(
         })
         participants = room.participants
         roomName = room.name
+        senderEmail = room.senderEmail
       }
     } catch (error) {
       console.log('[receiveSlack] Room profile lookup failed', error)
@@ -131,6 +133,8 @@ async function handleReceiveSlack(
     threadExternalId:
       event.thread_ts && event.thread_ts !== event.ts ? event.thread_ts : undefined,
     group,
+    // Matches the sender to a workplace member for Ask Skedyul (DMs).
+    identity: senderEmail ? { email: senderEmail } : undefined,
   })
 
   return { status: 200, body: { ok: true } }
