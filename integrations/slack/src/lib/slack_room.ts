@@ -10,6 +10,8 @@ export type SlackPerson = {
 export type SlackRoomProfile = {
   name?: string
   participants: SlackPerson[]
+  /** Sender's Slack profile email (needs users:read.email). */
+  senderEmail?: string
 }
 
 const MEMBER_CAP = 200
@@ -20,8 +22,10 @@ type SlackUser = {
   is_bot?: boolean
   real_name?: string
   name?: string
-  profile?: { display_name?: string; real_name?: string; image_72?: string }
+  profile?: { display_name?: string; real_name?: string; image_72?: string; email?: string }
 }
+
+type ResolvedPerson = SlackPerson & { email?: string }
 
 type SlackChannel = {
   name?: string
@@ -29,7 +33,7 @@ type SlackChannel = {
   is_mpim?: boolean
 }
 
-function personFromUser(user: SlackUser | undefined): SlackPerson | undefined {
+function personFromUser(user: SlackUser | undefined): ResolvedPerson | undefined {
   const identifierValue = user?.id?.trim()
   if (!identifierValue || user?.is_bot || identifierValue === 'USLACKBOT') return undefined
   const displayName =
@@ -39,7 +43,8 @@ function personFromUser(user: SlackUser | undefined): SlackPerson | undefined {
     user?.name?.trim() ||
     undefined
   const avatarUrl = user?.profile?.image_72?.trim() || undefined
-  return { identifierValue, displayName, avatarUrl }
+  const email = user?.profile?.email?.trim() || undefined
+  return { identifierValue, displayName, avatarUrl, ...(email ? { email } : {}) }
 }
 
 function logSlackLookup(method: string, error: unknown) {
@@ -76,8 +81,8 @@ async function users(
   client: SlackClient,
   ids: string[],
   signal: AbortSignal,
-): Promise<SlackPerson[]> {
-  const people: SlackPerson[] = []
+): Promise<ResolvedPerson[]> {
+  const people: ResolvedPerson[] = []
   const queue = [...ids]
   while (queue.length > 0) {
     if (signal.aborted) break
@@ -114,7 +119,7 @@ export async function describeSlackConversation(input: {
   const client = new SlackClient(input.botToken)
   const signal = AbortSignal.timeout(input.budgetMs ?? LOOKUP_BUDGET_MS)
   let channel: SlackChannel | undefined
-  const senderLookup = users(client, [input.senderId], signal).catch(() => [] as SlackPerson[])
+  const senderLookup = users(client, [input.senderId], signal).catch(() => [] as ResolvedPerson[])
 
   if (!input.direct) {
     try {
@@ -164,10 +169,18 @@ export async function describeSlackConversation(input: {
   })
   const [senderPeople, otherPeople] = await Promise.all([
     senderLookup,
-    extraIds.length > 0 ? users(client, extraIds, signal).catch(() => [] as SlackPerson[]) : Promise.resolve([]),
+    extraIds.length > 0
+      ? users(client, extraIds, signal).catch(() => [] as ResolvedPerson[])
+      : Promise.resolve([] as ResolvedPerson[]),
   ])
 
-  const participants = [...senderPeople, ...otherPeople]
+  const senderEmail = senderPeople.find(
+    (person) => person.identifierValue === input.senderId,
+  )?.email
+  // Emails stay out of the room roster; only the sender's is used, as a hint.
+  const participants: SlackPerson[] = [...senderPeople, ...otherPeople].map(
+    ({ email: _email, ...person }) => person,
+  )
   if (!participants.some((person) => person.identifierValue === input.senderId)) {
     participants.unshift({ identifierValue: input.senderId })
   }
@@ -175,6 +188,7 @@ export async function describeSlackConversation(input: {
   return {
     name: input.direct ? undefined : roomName(channel, participants),
     participants,
+    ...(senderEmail ? { senderEmail } : {}),
   }
 }
 

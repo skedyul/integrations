@@ -28,6 +28,7 @@ export default async function install(
     'mpim:history',
     'mpim:read',
     'users:read',
+    'users:read.email',
   ].join(',')
 
   const url = new URL('https://slack.com/oauth/v2/authorize')

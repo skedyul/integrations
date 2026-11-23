@@ -7,11 +7,13 @@ import {
   slackInboundGroup,
   type SlackPerson,
 } from '../lib/slack_room'
+import { botUserIdFromEvent, mentionsBot } from '../lib/slack_mention'
 
 type SlackEventBody = {
   type?: string
   challenge?: string
   team_id?: string
+  authorizations?: Array<{ user_id?: string; is_bot?: boolean }>
   event?: {
     type?: string
     subtype?: string
@@ -87,6 +89,7 @@ async function handleReceiveSlack(
   const isDirect = event.channel_type === 'im'
   let participants: SlackPerson[] = []
   let roomName: string | undefined
+  let senderEmail: string | undefined
   const installationId = channels[0]?.appInstallationId
   if (installationId) {
     try {
@@ -101,6 +104,7 @@ async function handleReceiveSlack(
         })
         participants = room.participants
         roomName = room.name
+        senderEmail = room.senderEmail
       }
     } catch (error) {
       console.log('[receiveSlack] Room profile lookup failed', error)
@@ -131,6 +135,10 @@ async function handleReceiveSlack(
     threadExternalId:
       event.thread_ts && event.thread_ts !== event.ts ? event.thread_ts : undefined,
     group,
+    // Matches the sender to a workplace member for Ask Skedyul.
+    identity: senderEmail ? { email: senderEmail } : undefined,
+    // In channels, Ask Skedyul replies only when the app is @mentioned.
+    mentioned: mentionsBot(event.text, botUserIdFromEvent(payload)),
   })
 
   return { status: 200, body: { ok: true } }
