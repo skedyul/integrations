@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import type { OAuth2Client } from 'google-auth-library'
 import { google } from 'googleapis'
 import { mapGoogleAuthError } from '../../lib/google_client'
@@ -20,7 +20,7 @@ export async function startCalendarWatch(
   },
 ): Promise<GoogleWatchChannel> {
   const channelId = options.channelId ?? randomUUID()
-  const token = options.token ?? randomUUID()
+  const token = options.token ?? randomBytes(32).toString('hex')
 
   try {
     const calendar = google.calendar({ version: 'v3', auth })
@@ -67,7 +67,13 @@ export async function stopCalendarWatch(
   }
 }
 
-export function watchNeedsRenewal(expiration: string | null | undefined): boolean {
+export const WATCH_RENEW_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/** True when the channel has no known expiry or expires within 24 hours. */
+export function watchNeedsRenewal(
+  expiration: string | null | undefined,
+  now: number = Date.now(),
+): boolean {
   if (!expiration) {
     return true
   }
@@ -77,5 +83,5 @@ export function watchNeedsRenewal(expiration: string | null | undefined): boolea
     return true
   }
 
-  return expiryMs <= Date.now() + 24 * 60 * 60 * 1000
+  return expiryMs <= now + WATCH_RENEW_WINDOW_MS
 }

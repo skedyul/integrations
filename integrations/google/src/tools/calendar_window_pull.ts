@@ -5,8 +5,13 @@ import {
   CalendarWindowPullInputSchema,
 } from 'skedyul'
 import type { ToolDefinition, CalendarWindowPullInput } from 'skedyul'
+import type { GoogleCalendarRecord, GoogleEventEntity } from '../events/types'
+import { listCrmCalendarRecords } from '../lib/crm-calendars'
+import { findCrmEventsByGoogleIds } from '../lib/crm-events'
+import { decideEventUpsert, eventLookupIds } from '../lib/event-upsert-plan'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { toCalendarWindowPullPayload } from '../lib/seed-google-calendars'
+import { ensureSyncSchedulesOnce } from '../lib/sync-schedules'
 import {
   listGoogleCalendarEvents,
   listGoogleCalendars,
@@ -14,17 +19,26 @@ import {
 } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import {
-  googleAuthToolFailure,
-  createGoogleError,
   createSuccessResponse,
   createValidationError,
+  googleToolFailure,
 } from '../lib/response'
 
-const DEFAULT_MAX_RESULTS_PER_CALENDAR = 250
+const PAGE_SIZE = 250
+/** Per calendar: 10 × 250 events. Further pages are reported as truncated. */
+export const MAX_PAGES_PER_CALENDAR = 10
+/** Stop paging with headroom before the 60s tool timeout. */
+const PAGING_BUDGET_MS = 40_000
 
 const CalendarWindowPullOutputSchema = z.object({
   calendars_upserted: z.number().int().nonnegative(),
   events_upserted: z.number().int().nonnegative(),
+  /** Cancelled in Google: existing rows marked cancelled, or cancelled occurrences stored. */
+  events_cancelled: z.number().int().nonnegative(),
+  /** Not newer than the CRM row, unknown cancellations, or pending write-backs. */
+  events_skipped: z.number().int().nonnegative(),
+  /** Calendars whose CRM row has sync_enabled false: events not pulled. */
+  calendars_skipped: z.number().int().nonnegative(),
   truncated: z.boolean(),
   calendars: z.array(
     z.object({
@@ -52,8 +66,11 @@ function readGoogleCalendarId(row: Record<string, unknown>): string | null {
 
 async function upsertCalendars(
   calendars: GoogleCalendarSummary[],
+  crmByGoogleId: Map<string, GoogleCalendarRecord>,
 ): Promise<Map<string, string>> {
-  const payloads = calendars.map((calendar) => toCalendarWindowPullPayload(calendar))
+  const payloads = calendars.map((calendar) =>
+    toCalendarWindowPullPayload(calendar, { isNew: !crmByGoogleId.has(calendar.calendar_id) }),
+  )
   const { results, errors } = await instance.upsertMany(
     'calendar',
     payloads,
@@ -93,7 +110,7 @@ async function upsertCalendars(
 }
 
 function toEventUpsertItem(
-  event: ReturnType<typeof normalizeGoogleCalendarEvent>,
+  event: GoogleEventEntity,
   calendar: GoogleCalendarSummary,
   crmCalendarId: string,
 ): Record<string, unknown> {
@@ -110,11 +127,27 @@ function toEventUpsertItem(
     location: event.location,
     html_link: event.html_link,
     updated_at: event.updated_at,
+    etag: event.etag,
     recurrence: event.recurrence,
     recurring_event_id: event.recurring_event_id,
     original_start: event.original_start,
     calendar: crmCalendarId,
   }
+}
+
+async function safeCrmCalendars(): Promise<GoogleCalendarRecord[]> {
+  try {
+    return await listCrmCalendarRecords()
+  } catch (error) {
+    console.warn('[Google] calendar_window_pull could not read CRM calendars:', error)
+    return []
+  }
+}
+
+type PulledCalendar = {
+  calendar: GoogleCalendarSummary
+  crmCalendarId: string
+  events: GoogleEventEntity[]
 }
 
 export const calendarWindowPullRegistry: ToolDefinition<
@@ -128,7 +161,7 @@ export const calendarWindowPullRegistry: ToolDefinition<
     activeTitle: 'Pulling calendar events',
   },
   description:
-    'List Google calendars and in-window events, then upsert them onto the mapped CRM models. Used by calendar LIST views; does not start a batch import.',
+    'List Google calendars and in-window events (all pages, bounded), then upsert them onto the mapped CRM models and apply cancellations. Skips calendars whose CRM row has sync disabled and Google copies that are not newer than the CRM row. Used by calendar LIST views; does not start a batch import.',
   timeout: 60_000,
   inputSchema: CalendarWindowPullInputSchema,
   outputSchema: CalendarWindowPullOutputSchema,
@@ -147,6 +180,9 @@ export const calendarWindowPullRegistry: ToolDefinition<
       }
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
+      // Existing installs pick up the renew/catch-up schedules here (memoized).
+      await ensureSyncSchedulesOnce(context.appInstallationId)
+
       const listed = await listGoogleCalendars(client)
       const requestedIds = input.calendars?.ids?.filter((id) => id.length > 0)
       const requestedSet = requestedIds ? new Set(requestedIds) : null
@@ -159,37 +195,87 @@ export const calendarWindowPullRegistry: ToolDefinition<
         return createSuccessResponse({
           calendars_upserted: 0,
           events_upserted: 0,
+          events_cancelled: 0,
+          events_skipped: 0,
+          calendars_skipped: 0,
           truncated: false,
           calendars: [],
         })
       }
 
-      const crmIdByGoogleId = await upsertCalendars(calendars)
-      const eventItems: Record<string, unknown>[] = []
+      const crmCalendars = await safeCrmCalendars()
+      const crmByGoogleId = new Map(
+        crmCalendars
+          .filter((record) => record.calendar_id.length > 0)
+          .map((record) => [record.calendar_id, record]),
+      )
+
+      const crmIdByGoogleId = await upsertCalendars(calendars, crmByGoogleId)
+      const startedAt = Date.now()
       let truncated = false
-      const maxResults = DEFAULT_MAX_RESULTS_PER_CALENDAR
+      let calendarsSkipped = 0
+      const pulled: PulledCalendar[] = []
 
       for (const calendar of calendars) {
         const crmCalendarId = crmIdByGoogleId.get(calendar.calendar_id)
         if (!crmCalendarId) {
           continue
         }
-
-        const page = await listGoogleCalendarEvents(client, {
-          calendarId: calendar.calendar_id,
-          timeMin: input.window.startAt,
-          timeMax: input.window.endAt,
-          maxResults,
-          singleEvents: false,
-        })
-        if (page.nextPageToken) {
-          truncated = true
+        if (crmByGoogleId.get(calendar.calendar_id)?.sync_enabled === false) {
+          calendarsSkipped += 1
+          continue
         }
 
-        for (const googleEvent of page.events) {
-          if (!googleEvent.id) continue
-          const event = normalizeGoogleCalendarEvent(googleEvent)
-          if (!event.google_event_id || event.status === 'cancelled') {
+        const events: GoogleEventEntity[] = []
+        let pageToken: string | undefined
+        for (let pageIndex = 0; ; pageIndex += 1) {
+          if (pageIndex >= MAX_PAGES_PER_CALENDAR || Date.now() - startedAt > PAGING_BUDGET_MS) {
+            truncated = true
+            break
+          }
+          const page = await listGoogleCalendarEvents(client, {
+            calendarId: calendar.calendar_id,
+            timeMin: input.window.startAt,
+            timeMax: input.window.endAt,
+            maxResults: PAGE_SIZE,
+            pageToken,
+            singleEvents: false,
+          })
+          for (const googleEvent of page.events) {
+            if (!googleEvent.id) continue
+            events.push(normalizeGoogleCalendarEvent(googleEvent))
+          }
+          if (!page.nextPageToken) {
+            break
+          }
+          pageToken = page.nextPageToken
+        }
+
+        pulled.push({ calendar, crmCalendarId, events })
+      }
+
+      const existing = await findCrmEventsByGoogleIds(
+        eventLookupIds(pulled.flatMap((entry) => entry.events)),
+      )
+
+      const eventItems: Record<string, unknown>[] = []
+      let cancelled = 0
+      let skipped = 0
+      for (const { calendar, crmCalendarId, events } of pulled) {
+        for (const event of events) {
+          if (!event.google_event_id) continue
+          const decision = decideEventUpsert(event, existing)
+          if (decision.action === 'skip') {
+            skipped += 1
+            continue
+          }
+          if (decision.action === 'cancel') {
+            cancelled += 1
+            eventItems.push({
+              ...decision.fields,
+              calendar_id: calendar.calendar_id,
+              calendar: crmCalendarId,
+            })
             continue
           }
           eventItems.push(toEventUpsertItem(event, calendar, crmCalendarId))
@@ -216,7 +302,10 @@ export const calendarWindowPullRegistry: ToolDefinition<
 
       return createSuccessResponse({
         calendars_upserted: crmIdByGoogleId.size,
-        events_upserted: eventsUpserted,
+        events_upserted: Math.max(0, eventsUpserted - cancelled),
+        events_cancelled: cancelled,
+        events_skipped: skipped,
+        calendars_skipped: calendarsSkipped,
         truncated,
         calendars: calendars.map((calendar) => ({
           calendar_id: calendar.calendar_id,
@@ -224,9 +313,7 @@ export const calendarWindowPullRegistry: ToolDefinition<
         })),
       })
     } catch (error) {
-      const authFailure = googleAuthToolFailure(error)
-      if (authFailure) return authFailure
-      return createGoogleError(error instanceof Error ? error.message : String(error))
+      return googleToolFailure(error)
     }
   },
 }

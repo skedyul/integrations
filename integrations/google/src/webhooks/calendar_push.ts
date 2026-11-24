@@ -1,10 +1,11 @@
 import type { WebhookDefinition, WebhookHandler, WebhookResponse } from 'skedyul'
 import { isRuntimeWebhookContext } from 'skedyul'
+import { watchTokensMatch } from '../lib/calendar_link'
+import { findCrmCalendarByWatchChannel } from '../lib/crm-calendars'
 import {
   StartAppBatchOperationError,
   startAppBatchOperation,
 } from '../lib/start-app-batch-operation'
-import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import { getHeaderValue } from './lib/helpers'
 
 const calendarPushHandler: WebhookHandler = async (request, context): Promise<WebhookResponse> => {
@@ -17,25 +18,41 @@ const calendarPushHandler: WebhookHandler = async (request, context): Promise<We
   }
 
   const channelId = getHeaderValue(request.headers, 'x-goog-channel-id')
+  const channelToken = getHeaderValue(request.headers, 'x-goog-channel-token')
   const resourceState = getHeaderValue(request.headers, 'x-goog-resource-state')
-  const calendarId = getHeaderValue(request.headers, 'x-goog-channel-token')
+  const resourceId = getHeaderValue(request.headers, 'x-goog-resource-id')
 
   if (!channelId) {
     return { status: 400, body: { error: 'Missing X-Goog-Channel-ID header' } }
   }
 
-  if (!calendarId) {
-    return { status: 400, body: { error: 'Missing X-Goog-Channel-Token header' } }
+  // The channel, not a caller-supplied calendar id, identifies the calendar.
+  const record = await findCrmCalendarByWatchChannel(channelId)
+  if (!record) {
+    if (resourceState === 'sync') {
+      // Google's handshake can arrive before the new channel is stored.
+      return { status: 200, body: { ok: true, action: 'acknowledged' } }
+    }
+    console.warn(`[Google Webhook] Unknown push channel ${channelId}`)
+    return { status: 404, body: { error: 'Unknown push channel' } }
   }
 
-  const record = await loadGoogleCalendarRecord(calendarId, context.env)
-  if (!record) {
-    console.warn(`[Google Webhook] No Google calendar found for token ${calendarId}`)
-    return { status: 404, body: { error: 'Unknown Google calendar' } }
+  if (!watchTokensMatch(record.watch_token, channelToken)) {
+    console.warn(`[Google Webhook] Channel token mismatch for ${channelId}`)
+    return { status: 403, body: { error: 'Invalid channel token' } }
+  }
+
+  if (resourceId && record.watch_resource_id && resourceId !== record.watch_resource_id) {
+    console.warn(`[Google Webhook] Resource id mismatch for ${channelId}`)
+    return { status: 403, body: { error: 'Invalid channel resource' } }
   }
 
   if (resourceState === 'sync') {
     return { status: 200, body: { ok: true, action: 'acknowledged' } }
+  }
+
+  if (record.sync_enabled === false) {
+    return { status: 200, body: { ok: true, action: 'ignored', reason: 'sync_disabled' } }
   }
 
   try {
@@ -74,7 +91,7 @@ const calendarPushHandler: WebhookHandler = async (request, context): Promise<We
 export const calendarPushRegistry: WebhookDefinition = {
   name: 'calendar_push',
   description:
-    'Receives Google Calendar push notifications and starts one import_calendar_events batch job',
+    'Receives Google Calendar push notifications, validates the channel id and secret token against the CRM calendar row, and starts one incremental import_calendar_events batch job',
   methods: ['POST'],
   type: 'WEBHOOK',
   handler: calendarPushHandler,

@@ -38,6 +38,11 @@ jest.unstable_mockModule('../../../lib/google_install_env.ts', () => ({
   buildOAuthRedirectUri: () => 'https://api.example.com/callback',
 }))
 
+const ensureSyncSchedules = jest.fn<(appInstallationId?: string) => Promise<string[]>>()
+jest.unstable_mockModule('../../../lib/sync-schedules.ts', () => ({
+  ensureSyncSchedules,
+}))
+
 const { default: oauthCallback } = await import('../oauth_callback')
 
 function encodeState() {
@@ -59,6 +64,7 @@ describe('oauthCallback', () => {
       expiryDate: Date.now() + 3600_000,
     })
     fetchGoogleAccountEmail.mockReset().mockResolvedValue('user@example.com')
+    ensureSyncSchedules.mockReset().mockResolvedValue(['crsub_1', 'crsub_2'])
     process.env.GOOGLE_CLIENT_ID = 'client-id'
     process.env.GOOGLE_CLIENT_SECRET = 'client-secret'
     process.env.SKEDYUL_API_URL = 'https://api.example.com'
@@ -83,6 +89,28 @@ describe('oauthCallback', () => {
       },
     })
     expect(setupComplete).toHaveBeenCalledWith('connect_google')
+  })
+
+  it('subscribes the watch-renewal and catch-up schedules after auth', async () => {
+    await oauthCallback({
+      request: { query: { code: 'auth-code', state: encodeState() } },
+      log: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+    } as never)
+
+    expect(ensureSyncSchedules).toHaveBeenCalledWith('inst_1')
+  })
+
+  it('does not fail the connect when subscribing schedules fails', async () => {
+    ensureSyncSchedules.mockRejectedValue(new Error('cron unavailable'))
+    const warn = jest.fn()
+
+    const result = await oauthCallback({
+      request: { query: { code: 'auth-code', state: encodeState() } },
+      log: { info: jest.fn(), error: jest.fn(), warn },
+    } as never)
+
+    expect(result.appInstallationId).toBe('inst_1')
+    expect(warn).toHaveBeenCalled()
   })
 })
 

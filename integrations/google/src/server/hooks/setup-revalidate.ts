@@ -1,4 +1,5 @@
 import { setup, type SetupRevalidateHandler } from 'skedyul'
+import { ensureSyncSchedules } from '../../lib/sync-schedules'
 
 /**
  * On CRM changes: invalidate listening CRM steps, then reconcile so steps
@@ -27,6 +28,14 @@ export const setupRevalidateHandler: SetupRevalidateHandler = async (ctx) => {
 
   if (typeof setup.reconcile === 'function') {
     await setup.reconcile()
+  }
+
+  // Maps changed (e.g. calendars just mapped): make sure the watch renewal
+  // and catch-up sync schedules exist. Idempotent and best-effort.
+  try {
+    await ensureSyncSchedules(ctx.appInstallationId)
+  } catch (error) {
+    ctx.log?.warn?.('[Google Setup] Could not subscribe sync schedules:', error)
   }
 
   const after = await setup.list()

@@ -2,15 +2,15 @@ import type { ToolDefinition } from 'skedyul'
 import { z } from 'skedyul'
 import { isRuntimeContext } from 'skedyul'
 import { removeCalendarWatch } from '../lib/calendar_link'
+import { updateCrmCalendarSyncState } from '../lib/crm-calendars'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { emitGoogleEvent } from '../lib/emit-google-event'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import {
-  googleAuthToolFailure,
-  createGoogleError,
   createNotFoundError,
   createSuccessResponse,
   createValidationError,
+  googleToolFailure,
 } from '../lib/response'
 
 const RemoveGoogleCalendarInputSchema = z.object({
@@ -33,7 +33,8 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
   label: 'Remove Google Calendar',
   ui: { title: 'Removed calendar', activeTitle: 'Removing calendar' },
   description:
-    'Stop push notifications for a Google Calendar and emit calendar.deleted so CRM workflows can update the mapped row',
+    'Stop the Google push channel for a calendar, clear its watch state and turn its sync off on the CRM calendar row, and emit calendar.deleted so CRM workflows can update the mapped row',
+  timeout: 60_000,
   inputSchema: RemoveGoogleCalendarInputSchema,
   outputSchema: RemoveGoogleCalendarOutputSchema,
   handler: async (input, context) => {
@@ -49,6 +50,9 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
       await removeCalendarWatch(client, record)
+      if (record.crm_instance_id) {
+        await updateCrmCalendarSyncState(record, { sync_enabled: false })
+      }
 
       await emitGoogleEvent(
         context.appInstallationId,
@@ -58,8 +62,8 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
             calendar_id: input.calendar_id,
             summary: record.summary || input.calendar_id,
             primary: Boolean(record.primary),
-            timezone: null,
-            description: null,
+            timezone: record.timezone ?? null,
+            description: record.description ?? null,
           },
           sync: { trigger: 'tool' },
         },
@@ -72,9 +76,7 @@ export const removeGoogleCalendarRegistry: ToolDefinition<
         removed: true,
       })
     } catch (error) {
-      const authFailure = googleAuthToolFailure(error)
-      if (authFailure) return authFailure
-      return createGoogleError(error instanceof Error ? error.message : String(error))
+      return googleToolFailure(error)
     }
   },
 }

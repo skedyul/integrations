@@ -18,6 +18,7 @@ import { calendarEventUpdateRegistry } from './tools/calendar_event_update'
 import { calendarEventDeleteRegistry } from './tools/calendar_event_delete'
 import { calendarSyncRegistry } from './tools/calendar_sync'
 import { calendarWindowPullRegistry } from './tools/calendar_window_pull'
+import { calendarWatchRenewRegistry } from './tools/calendar_watch_renew'
 import { calendarPushRegistry } from './webhooks/calendar_push'
 
 export const toolRegistry: ToolRegistry = {
@@ -34,6 +35,7 @@ export const toolRegistry: ToolRegistry = {
   calendar_event_delete: calendarEventDeleteRegistry,
   calendar_sync: calendarSyncRegistry,
   calendar_window_pull: calendarWindowPullRegistry,
+  calendar_watch_renew: calendarWatchRenewRegistry,
 }
 
 export const webhookRegistry: WebhookRegistry = {

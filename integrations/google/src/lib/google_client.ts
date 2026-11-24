@@ -208,6 +208,27 @@ export async function refreshGoogleAccessToken(
   }
 }
 
+/**
+ * OAuth client for lifecycle hooks (uninstall) that cannot ask the platform
+ * to refresh: uses the stored access token while valid, else refreshes
+ * in-process. Null when the install has no refresh token.
+ */
+export async function getOAuthClientWithInlineRefresh(
+  env: GoogleInstallEnv,
+): Promise<OAuth2Client | null> {
+  if (!env.GOOGLE_REFRESH_TOKEN) {
+    return null
+  }
+  const tokens = getTokenSetFromEnv(env) ?? (await refreshGoogleAccessToken(env))
+  const client = createOAuth2Client(requireGoogleOAuthConfig(env))
+  client.setCredentials({
+    access_token: tokens.accessToken,
+    refresh_token: tokens.refreshToken,
+    expiry_date: tokens.expiryDate ?? undefined,
+  })
+  return client
+}
+
 export function mapGoogleAuthError(error: unknown): Error {
   if (error instanceof TokenRefreshRequiredError || error instanceof AppAuthInvalidError) {
     return error

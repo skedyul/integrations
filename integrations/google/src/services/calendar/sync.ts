@@ -62,11 +62,12 @@ export async function loadGoogleCalendarRecord(
  */
 export async function loadLinkedGoogleCalendars(
   env: GoogleInstallEnv,
+  options?: { crmOnly?: boolean },
 ): Promise<GoogleCalendarRecord[]> {
   const crmCalendars = (await safeCrmCalendars()).filter(
     (calendar) => calendar.calendar_id.length > 0,
   )
-  if (crmCalendars.length > 0) {
+  if (crmCalendars.length > 0 || options?.crmOnly) {
     return filterSyncEnabledCalendars(crmCalendars)
   }
   return filterSyncEnabledCalendars(await loadGoogleCalendarsFromGoogle(env))

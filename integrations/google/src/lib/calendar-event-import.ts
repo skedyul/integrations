@@ -3,12 +3,24 @@ import { getAuthenticatedOAuthClient } from './google_client'
 import type { GoogleInstallEnv } from './google_install_env'
 import { toCalendarEntityPayload } from './seed-google-calendars'
 import { buildCalendarPeopleCascadeItems } from './calendar-people'
+import { updateCrmCalendarSyncState } from './crm-calendars'
+import { findCrmEventsByGoogleIds, type ExistingEventRow } from './crm-events'
+import { decideEventUpsert, eventLookupIds, type EventUpsertDecision } from './event-upsert-plan'
+import { isGoogleNotFound } from './google-errors'
 import {
   listGoogleCalendarEvents,
   type GoogleCalendarSummary,
 } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
-import type { GoogleCalendarRecord } from '../events/types'
+import type { GoogleCalendarRecord, GoogleEventEntity } from '../events/types'
+
+/** Sync state of a fully paged calendar, written on the following iterate. */
+export interface PendingCalendarSyncState {
+  calendar_id: string
+  crm_instance_id: string | null
+  sync_token: string | null
+  last_synced_at: string
+}
 
 export interface ImportCalendarEventsState {
   calendars: GoogleCalendarRecord[]
@@ -17,6 +29,13 @@ export interface ImportCalendarEventsState {
   nextSyncToken?: string | null
   calendarsEmitted?: boolean
   useSyncToken?: boolean
+  /**
+   * Tokens are saved one iterate later, after the platform has upserted the
+   * calendar's last page, so a failed upsert cannot advance the token past
+   * changes that never landed. When the last calendar finishes, the job
+   * reports hasMore once more just to save its token.
+   */
+  pendingSyncState?: PendingCalendarSyncState[]
 }
 
 export function toCalendarSummary(record: GoogleCalendarRecord): GoogleCalendarSummary {
@@ -25,9 +44,9 @@ export function toCalendarSummary(record: GoogleCalendarRecord): GoogleCalendarS
     summary: record.summary || record.calendar_id,
     primary: Boolean(record.primary),
     access_role: null,
-    time_zone: null,
-    description: null,
-    color: null,
+    time_zone: record.timezone ?? null,
+    description: record.description ?? null,
+    color: record.color ?? null,
   }
 }
 
@@ -54,6 +73,21 @@ type IterateContext = BatchOperationContext & {
   limit: number
 }
 
+async function flushPendingSyncState(
+  pending: PendingCalendarSyncState[] | undefined,
+  ctx: IterateContext,
+): Promise<void> {
+  for (const entry of pending ?? []) {
+    const saved = await updateCrmCalendarSyncState(
+      { calendar_id: entry.calendar_id, crm_instance_id: entry.crm_instance_id },
+      { sync_token: entry.sync_token, last_synced_at: entry.last_synced_at },
+    )
+    if (!saved) {
+      ctx.log.warn(`No CRM calendar row for ${entry.calendar_id}; sync token not saved`)
+    }
+  }
+}
+
 /** Page events (and people/attendees) for calendars already on `state`. */
 export async function iterateCalendarEventImport(
   ctx: IterateContext,
@@ -64,18 +98,26 @@ export async function iterateCalendarEventImport(
   }
   const state: ImportCalendarEventsState = {
     ...incoming,
+    calendars: [...incoming.calendars],
     calendarIndex: incoming.calendarIndex ?? 0,
   }
+
+  // The previous page has been upserted by now: its tokens are safe to save.
+  await flushPendingSyncState(state.pendingSyncState, ctx)
+  state.pendingSyncState = []
 
   const cascadeEntities = new Set(ctx.cascadeEntities ?? [])
   const itemsByEntity: Record<string, Record<string, unknown>[]> = {}
 
-  if (!state.calendarsEmitted && cascadeEntities.has('calendar')) {
-    itemsByEntity.calendar = state.calendars.map((record) => ({
-      calendar: toCalendarEntityPayload(toCalendarSummary(record), record),
-    }))
-    state.calendarsEmitted = true
-  } else if (!state.calendarsEmitted) {
+  if (!state.calendarsEmitted) {
+    // Only create calendars the CRM does not have yet; existing rows keep
+    // their metadata and the workplace's sync flags.
+    const missing = state.calendars.filter((record) => !record.crm_instance_id)
+    if (cascadeEntities.has('calendar') && missing.length > 0) {
+      itemsByEntity.calendar = missing.map((record) => ({
+        calendar: toCalendarEntityPayload(toCalendarSummary(record), record),
+      }))
+    }
     state.calendarsEmitted = true
   }
 
@@ -88,51 +130,90 @@ export async function iterateCalendarEventImport(
     }
   }
 
-  const calendar = state.calendars[state.calendarIndex]
+  const calendar = state.calendars[state.calendarIndex] as GoogleCalendarRecord
   const { client } = await getAuthenticatedOAuthClient(ctx.env as GoogleInstallEnv)
   const useSyncToken = state.useSyncToken !== false
   const syncToken = useSyncToken ? calendar.sync_token : undefined
-  const timeMin = syncToken ? undefined : readBatchStringInput(ctx.input, 'time_min')
-  const timeMax = syncToken ? undefined : readBatchStringInput(ctx.input, 'time_max')
+  const maxResults = ctx.limit > 0 ? ctx.limit : 100
+  const windowInput = {
+    timeMin: readBatchStringInput(ctx.input, 'time_min'),
+    timeMax: readBatchStringInput(ctx.input, 'time_max'),
+  }
 
   let page
   try {
     page = await listGoogleCalendarEvents(client, {
       calendarId: calendar.calendar_id,
       syncToken: syncToken || undefined,
-      timeMin,
-      timeMax,
+      ...(syncToken ? {} : windowInput),
       pageToken: state.pageToken,
-      maxResults: ctx.limit > 0 ? ctx.limit : 100,
+      maxResults,
     })
   } catch (error) {
-    if (!(error instanceof Error) || error.message !== 'SYNC_TOKEN_INVALID') {
+    if (error instanceof Error && error.message === 'SYNC_TOKEN_INVALID') {
+      // 410: the token expired. Restart this calendar with a full sync: no
+      // sync token, and not the page token that belonged to the old listing.
+      ctx.log.warn(`Sync token expired for ${calendar.calendar_id}; running a full sync`)
+      state.calendars[state.calendarIndex] = { ...calendar, sync_token: null }
+      state.pageToken = undefined
+      state.nextSyncToken = undefined
+      page = await listGoogleCalendarEvents(client, {
+        calendarId: calendar.calendar_id,
+        ...windowInput,
+        maxResults,
+      })
+    } else if (isGoogleNotFound(error)) {
+      // The calendar was deleted or unshared in Google: skip it.
+      ctx.log.warn(`Calendar ${calendar.calendar_id} is no longer in Google; skipping`)
+      state.pageToken = undefined
+      state.nextSyncToken = undefined
+      state.calendarIndex += 1
+      return {
+        items: [],
+        itemsByEntity,
+        pagination: { hasMore: state.calendarIndex < state.calendars.length, page: ctx.page },
+        state: { ...state } as Record<string, unknown>,
+      }
+    } else {
       throw error
     }
+  }
 
-    state.calendars[state.calendarIndex] = {
-      ...calendar,
-      sync_token: null,
-    }
-    page = await listGoogleCalendarEvents(client, {
-      calendarId: calendar.calendar_id,
-      timeMin: readBatchStringInput(ctx.input, 'time_min'),
-      timeMax: readBatchStringInput(ctx.input, 'time_max'),
-      pageToken: state.pageToken,
-      maxResults: ctx.limit > 0 ? ctx.limit : 100,
-    })
+  const events: GoogleEventEntity[] = page.events
+    .filter((googleEvent) => Boolean(googleEvent.id))
+    .map((googleEvent) => normalizeGoogleCalendarEvent(googleEvent))
+
+  let existing = new Map<string, ExistingEventRow>()
+  if (cascadeEntities.has('calendar_event') && events.length > 0) {
+    existing = await findCrmEventsByGoogleIds(eventLookupIds(events))
   }
 
   const eventItems: Record<string, unknown>[] = []
   const userItems: Record<string, unknown>[] = []
   const attendeeItems: Record<string, unknown>[] = []
   const seenUserEmails = new Set<string>()
+  let skipped = 0
 
-  for (const googleEvent of page.events) {
-    if (!googleEvent.id) {
+  for (const event of events) {
+    const decision: EventUpsertDecision = cascadeEntities.has('calendar_event')
+      ? decideEventUpsert(event, existing)
+      : event.status === 'cancelled'
+        ? { action: 'skip', reason: 'unknown_cancelled' }
+        : { action: 'upsert' }
+
+    if (decision.action === 'skip') {
+      skipped += 1
       continue
     }
-    const event = normalizeGoogleCalendarEvent(googleEvent)
+
+    if (decision.action === 'cancel') {
+      eventItems.push({
+        calendar_event: { ...decision.fields, calendar_id: calendar.calendar_id },
+        calendar: { __crmMatch: calendar.calendar_id },
+      })
+      continue
+    }
+
     const people = buildCalendarPeopleCascadeItems({
       googleEventId: event.google_event_id,
       calendarId: calendar.calendar_id,
@@ -184,36 +265,34 @@ export async function iterateCalendarEventImport(
     state.nextSyncToken = page.nextSyncToken
   }
 
+  const current = state.calendars[state.calendarIndex] as GoogleCalendarRecord
   if (page.nextPageToken) {
     state.pageToken = page.nextPageToken
   } else {
     const lastSyncedAt = new Date().toISOString()
-    const nextSyncToken = state.nextSyncToken ?? calendar.sync_token ?? null
+    const nextSyncToken = state.nextSyncToken ?? current.sync_token ?? null
     state.calendars[state.calendarIndex] = {
-      ...calendar,
+      ...current,
       sync_token: nextSyncToken,
       last_synced_at: lastSyncedAt,
     }
-    if (cascadeEntities.has('calendar')) {
-      itemsByEntity.calendar = [
-        ...(itemsByEntity.calendar ?? []),
-        {
-          calendar: toCalendarEntityPayload(toCalendarSummary(calendar), {
-            ...calendar,
-            sync_token: nextSyncToken,
-            last_synced_at: lastSyncedAt,
-          }),
-        },
-      ]
-    }
+    state.pendingSyncState = [
+      {
+        calendar_id: current.calendar_id,
+        crm_instance_id: current.crm_instance_id ?? null,
+        sync_token: nextSyncToken,
+        last_synced_at: lastSyncedAt,
+      },
+    ]
     state.pageToken = undefined
     state.nextSyncToken = undefined
     state.calendarIndex += 1
   }
 
-  const hasMore = state.calendarIndex < state.calendars.length
+  const hasMore =
+    state.calendarIndex < state.calendars.length || (state.pendingSyncState?.length ?? 0) > 0
   ctx.log.info(
-    `Imported ${eventItems.length} events from ${calendar.calendar_id} (hasMore=${hasMore})`,
+    `Imported ${eventItems.length} events from ${calendar.calendar_id} (skipped=${skipped}, hasMore=${hasMore})`,
   )
 
   return {

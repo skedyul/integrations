@@ -2,6 +2,7 @@ import { google, type calendar_v3 } from 'googleapis'
 import type { OAuth2Client } from 'google-auth-library'
 import { AppAuthInvalidError } from 'skedyul'
 import { mapGoogleAuthError } from '../../lib/google_client'
+import { googleErrorStatus } from '../../lib/google-errors'
 import { buildEventDateTime } from './event-datetime'
 
 export interface GoogleCalendarSummary {
@@ -114,8 +115,8 @@ export async function listGoogleCalendarEvents(
       nextPageToken: response.data.nextPageToken ?? null,
     }
   } catch (error) {
-    const status = (error as { code?: number }).code
-    if (status === 410) {
+    // 410 Gone: the sync token expired; the caller restarts a full sync.
+    if (googleErrorStatus(error) === 410) {
       const syncError = new Error('SYNC_TOKEN_INVALID')
       syncError.name = 'SyncTokenInvalidError'
       throw syncError
