@@ -45,7 +45,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
 ### 3. Install the app (workplace)
 
 1. Install the Google app on a workplace
-2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens. Uninstall deletes Google-keyed calendar, event, and attendee CRM rows so a later Import does not create a second set.
+2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect stores tokens and subscribes two schedules (they no-op until calendars are mapped and sync-enabled): `calendar_watch_renew` every 6 hours and an incremental `calendar_sync` catch-up every 15 minutes. See **Uninstall** below for what is removed.
 3. Complete **Set up calendars** (its button opens Settings → CRM → Sources):
    - Map the `calendar` entity to your workplace calendar model (`google_calendar_id` match key)
    - Run **Import calendars** on the Google Calendar hub (one batch job). That job also imports events, people, and attendees when those maps are ready
@@ -62,9 +62,9 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
    - Map attendee `event` → event and `user` → the workplace people field
    - Import calendars also upserts users then attendees (`event: { __crmMatch }` / `user: { __crmMatch }`)
 6. On the workplace Event list, set Calendar view **section** to the calendar relationship so events from every synced calendar appear together
-7. Optional live updates: call `calendar_sync` with `enable_live_sync: true` (or add a calendar with sync enabled) so Google push starts **one** import batch per ping
+7. Live updates: `calendar_watch_renew` (every 6 hours) opens a push channel for every calendar whose CRM row has `sync_enabled: true`, renews channels that expire within 24 hours and stops channels on calendars whose sync is off. `calendar_sync` with `enable_live_sync: true` or `add_google_calendar` opens one immediately. Each Google ping starts **one** incremental import batch.
 
-Connect never imports history, never starts `calendar_push`, and never emits per-event webhooks.
+Connect never imports history and never emits per-event webhooks.
 
 ## App events
 
@@ -83,9 +83,22 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 `sync-google-calendar-event-from-webhook` upserts the parent calendar first, then the event (with the calendar relationship) via `| google: "format", "calendar_event"`.
 
-`push-calendar-event-create-to-google` listens for CRM record creates (`@crm/*/created`). Create payloads are sparse (title/times only), so the workflow reloads the row, resolves the Google calendar from the assigned relation (`instance.find` when the value is a Skedyul id), creates via `calendar_event_create` with `emit_event: false`, and writes `google_event_id` back with `instance.update`. Emitting `calendar.event.created` here would inbound-upsert a duplicate CRM row.
+### Outbound sync (Skedyul → Google)
 
-`push-calendar-event-update-to-google` listens for CRM record changes (`@crm/*/updated`; setup binds the mapped workplace model). It unformats the record with `| google: "unformat", inputs.data.model` and patches Google via `calendar_event_update` (title, description, location, times, attendees, recurrence, status). Timed patches send a naive local `dateTime` plus `timeZone` (never a `Z`/offset timestamp together with `timeZone`). Series exceptions patch `{recurringEventId}_{yyyyMMdd'T'HHmmss'Z'}` instead of inserting a duplicate. When the row has no Google event id yet, the same tool inserts a new Google event and the workflow writes `google_event_id` back. Setup provisions an origin skip so Google-originated upserts do not loop.
+Every calendar edit in Skedyul arrives as `instance.created/updated/deleted` (with the platform's `calendarEdit` envelope). The three push workflows never emit `calendar.event.*` (inbound sync would otherwise upsert a second row), and Google-originated writes carry `meta.origin.appHandle = google`, which the `@crm/...` subscriptions skip, so nothing loops. After every successful write the workflow stores `google_event_id`, `etag`, `html_link` and `updated_at` on the row.
+
+- **Create** (`push-calendar-event-create-to-google`, `@crm/*/created`): reloads the sparse create payload, resolves the Google calendar from the assigned relation, and calls `calendar_event_create` with the recurrence lines (verbatim, `EXDATE;TZID=…`/`RDATE;VALUE=DATE:…` included) and a time zone (row, else the calendar's, else UTC: Google requires one on series). Inserts use the client id `sk` + sha256(CRM instance id), so a retry gets 409 and reads the existing event instead of duplicating it. Rows that already have a `google_event_id` are never inserted.
+- **Exceptions** ("this event" edits: `recurring_event_id` + `original_start`, no Google id) PATCH the occurrence `{seriesId}_{stamp}` with every field: `yyyyMMdd` for all-day series, `yyyyMMdd'T'HHmmss'Z'` (UTC) for timed ones. A `recurring_event_id` that is a CRM instance id is resolved through the master row (or the master's deterministic id while its insert is in flight; 404s are retried briefly). Exceptions re-pointed by a "this and following" split, or shifted by an "all events" edit, are re-applied to their new occurrence.
+- **Update** (`push-calendar-event-update-to-google`, `@crm/*/updated`): `calendar_event_update` patches only changed fields (cleared fields are sent as cleared, the master's `RRULE … UNTIL` / `EXDATE` lines verbatim) with `If-Match: <etag>`; on 412 it re-reads the event, re-applies the patch and retries once. A changed calendar relation moves the event with `events.move`. A row with no Google id is inserted with the deterministic id. Cancelling an occurrence that Google already removed counts as done.
+- **Delete** (`push-calendar-event-delete-to-google`, `@crm/*/deleted`): `calendar_event_delete` honours guest notifications (`send_updates`) and is idempotent (404/410 = deleted).
+
+### Inbound sync (Google → Skedyul)
+
+- Push: `calendar_push` finds the CRM calendar row by `X-Goog-Channel-ID` and checks `X-Goog-Channel-Token` against the random secret stored in `watch_token` (and the resource id) before starting one `import_calendar_events` batch.
+- `import_calendar_events` reads the calendar's CRM row, lists with its stored `sync_token`, and saves the new token on the next iterate, once the last page has been upserted. After a 410 it restarts a full sync without the stale token or page token.
+- `calendar_window_pull` (calendar views, throttled by the platform) reads every page (bounded, reports `truncated`), skips calendars whose CRM row has `sync_enabled: false`, and only sets `sync_direction` when it creates a calendar row.
+- Both apply cancellations: a known row is marked `cancelled`, a cancelled occurrence of a known series is stored as a cancelled exception, and a cancelled event the CRM never had is ignored (so a row deleted in Skedyul is not re-created). A Google copy whose `updated` is not newer than the row's `updated_at` is skipped, so an in-flight local edit is not reverted.
+- Google 429 / 403 `rateLimitExceeded` return `RATE_LIMITED` so the platform backs off.
 
 ## Tools
 
@@ -105,13 +118,14 @@ Connect never imports history, never starts `calendar_push`, and never emits per
 
 ### Write
 
-- `calendar_event_create`
+- `calendar_event_create` (`crm_instance_id` for an idempotent insert)
 - `calendar_event_update` (mapped fields, or unformatted CRM `before`/`after` payloads)
-- `calendar_event_delete`
+- `calendar_event_delete` (idempotent)
 
 ### Sync
 
-- `calendar_sync` (starts one `import_calendar_events` batch; optional `enable_live_sync` registers watches)
+- `calendar_sync` (starts one `import_calendar_events` batch; optional `enable_live_sync` opens watches; cron: every 15 minutes)
+- `calendar_watch_renew` (renews/creates/stops push channels; cron: every 6 hours)
 
 ### Batch operations
 
@@ -127,12 +141,21 @@ pnpm test
 pnpm build
 ```
 
+## Uninstall
+
+Uninstall stops every stored push channel and removes the two schedules (while the refresh token still works), revokes the token, then cleans up the CRM. The rule: remove only rows that exist because of the Google import, and keep every event created in Skedyul.
+
+- `attendee` rows (Google guest lists) are deleted.
+- Events whose `google_event_id` Skedyul minted (`sk…`, or an occurrence of such a series) are kept with `google_event_id`, `html_link`, `etag` and `updated_at` cleared; their exceptions are re-pointed at the master's CRM id.
+- Other events with a `google_event_id` came from Google and are deleted, so a later import does not create a second copy. Events pushed to Google before Skedyul-minted ids existed cannot be told apart from imported ones and are deleted as before.
+- Calendar rows still used by a remaining event are kept with their sync token and watch cleared; the rest are deleted.
+
 ## Architecture notes
 
 - One Google account per installation (Meta-style)
-- Connect does not register `calendar_push` or start watches. Live push is opt-in and starts one batch job per Google ping
 - Multi-record pulls (Import, `calendar_sync`, push) must start **0 or 1** platform batch jobs. Never `for (event of events) emit()`
-- Per-install calendar identity lives on the workplace `calendar` CRM map after Import. Tools, watches, and batch jobs list calendars from the Google API — they do not call `instance.*` on `calendar`. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
+- Per-install calendar identity and sync state (`sync_enabled`, `sync_direction`, `sync_token`, `watch_*`) live on the workplace `calendar` CRM row. Writes, the webhook and imports read that row instead of calling `calendarList.list`; calendars that were never imported fall back to the Google list. `instance.*` rows come back keyed by workplace field handles, so reads fall back to the `crmMapDefaults` targets. Internal models are only for data shared across installs, so Google does not declare a `google_calendar` internal model
+- Sync flags are only written when a calendar row is created; imports and window pulls never reset them
 - CRM-facing `calendar` and `calendar_event` entities are mapped per install; events relate to calendars so workplace Calendar LIST view can load events from multiple calendars in one query
 - Live `calendar.event.*` workflows stay for a later 1:1 payload, not for pull/history
 - CRM record changes push to Google through `push-calendar-event-update-to-google` / `calendar_event_update`
