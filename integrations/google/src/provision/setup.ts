@@ -36,6 +36,7 @@ export const setupCalendarEventsStep = defineSetupStep({
     'sync-google-calendar-event-from-webhook',
     'push-calendar-event-create-to-google',
     'push-calendar-event-update-to-google',
+    'push-calendar-event-delete-to-google',
   ],
   listenToCrm: true,
   capabilities: ['crm.calendar_event', 'realtime.calendar_event'],

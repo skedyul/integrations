@@ -99,8 +99,13 @@ export interface GoogleCalendarRecord {
   id: string
   calendar_id: string
   google_calendar_id?: string | null
+  /** Workplace CRM calendar instance id when the row exists in the CRM. */
+  crm_instance_id?: string | null
   summary?: string | null
   primary?: boolean | null
+  timezone?: string | null
+  color?: string | null
+  description?: string | null
   sync_enabled?: boolean | null
   sync_direction?: GoogleSyncDirection | null
   external_read_only?: boolean | null

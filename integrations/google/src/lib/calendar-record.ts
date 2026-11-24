@@ -1,14 +1,16 @@
 import type { GoogleCalendarRecord, GoogleSyncDirection } from '../events/types'
 import type { GoogleCalendarSummary } from '../services/calendar/client'
+import {
+  readEntityBoolean,
+  readEntityString,
+  readRowId,
+  type CrmRow,
+} from './crm-fields'
 
 const SYNC_DIRECTIONS = new Set<GoogleSyncDirection>(['push', 'pull', 'both'])
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
-}
-
-function readBoolean(value: unknown): boolean | null {
-  return typeof value === 'boolean' ? value : null
 }
 
 function readSyncDirection(value: unknown): GoogleSyncDirection | null {
@@ -26,8 +28,12 @@ export function recordFromGoogleSummary(
     id: calendar.calendar_id,
     calendar_id: calendar.calendar_id,
     google_calendar_id: calendar.calendar_id,
+    crm_instance_id: extras?.crm_instance_id ?? null,
     summary: calendar.summary,
     primary: calendar.primary,
+    timezone: calendar.time_zone,
+    color: calendar.color,
+    description: calendar.description,
     sync_enabled: extras?.sync_enabled ?? calendar.primary,
     sync_direction: extras?.sync_direction ?? 'both',
     external_read_only: extras?.external_read_only ?? false,
@@ -57,6 +63,7 @@ export function overlayCrmCalendarState(
     return {
       ...google,
       id: crm.id || google.id,
+      crm_instance_id: crm.crm_instance_id ?? google.crm_instance_id ?? null,
       sync_enabled: crm.sync_enabled ?? google.sync_enabled,
       sync_direction: crm.sync_direction ?? google.sync_direction,
       external_read_only: crm.external_read_only ?? google.external_read_only,
@@ -76,26 +83,29 @@ export function filterSyncEnabledCalendars(
   return calendars.filter((calendar) => calendar.sync_enabled === true)
 }
 
-export function asGoogleCalendarRecord(
-  row: Record<string, unknown>,
-): GoogleCalendarRecord {
-  const calendarId =
-    readString(row.google_calendar_id) ?? readString(row.calendar_id) ?? ''
+export function asGoogleCalendarRecord(row: CrmRow): GoogleCalendarRecord {
+  const read = (field: string) => readEntityString(row, 'calendar', field)
+  const calendarId = read('google_calendar_id') ?? readString(row.calendar_id) ?? ''
+  const crmInstanceId = readRowId(row)
 
   return {
-    id: String(row.id ?? calendarId),
+    id: crmInstanceId ?? calendarId,
     calendar_id: calendarId,
     google_calendar_id: calendarId,
-    summary: readString(row.summary) ?? readString(row.name),
-    primary: readBoolean(row.primary),
-    sync_enabled: readBoolean(row.sync_enabled),
-    sync_direction: readSyncDirection(row.sync_direction),
-    external_read_only: readBoolean(row.external_read_only),
-    sync_token: readString(row.sync_token),
-    watch_channel_id: readString(row.watch_channel_id),
-    watch_resource_id: readString(row.watch_resource_id),
-    watch_expiration: readString(row.watch_expiration),
-    watch_token: readString(row.watch_token),
-    last_synced_at: readString(row.last_synced_at),
+    crm_instance_id: crmInstanceId,
+    summary: read('summary') ?? readString(row.name),
+    primary: readEntityBoolean(row, 'calendar', 'primary'),
+    timezone: read('timezone'),
+    color: read('color'),
+    description: read('description'),
+    sync_enabled: readEntityBoolean(row, 'calendar', 'sync_enabled'),
+    sync_direction: readSyncDirection(read('sync_direction')),
+    external_read_only: readEntityBoolean(row, 'calendar', 'external_read_only'),
+    sync_token: read('sync_token'),
+    watch_channel_id: read('watch_channel_id'),
+    watch_resource_id: read('watch_resource_id'),
+    watch_expiration: read('watch_expiration'),
+    watch_token: read('watch_token'),
+    last_synced_at: read('last_synced_at'),
   }
 }

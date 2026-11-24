@@ -6,18 +6,28 @@ import {
   asBoolean,
   attendeeEmails,
   blankToUndefined,
+  parseRecurrenceLines,
 } from '../lib/calendar-event-update-patch'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { createGoogleEvent } from '../lib/create-google-event'
-import { createGoogleCalendarEvent } from '../services/calendar/client'
+import { resolveSeriesInstanceId } from '../lib/series-instance'
+import {
+  getGoogleCalendarEvent,
+  type GoogleCalendarEventInput,
+} from '../services/calendar/client'
+import {
+  asGoogleEventId,
+  RECURRING_EVENT_FALLBACK_TIMEZONE,
+} from '../services/calendar/event-datetime'
+import { skedyulGoogleEventId } from '../services/calendar/event-ids'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
+import { insertEventIdempotent, patchSeriesInstance } from '../services/calendar/writes'
 import {
-  googleAuthToolFailure,
-  createGoogleError,
   createNotFoundError,
   createSuccessResponse,
   createValidationError,
+  googleToolFailure,
 } from '../lib/response'
 
 const optionalString = z.preprocess(blankToUndefined, z.string().optional())
@@ -44,10 +54,17 @@ const CalendarEventCreateInputSchema = z.object({
     }
     return attendeeEmails(value)
   }, z.array(z.string().email()).optional()),
-  recurrence: z.array(z.string()).optional(),
+  /** RRULE/EXDATE/RDATE lines (array, JSON array string, or newline text). */
+  recurrence: z.preprocess(parseRecurrenceLines, z.array(z.string()).optional()),
+  status: optionalString,
   google_event_id: optionalString,
   recurring_event_id: optionalString,
   original_start: optionalString,
+  /**
+   * CRM instance id of the row being pushed. The Google id is derived from it
+   * (`sk` + sha256), so a retried create is idempotent.
+   */
+  crm_instance_id: optionalString,
   send_updates: z.enum(['all', 'externalOnly', 'none']).optional(),
   /** Set false on CRM outbound create so inbound webhook sync does not duplicate the row. */
   emit_event: z.preprocess(
@@ -80,6 +97,8 @@ const CalendarEventCreateOutputSchema = z.object({
     updated_at: z.string().nullable(),
     etag: z.string().nullable(),
   }),
+  /** insert: new Google event; existing: already in Google (retry or stored id); instance: series occurrence patched. */
+  write: z.enum(['insert', 'existing', 'instance']),
 })
 
 type CalendarEventCreateInput = z.infer<typeof CalendarEventCreateInputSchema>
@@ -103,7 +122,9 @@ export const calendarEventCreateRegistry: ToolDefinition<
     activeTitle: 'Creating calendar event',
     targetArg: 'summary',
   },
-  description: 'Create a Google Calendar event. Set emit_event false when creating from a CRM outbound push so inbound sync does not insert a duplicate row.',
+  description:
+    'Create a Google Calendar event (recurring when recurrence is set). Pass crm_instance_id so retries reuse one Google id. A row with recurring_event_id + original_start patches that series occurrence instead. Never inserts when google_event_id is set. Set emit_event false when creating from a CRM outbound push so inbound sync does not insert a duplicate row.',
+  timeout: 60_000,
   inputSchema: CalendarEventCreateInputSchema,
   outputSchema: CalendarEventCreateOutputSchema,
   handler: async (input, context) => {
@@ -120,22 +141,75 @@ export const calendarEventCreateRegistry: ToolDefinition<
       assertCalendarWritable(record)
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
-      const created = await createGoogleCalendarEvent(client, input.calendar_id, {
+      const allDay = asBoolean(input.all_day)
+      const fields: GoogleCalendarEventInput = {
         summary: input.summary,
         description: input.description,
         location: input.location,
         start: input.start,
         end: input.end,
         timezone: input.timezone,
-        all_day: asBoolean(input.all_day),
+        all_day: allDay,
         attendees: input.attendees,
-        recurrence: input.recurrence,
-        google_event_id: input.google_event_id,
-        recurring_event_id: input.recurring_event_id,
-        original_start: input.original_start,
+        status: input.status,
         send_updates: input.send_updates,
-      })
-      const normalized = normalizeGoogleCalendarEvent(created)
+      }
+
+      const storedId = asGoogleEventId(input.google_event_id)
+      let write: CalendarEventCreateOutput['write']
+      let googleEvent
+
+      if (!storedId && input.recurring_event_id && input.original_start) {
+        // "This event" edit: an exception row. Patch the Google occurrence of
+        // its series; never insert a standalone duplicate.
+        const resolved = await resolveSeriesInstanceId({
+          recurring_event_id: input.recurring_event_id,
+          original_start: input.original_start,
+          all_day: allDay,
+        })
+        if (!resolved) {
+          return createNotFoundError(
+            `Series ${input.recurring_event_id} for this exception no longer exists`,
+          )
+        }
+        googleEvent = await patchSeriesInstance(
+          client,
+          input.calendar_id,
+          resolved.instanceId,
+          fields,
+        )
+        if (!googleEvent) {
+          return createNotFoundError(
+            `Occurrence ${resolved.instanceId} is no longer in Google Calendar`,
+          )
+        }
+        write = 'instance'
+      } else if (storedId) {
+        // Already in Google: read it back so the caller can write ids back.
+        googleEvent = await getGoogleCalendarEvent(client, input.calendar_id, storedId)
+        write = 'existing'
+      } else {
+        const recurrence = input.recurrence
+        const timezone =
+          input.timezone ??
+          (recurrence && !allDay
+            ? record.timezone || RECURRING_EVENT_FALLBACK_TIMEZONE
+            : undefined)
+        const inserted = await insertEventIdempotent(
+          client,
+          input.calendar_id,
+          { ...fields, timezone, recurrence },
+          {
+            eventId: input.crm_instance_id
+              ? skedyulGoogleEventId(input.crm_instance_id)
+              : undefined,
+          },
+        )
+        googleEvent = inserted.event
+        write = inserted.created ? 'insert' : 'existing'
+      }
+
+      const normalized = normalizeGoogleCalendarEvent(googleEvent)
 
       if (shouldEmitCreatedEvent(input.emit_event)) {
         await createGoogleEvent(
@@ -155,11 +229,9 @@ export const calendarEventCreateRegistry: ToolDefinition<
         )
       }
 
-      return createSuccessResponse({ event: normalized })
+      return createSuccessResponse({ event: normalized, write })
     } catch (error) {
-      const authFailure = googleAuthToolFailure(error)
-      if (authFailure) return authFailure
-      return createGoogleError(error instanceof Error ? error.message : String(error))
+      return googleToolFailure(error)
     }
   },
 }

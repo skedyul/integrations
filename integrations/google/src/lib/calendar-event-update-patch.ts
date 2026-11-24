@@ -132,6 +132,32 @@ function asStringArray(value: unknown): string[] | undefined {
   return undefined
 }
 
+/**
+ * Recurrence lines (RRULE/EXRULE/RDATE/EXDATE, parameterised lines included)
+ * from a CRM value: an array, a JSON array string, or newline-separated text.
+ * Lines are passed to Google verbatim. Returns undefined when there are none.
+ */
+export function parseRecurrenceLines(value: unknown): string[] | undefined {
+  let source: unknown = value
+  if (typeof source === 'string') {
+    const trimmed = source.trim()
+    if (!trimmed) return undefined
+    if (trimmed.startsWith('[')) {
+      try {
+        source = JSON.parse(trimmed)
+      } catch {
+        return undefined
+      }
+    } else {
+      source = trimmed.split(/\r?\n/)
+    }
+  }
+  const lines = asStringArray(source)
+    ?.map((line) => line.trim())
+    .filter((line) => line.length > 0 && line !== 'null')
+  return lines && lines.length > 0 ? lines : undefined
+}
+
 function valuesChanged(before: unknown, after: unknown): boolean {
   return jsonKey(before) !== jsonKey(after)
 }
@@ -166,6 +192,7 @@ export function resolveGoogleEventId(record: Record<string, unknown>): string | 
     event_id: asString(record.event_id),
     recurring_event_id: asString(record.recurring_event_id),
     original_start: asString(record.original_start),
+    all_day: asBoolean(record.all_day),
   })
   return target.mode === 'patch' ? target.eventId : undefined
 }
@@ -245,11 +272,65 @@ export function buildCalendarEventCreateInput(
   if (attendees) {
     created.attendees = attendees
   }
-  const recurrence = asStringArray(afterRecord.recurrence)
+  const recurrence = parseRecurrenceLines(afterRecord.recurrence)
   if (recurrence) {
     created.recurrence = recurrence
   }
+  const status = asString(afterRecord.status)
+  if (status === 'cancelled' || status === 'tentative') {
+    created.status = status
+  }
   return created
+}
+
+/** recurring_event_id + original_start: an exception of a series. */
+export function isSeriesException(record: Record<string, unknown> | null): boolean {
+  if (!record) return false
+  return Boolean(asString(record.recurring_event_id) && asString(record.original_start))
+}
+
+/**
+ * The exception now belongs to another series slot: its series changed (a
+ * "this and following" split re-points it at the new series) or its
+ * original start moved (an "all events" time change). The old Google
+ * instance is gone, so the full edit must be applied to the new instance.
+ */
+export function seriesLinkChanged(
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+): boolean {
+  if (!before || !after) return false
+  const beforeSeries = asString(readField(before, 'recurring_event_id')) ?? ''
+  const afterSeries = asString(readField(after, 'recurring_event_id')) ?? ''
+  if (beforeSeries !== afterSeries) {
+    return true
+  }
+  return !instantsEqual(readField(before, 'original_start'), readField(after, 'original_start'))
+}
+
+/**
+ * Every writable field of an exception row, for a PATCH of its Google
+ * instance. Blank fields are omitted (the instance keeps the series value).
+ */
+export function buildCalendarEventFullBody(record: Record<string, unknown>): GoogleCalendarEventInput {
+  const body: GoogleCalendarEventInput = {}
+  for (const key of SCALAR_KEYS) {
+    const value = asString(readField(record, key))
+    if (value) {
+      body[key] = value
+    }
+  }
+  const start = asString(record.start)
+  if (start) body.start = start
+  const end = asString(record.end)
+  if (end) body.end = end
+  const timezone = asString(record.timezone)
+  if (timezone) body.timezone = timezone
+  const allDay = asBoolean(record.all_day)
+  if (allDay != null) body.all_day = allDay
+  const attendees = attendeeEmails(record.attendees)
+  if (attendees) body.attendees = attendees
+  return body
 }
 
 export function parseJsonRecord(value: unknown): Record<string, unknown> | null {
@@ -287,6 +368,12 @@ export function buildCalendarEventUpdatePatch(
   for (const key of SCALAR_KEYS) {
     const next = readField(afterRecord, key)
     if (isBlank(next)) {
+      // Cleared in Skedyul: send '' so Google clears it too (status has no
+      // empty value).
+      if (key !== 'status' && beforeRecord && !isBlank(readField(beforeRecord, key))) {
+        patch[key] = ''
+        hasField = true
+      }
       continue
     }
     if (!valuesChanged(readField(beforeRecord, key), next)) {
@@ -337,12 +424,18 @@ export function buildCalendarEventUpdatePatch(
   ) {
     patch.attendees = nextAttendees
     hasField = true
+  } else if (!nextAttendees && prevAttendees && beforeRecord) {
+    patch.attendees = []
+    hasField = true
   }
 
-  const nextRecurrence = asStringArray(afterRecord.recurrence)
-  const prevRecurrence = asStringArray(beforeRecord?.recurrence)
+  const nextRecurrence = parseRecurrenceLines(afterRecord.recurrence)
+  const prevRecurrence = parseRecurrenceLines(beforeRecord?.recurrence)
   if (nextRecurrence && jsonKey(nextRecurrence) !== jsonKey(prevRecurrence ?? [])) {
     patch.recurrence = nextRecurrence
+    hasField = true
+  } else if (!nextRecurrence && prevRecurrence && beforeRecord) {
+    patch.recurrence = []
     hasField = true
   }
 

@@ -2,3 +2,4 @@ export { default as syncGoogleCalendarFromWebhook } from './sync-google-calendar
 export { default as syncGoogleCalendarEventFromWebhook } from './sync-google-calendar-event-from-webhook'
 export { default as pushCalendarEventUpdateToGoogle } from './push-calendar-event-update-to-google'
 export { default as pushCalendarEventCreateToGoogle } from './push-calendar-event-create-to-google'
+export { default as pushCalendarEventDeleteToGoogle } from './push-calendar-event-delete-to-google'

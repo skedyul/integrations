@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@jest/globals'
 import {
   buildEventDateTime,
+  googleInstanceStamp,
   googleSeriesInstanceId,
   isGoogleThisAndFollowingMasterId,
   isSkedyulInstanceId,
@@ -71,7 +72,36 @@ describe('googleSeriesInstanceId', () => {
   })
 })
 
+describe('googleSeriesInstanceId for all-day series', () => {
+  it('uses yyyyMMdd (no time) for a date-only original start', () => {
+    expect(googleSeriesInstanceId('abc123', '2026-08-17')).toBe('abc123_20260817')
+    expect(toCompactUtcStamp('2026-08-17')).toBe('20260817')
+  })
+
+  it('uses the calendar date as written when the row is all-day', () => {
+    expect(
+      googleSeriesInstanceId('abc123', '2026-08-17T00:00:00.000Z', { allDay: true }),
+    ).toBe('abc123_20260817')
+    expect(googleInstanceStamp('20260817')).toBe('20260817')
+  })
+
+  it('keeps UTC yyyyMMddTHHmmssZ for timed series, converting offsets', () => {
+    expect(googleInstanceStamp('2026-08-17T19:00:00+10:00')).toBe('20260817T090000Z')
+    expect(googleInstanceStamp('20260817T090000Z')).toBe('20260817T090000Z')
+  })
+})
+
 describe('resolveGoogleWriteTarget', () => {
+  it('builds an all-day instance id when all_day is set', () => {
+    expect(
+      resolveGoogleWriteTarget({
+        recurring_event_id: 'abc123',
+        original_start: '2026-08-17',
+        all_day: true,
+      }),
+    ).toEqual({ mode: 'patch', eventId: 'abc123_20260817' })
+  })
+
   it('patches a series instance instead of inserting', () => {
     expect(
       resolveGoogleWriteTarget({

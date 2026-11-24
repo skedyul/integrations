@@ -47,11 +47,25 @@ describe('push-calendar-event-update-to-google', () => {
     )
   })
 
-  it('writes google_event_id back when the CRM row had none', () => {
+  it('writes the Google id, etag, link and updated time back whenever the tool asks for it', () => {
     expect(yaml).toContain('cmd: instance.update')
     expect(yaml).toContain('instanceId: "{{ inputs.data.after.id }}"')
+    expect(yaml).toContain('steps.push-google.outputs.response.data.writeback == true')
     expect(yaml).toContain(
-      'steps.resolve-update.outputs.response.data.event_id == blank',
+      '"updated_at": {{ steps.push-google.outputs.response.data.event.updated_at | json }}',
     )
+  })
+
+  it('passes the CRM id, previous calendar and calendarEdit, and never emits inbound events', () => {
+    expect(yaml).toContain('crm_instance_id: "{{ inputs.data.after.id }}"')
+    expect(yaml).toContain('previous_calendar_id:')
+    expect(yaml).toContain('previous_calendar_instance_id:')
+    expect(yaml).toContain('calendar_edit: "{{ inputs.calendarEdit | json }}"')
+    expect(yaml).toMatch(/toolName: calendar_event_update[\s\S]*emit_event: "false"/)
+  })
+
+  it('resolves the target calendar from the relation when the relation changed', () => {
+    expect(yaml).toContain('relation_changed')
+    expect(yaml).toContain('{%- if relation_changed == false -%}')
   })
 })

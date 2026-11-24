@@ -2,7 +2,7 @@ import { google, type calendar_v3 } from 'googleapis'
 import type { OAuth2Client } from 'google-auth-library'
 import { AppAuthInvalidError } from 'skedyul'
 import { mapGoogleAuthError } from '../../lib/google_client'
-import { buildEventDateTime, resolveGoogleWriteTarget } from './event-datetime'
+import { buildEventDateTime } from './event-datetime'
 
 export interface GoogleCalendarSummary {
   calendar_id: string
@@ -39,9 +39,6 @@ export function resolveSendUpdates(
   }
   return 'externalOnly'
 }
-
-/** Google Calendar event colorId for Peacock (teal/blue). Hardcoded until colors are configurable. */
-export const GOOGLE_EVENT_COLOR_PEACOCK = '7'
 
 export interface GoogleFreeBusyInterval {
   start: string
@@ -144,41 +141,48 @@ export async function getGoogleCalendarEvent(
   }
 }
 
+/**
+ * Google event body from mapped fields. Undefined fields are omitted (left as
+ * they are on patch); empty strings and empty arrays are sent, which clears
+ * them in Google. No colorId: the event keeps its calendar's color.
+ */
 export function toGoogleEventBody(
   input: GoogleCalendarEventInput,
   options?: { includeRecurrence?: boolean },
 ): calendar_v3.Schema$Event {
-  return {
-    summary: input.summary,
-    description: input.description,
-    location: input.location,
-    start: buildEventDateTime(input, 'start'),
-    end: buildEventDateTime(input, 'end'),
-    attendees: input.attendees?.map((email) => ({ email })),
-    ...(options?.includeRecurrence === false ? {} : { recurrence: input.recurrence }),
-    status: input.status,
-    colorId: GOOGLE_EVENT_COLOR_PEACOCK,
+  const body: calendar_v3.Schema$Event = {}
+  if (input.summary !== undefined) body.summary = input.summary
+  if (input.description !== undefined) body.description = input.description
+  if (input.location !== undefined) body.location = input.location
+  const start = buildEventDateTime(input, 'start')
+  if (start) body.start = start
+  const end = buildEventDateTime(input, 'end')
+  if (end) body.end = end
+  if (input.attendees !== undefined) {
+    body.attendees = input.attendees.map((email) => ({ email }))
   }
+  if (options?.includeRecurrence !== false && input.recurrence !== undefined) {
+    body.recurrence = input.recurrence
+  }
+  if (input.status !== undefined) body.status = input.status
+  return body
 }
 
-export async function createGoogleCalendarEvent(
+/** events.insert; `eventId` sets a client-supplied id so retries hit 409. */
+export async function insertGoogleCalendarEvent(
   auth: OAuth2Client,
   calendarId: string,
   input: GoogleCalendarEventInput,
+  options?: { eventId?: string },
 ): Promise<calendar_v3.Schema$Event> {
-  const target = resolveGoogleWriteTarget(input)
-  if (target.mode === 'patch' && input.recurring_event_id && input.original_start) {
-    return updateGoogleCalendarEvent(auth, calendarId, target.eventId, {
-      ...input,
-      recurrence: undefined,
-    })
-  }
-
   try {
     const calendar = await getCalendarApi(auth)
     const response = await calendar.events.insert({
       calendarId,
-      requestBody: toGoogleEventBody(input),
+      requestBody: {
+        ...toGoogleEventBody(input),
+        ...(options?.eventId ? { id: options.eventId } : {}),
+      },
       sendUpdates: resolveSendUpdates(input.send_updates),
     })
 
@@ -192,22 +196,27 @@ export async function createGoogleCalendarEvent(
   }
 }
 
-export async function updateGoogleCalendarEvent(
+/** events.patch, with If-Match when an etag is known. */
+export async function patchGoogleCalendarEvent(
   auth: OAuth2Client,
   calendarId: string,
   eventId: string,
   input: GoogleCalendarEventInput,
+  options?: { ifMatch?: string | null },
 ): Promise<calendar_v3.Schema$Event> {
   try {
     const calendar = await getCalendarApi(auth)
-    const response = await calendar.events.patch({
-      calendarId,
-      eventId,
-      requestBody: toGoogleEventBody(input, {
-        includeRecurrence: input.recurrence != null,
-      }),
-      sendUpdates: resolveSendUpdates(input.send_updates),
-    })
+    const response = await calendar.events.patch(
+      {
+        calendarId,
+        eventId,
+        requestBody: toGoogleEventBody(input, {
+          includeRecurrence: input.recurrence != null,
+        }),
+        sendUpdates: resolveSendUpdates(input.send_updates),
+      },
+      options?.ifMatch ? { headers: { 'If-Match': options.ifMatch } } : undefined,
+    )
 
     if (!response.data.id) {
       throw new Error('Google did not return an updated event id')
@@ -219,14 +228,54 @@ export async function updateGoogleCalendarEvent(
   }
 }
 
+/** Back-compat alias: patch without If-Match. */
+export async function updateGoogleCalendarEvent(
+  auth: OAuth2Client,
+  calendarId: string,
+  eventId: string,
+  input: GoogleCalendarEventInput,
+): Promise<calendar_v3.Schema$Event> {
+  return patchGoogleCalendarEvent(auth, calendarId, eventId, input)
+}
+
+/** events.move: change the event's calendar (organizer). */
+export async function moveGoogleCalendarEvent(
+  auth: OAuth2Client,
+  calendarId: string,
+  eventId: string,
+  destinationCalendarId: string,
+  sendUpdates?: GoogleCalendarEventInput['send_updates'],
+): Promise<calendar_v3.Schema$Event> {
+  try {
+    const calendar = await getCalendarApi(auth)
+    const response = await calendar.events.move({
+      calendarId,
+      eventId,
+      destination: destinationCalendarId,
+      sendUpdates: resolveSendUpdates(sendUpdates),
+    })
+    if (!response.data.id) {
+      throw new Error('Google did not return a moved event id')
+    }
+    return response.data
+  } catch (error) {
+    throw mapGoogleAuthError(error)
+  }
+}
+
 export async function deleteGoogleCalendarEvent(
   auth: OAuth2Client,
   calendarId: string,
   eventId: string,
+  options?: { sendUpdates?: GoogleCalendarEventInput['send_updates'] },
 ): Promise<void> {
   try {
     const calendar = await getCalendarApi(auth)
-    await calendar.events.delete({ calendarId, eventId })
+    await calendar.events.delete({
+      calendarId,
+      eventId,
+      sendUpdates: resolveSendUpdates(options?.sendUpdates),
+    })
   } catch (error) {
     throw mapGoogleAuthError(error)
   }

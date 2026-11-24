@@ -1,6 +1,6 @@
 name: Push Calendar Event Create to Google
 handle: push-calendar-event-create-to-google
-description: "When a mapped CRM record is created, load the full row (create payloads are sparse), resolve the Google calendar from the assigned relation, create the Google event, and write google_event_id back. Skips Google-originated writes so import and inbound sync do not loop."
+description: "When a mapped CRM record is created, load the full row (create payloads are sparse), resolve the Google calendar from the assigned relation, create the Google event (recurring when the row has recurrence; a series occurrence when the row is an exception) with an id derived from the CRM instance id, and write the Google id, etag, link and updated time back. Never inserts for a row that already has a Google id. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
@@ -14,6 +14,11 @@ inputs:
     type: object
     label: Google
     description: App-namespaced context from the calendar_event saveInteraction (not CRM fields)
+    required: false
+  calendarEdit:
+    type: object
+    label: Calendar edit
+    description: "Platform calendar edit envelope ({ action, scope, masterId, originalStart }). Exceptions and new series are detected from the row itself, so this is informational."
     required: false
 
 outputs:
@@ -116,6 +121,8 @@ steps:
           "google_event_id": {{ record.google_event_id | json }},
           "recurring_event_id": {{ record.recurring_event_id | json }},
           "original_start": {{ record.original_start | json }},
+          "recurrence": {{ record.recurrence | json }},
+          "status": {{ record.status | json }},
           "attendees": {{ record.attendees | json }}
         }
         {%- else -%}
@@ -175,6 +182,8 @@ steps:
           "google_event_id": {{ steps.build-create.outputs.response.data.google_event_id | json }},
           "recurring_event_id": {{ steps.build-create.outputs.response.data.recurring_event_id | json }},
           "original_start": {{ steps.build-create.outputs.response.data.original_start | json }},
+          "recurrence": {{ steps.build-create.outputs.response.data.recurrence | json }},
+          "status": {{ steps.build-create.outputs.response.data.status | json }},
           "attendees": {{ steps.build-create.outputs.response.data.attendees | json }}
         }
         {%- else -%}
@@ -185,9 +194,9 @@ steps:
     needs: [resolve-create]
     type: task
     name: Create Google Calendar event
-    description: Create a new Google Calendar event via calendar_event_create without emitting inbound sync
+    description: Create the Google event via calendar_event_create (deterministic id, recurrence, exception occurrences) without emitting inbound sync. Rows that already carry a Google id are never inserted again.
     timeout: 2 minutes
-    if: "{{ steps.resolve-create.outputs.response.data.calendar_id != blank }}"
+    if: "{{ steps.resolve-create.outputs.response.data.calendar_id != blank and steps.resolve-create.outputs.response.data.google_event_id == blank }}"
     service:
       name: skedyul/app
       cmd: tool.call
@@ -206,7 +215,10 @@ steps:
       google_event_id: "{{ steps.resolve-create.outputs.response.data.google_event_id | default: '' }}"
       recurring_event_id: "{{ steps.resolve-create.outputs.response.data.recurring_event_id | default: '' }}"
       original_start: "{{ steps.resolve-create.outputs.response.data.original_start | default: '' }}"
+      recurrence: "{{ steps.resolve-create.outputs.response.data.recurrence | json }}"
+      status: "{{ steps.resolve-create.outputs.response.data.status | default: '' }}"
       attendees: "{{ steps.resolve-create.outputs.response.data.attendees | json }}"
+      crm_instance_id: "{{ inputs.data.record.id }}"
       send_updates: "{{ inputs.google.send_updates | default: 'externalOnly' }}"
       emit_event: "false"
 
@@ -227,7 +239,8 @@ steps:
             "google_event_id": {{ steps.create-google.outputs.response.data.event.google_event_id | json }},
             "calendar_id": {{ steps.resolve-create.outputs.response.data.calendar_id | json }},
             "html_link": {{ steps.create-google.outputs.response.data.event.html_link | json }},
-            "etag": {{ steps.create-google.outputs.response.data.event.etag | json }}
+            "etag": {{ steps.create-google.outputs.response.data.event.etag | json }},
+            "updated_at": {{ steps.create-google.outputs.response.data.event.updated_at | json }}
           }
         }
 
