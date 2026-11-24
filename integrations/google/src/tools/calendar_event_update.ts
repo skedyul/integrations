@@ -28,6 +28,7 @@ import {
 } from '../services/calendar/client'
 import {
   asGoogleEventId,
+  isGoogleThisAndFollowingMasterId,
   RECURRING_EVENT_FALLBACK_TIMEZONE,
 } from '../services/calendar/event-datetime'
 import { skedyulGoogleEventId } from '../services/calendar/event-ids'
@@ -184,7 +185,10 @@ export function planCalendarEventWrite(input: CalendarEventUpdateInput): Calenda
     const storedId =
       asGoogleEventId(asString(after.google_event_id)) ?? asGoogleEventId(eventId)
 
-    if (isSeriesException(after)) {
+    // A Google "this and following" split master (`…_R…`) can carry its own
+    // id as recurring_event_id plus an original start: it is a master.
+    const storedIsSplitMaster = storedId != null && isGoogleThisAndFollowingMasterId(storedId)
+    if (isSeriesException(after) && !storedIsSplitMaster) {
       const recurringEventId = asString(after.recurring_event_id) as string
       const originalStart = asString(after.original_start) as string
       const storedIsMaster = storedId != null && storedId === asGoogleEventId(recurringEventId)

@@ -210,6 +210,21 @@ describe('planCalendarEventWrite', () => {
     })
   })
 
+  it('treats an imported split-series master (`_R` id) as a master, not an exception', () => {
+    const splitId = '21276hr5ftmq6ts3pe451ti7er_R20260629T233000'
+    const master = {
+      google_event_id: splitId,
+      recurring_event_id: splitId,
+      original_start: '2026-06-29T23:30:00.000Z',
+      summary: 'Series',
+      etag: '"split"',
+    }
+    const plan = planCalendarEventWrite(
+      parse({ calendar_id: CAL, before: master, after: { ...master, summary: 'Renamed' } }),
+    )
+    expect(plan).toMatchObject({ kind: 'patch', eventId: splitId, body: { summary: 'Renamed' } })
+  })
+
   it('inserts a row without a Google id using the deterministic id', () => {
     const { google_event_id: _id, etag: _etag, ...unsynced } = row
     const plan = planCalendarEventWrite(
