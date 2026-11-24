@@ -115,6 +115,8 @@ export async function describeSlackConversation(input: {
   senderId: string
   direct?: boolean
   budgetMs?: number
+  /** Users @mentioned in the message, so their names can be shown. */
+  mentionedIds?: string[]
 }): Promise<SlackRoomProfile> {
   const client = new SlackClient(input.botToken)
   const signal = AbortSignal.timeout(input.budgetMs ?? LOOKUP_BUDGET_MS)
@@ -162,7 +164,7 @@ export async function describeSlackConversation(input: {
   }
 
   const known = new Set<string>([input.senderId])
-  const extraIds = memberIds.filter((id) => {
+  const extraIds = [...memberIds, ...(input.mentionedIds ?? [])].filter((id) => {
     if (known.has(id)) return false
     known.add(id)
     return true

@@ -8,6 +8,7 @@ import {
   type SlackPerson,
 } from '../lib/slack_room'
 import { botUserIdFromEvent, mentionsBot } from '../lib/slack_mention'
+import { slackMentionedUserIds, slackTextToPlain } from '../lib/slack_markup'
 
 type SlackEventBody = {
   type?: string
@@ -101,6 +102,7 @@ async function handleReceiveSlack(
           channelId: event.channel,
           senderId: event.user,
           direct: isDirect,
+          mentionedIds: slackMentionedUserIds(event.text),
         })
         participants = room.participants
         roomName = room.name
@@ -119,6 +121,13 @@ async function handleReceiveSlack(
     participants,
   })
 
+  const botUserId = botUserIdFromEvent(payload)
+  // Slack markup (<@U123>, <https://…|label>) becomes readable text.
+  const text = slackTextToPlain(event.text, {
+    botUserId,
+    names: new Map(participants.map((person) => [person.identifierValue, person.displayName])),
+  })
+
   await communicationChannel.receiveMessage({
     communicationChannelId: channelId,
     from: event.user,
@@ -128,7 +137,7 @@ async function handleReceiveSlack(
         ? { displayName: sender.displayName, avatarUrl: sender.avatarUrl }
         : undefined,
     message: {
-      message: event.text,
+      message: text,
       remoteId: event.ts,
     },
     remoteId: event.ts,
@@ -138,7 +147,7 @@ async function handleReceiveSlack(
     // Matches the sender to a workplace member for Ask Skedyul.
     identity: senderEmail ? { email: senderEmail } : undefined,
     // In channels, Ask Skedyul replies only when the app is @mentioned.
-    mentioned: mentionsBot(event.text, botUserIdFromEvent(payload)),
+    mentioned: mentionsBot(event.text, botUserId),
   })
 
   return { status: 200, body: { ok: true } }
