@@ -17,7 +17,6 @@ const ensureCalendarWatch = jest.fn(async (_auth: unknown, record: GoogleCalenda
 const removeCalendarWatch = jest.fn(async (_auth: unknown, _record: GoogleCalendarRecord) => undefined)
 const updateCrmCalendarSyncState = jest.fn(async (_record: unknown, _state: Row) => true)
 const emitGoogleEvent = jest.fn(async () => ({ emitted: true }))
-const ensureSyncSchedulesOnce = jest.fn(async (_id: string) => undefined)
 
 jest.unstable_mockModule('skedyul', async () => {
   const actual = await jest.requireActual<typeof import('skedyul')>('skedyul')
@@ -38,7 +37,6 @@ jest.unstable_mockModule('../../lib/calendar_link.ts', () => ({
 }))
 jest.unstable_mockModule('../../lib/crm-calendars.ts', () => ({ updateCrmCalendarSyncState }))
 jest.unstable_mockModule('../../lib/emit-google-event.ts', () => ({ emitGoogleEvent }))
-jest.unstable_mockModule('../../lib/sync-schedules.ts', () => ({ ensureSyncSchedulesOnce }))
 
 const { addGoogleCalendarRegistry } = await import('../add_google_calendar')
 const { removeGoogleCalendarRegistry } = await import('../remove_google_calendar')
@@ -82,7 +80,6 @@ describe('add_google_calendar', () => {
       expect.objectContaining({ calendar_id: 'room@x', sync_enabled: true }),
     )
     expect(result).toMatchObject({ success: true, output: { live_sync: true } })
-    expect(ensureSyncSchedulesOnce).toHaveBeenCalledWith('inst_1')
   })
 
   it('creates the CRM row (with flags) for a calendar that was never imported', async () => {

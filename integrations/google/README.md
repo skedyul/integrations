@@ -45,7 +45,7 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
 ### 3. Install the app (workplace)
 
 1. Install the Google app on a workplace
-2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect stores tokens and subscribes two schedules (they no-op until calendars are mapped and sync-enabled): `calendar_watch_renew` every 6 hours and an incremental `calendar_sync` catch-up every 15 minutes. See **Uninstall** below for what is removed.
+2. Open **Setup** and complete **Connect Google account** (OAuth). Use **Reconnect Google** if tokens are missing. Connect only stores tokens. The app subscribes no schedules (see **Live updates** below).
 3. Complete **Set up calendars** (its button opens Settings → CRM → Sources):
    - Map the `calendar` entity to your workplace calendar model (`google_calendar_id` match key)
    - Run **Import calendars** on the Google Calendar hub (one batch job). That job also imports events, people, and attendees when those maps are ready
@@ -62,7 +62,13 @@ Install-level variables (`GOOGLE_REFRESH_TOKEN`, `GOOGLE_ACCESS_TOKEN`, etc.) ar
    - Map attendee `event` → event and `user` → the workplace people field
    - Import calendars also upserts users then attendees (`event: { __crmMatch }` / `user: { __crmMatch }`)
 6. On the workplace Event list, set Calendar view **section** to the calendar relationship so events from every synced calendar appear together
-7. Live updates: `calendar_watch_renew` (every 6 hours) opens a push channel for every calendar whose CRM row has `sync_enabled: true`, renews channels that expire within 24 hours and stops channels on calendars whose sync is off. `calendar_sync` with `enable_live_sync: true` or `add_google_calendar` opens one immediately. Each Google ping starts **one** incremental import batch.
+7. Live updates: every calendar whose CRM row has `sync_enabled: true` gets a push channel, which is opened by any of these:
+   - `add_google_calendar`;
+   - `calendar_sync` with `enable_live_sync: true`;
+   - a CRM mapping change (setup revalidate);
+   - the first calendar view (window pull).
+
+   Each channel points at its own `calendar_push` webhook registration, and that registration is a **platform lease**. The platform calls `calendar_push.renew` shortly before Google's expiry (about a week). `renew` opens a new channel on the same URL, stops the old one and queues one incremental sync. When the calendar is gone or its sync is off, it gives the registration up instead. Each Google ping queues **one** incremental import batch, behind one already running, so no ping is dropped. There are no cron schedules.
 
 Connect never imports history and never emits per-event webhooks.
 
@@ -124,8 +130,7 @@ Every calendar edit in Skedyul arrives as `instance.created/updated/deleted` (wi
 
 ### Sync
 
-- `calendar_sync` (starts one `import_calendar_events` batch; optional `enable_live_sync` opens watches; cron: every 15 minutes)
-- `calendar_watch_renew` (renews/creates/stops push channels; cron: every 6 hours)
+- `calendar_sync` (queues one `import_calendar_events` batch; optional `enable_live_sync` opens push channels, which the platform renews)
 
 ### Batch operations
 
@@ -143,7 +148,7 @@ pnpm build
 
 ## Uninstall
 
-Uninstall stops every stored push channel and removes the two schedules (while the refresh token still works), revokes the token, then cleans up the CRM. The rule: remove only rows that exist because of the Google import, and keep every event created in Skedyul.
+Uninstall stops every stored push channel (while the refresh token still works; the platform removes the registrations and their renewal timers), revokes the token, then cleans up the CRM. The rule: remove only rows that exist because of the Google import, and keep every event created in Skedyul.
 
 - `attendee` rows (Google guest lists) are deleted.
 - Events whose `google_event_id` Skedyul minted (`sk…`, or an occurrence of such a series) are kept with `google_event_id`, `html_link`, `etag` and `updated_at` cleared; their exceptions are re-pointed at the master's CRM id.

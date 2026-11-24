@@ -34,7 +34,7 @@ describe('startAppBatchOperation', () => {
         entityHandle: 'calendar_event',
         input: { calendar_id: 'primary' },
       }),
-    ).resolves.toEqual({ batchJobId: 'job_1' })
+    ).resolves.toEqual({ batchJobId: 'job_1', status: 'started' })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example.com/api/core')

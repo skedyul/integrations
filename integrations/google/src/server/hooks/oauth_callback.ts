@@ -7,7 +7,6 @@ import {
   tokenSetToInstallEnv,
 } from '../../lib/google_client'
 import { buildOAuthRedirectUri } from '../../lib/google_install_env'
-import { ensureSyncSchedules } from '../../lib/sync-schedules'
 
 export default async function oauthCallback(
   ctx: OAuthCallbackContext,
@@ -79,15 +78,6 @@ export default async function oauthCallback(
     await setup.complete('connect_google')
     if (typeof setup.reconcile === 'function') {
       await setup.reconcile()
-    }
-
-    // Watch renewal (6h) and catch-up sync (15m) schedules. Idempotent; they
-    // no-op until calendars are mapped and sync-enabled. A failure here must
-    // not fail the connect: later tool runs ensure them again.
-    try {
-      await ensureSyncSchedules(appInstallationId)
-    } catch (error) {
-      ctx.log.warn('[Google OAuth] Could not subscribe sync schedules:', error)
     }
 
     return {

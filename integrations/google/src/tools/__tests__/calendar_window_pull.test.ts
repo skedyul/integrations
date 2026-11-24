@@ -74,11 +74,15 @@ jest.unstable_mockModule('../../lib/emit-google-event.ts', () => ({
   emitGoogleEvent,
 }))
 
+const ensureCalendarWatchesOnce = jest.fn(async (_appInstallationId: string, _auth: unknown) => undefined)
+jest.unstable_mockModule('../../lib/calendar-watches.ts', () => ({
+  ensureCalendarWatchesOnce,
+}))
+
 const { AppAuthInvalidError } = await import('skedyul')
 const { calendarWindowPullRegistry, MAX_PAGES_PER_CALENDAR } = await import(
   '../calendar_window_pull'
 )
-const { resetEnsuredSyncSchedules } = await import('../../lib/sync-schedules')
 const { skedyulGoogleEventId } = await import('../../services/calendar/event-ids')
 
 const context = {
@@ -143,7 +147,7 @@ describe('calendar_window_pull', () => {
   beforeEach(() => {
     crmCalendars = []
     crmEvents = []
-    resetEnsuredSyncSchedules()
+    ensureCalendarWatchesOnce.mockClear()
     cronSubscribe.mockClear()
     upsertMany.mockReset().mockImplementation(async (modelHandle, items) => ({
       results: items.map((item, index) => ({
@@ -354,14 +358,11 @@ describe('calendar_window_pull', () => {
     expect(eventUpserts()).toEqual([])
   })
 
-  it('subscribes the renew and catch-up schedules once per installation', async () => {
-    await calendarWindowPullRegistry.handler(windowInput, context as never)
+  it('opens missing push channels and subscribes no schedules', async () => {
     await calendarWindowPullRegistry.handler(windowInput, context as never)
 
-    expect(cronSubscribe.mock.calls.map((call) => call[0].toolName)).toEqual([
-      'calendar_watch_renew',
-      'calendar_sync',
-    ])
+    expect(ensureCalendarWatchesOnce).toHaveBeenCalledWith('inst_1', expect.anything())
+    expect(cronSubscribe).not.toHaveBeenCalled()
   })
 
   it('filters to requested calendar_ids', async () => {

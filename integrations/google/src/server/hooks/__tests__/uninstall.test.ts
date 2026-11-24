@@ -14,10 +14,6 @@ const listCrmCalendarRecords = jest.fn<() => Promise<GoogleCalendarRecord[]>>()
 const stopCalendarWatch = jest.fn(async (_auth: unknown, options: { channelId: string }) => {
   calls.push(`stop:${options.channelId}`)
 })
-const removeSyncSchedules = jest.fn(async () => {
-  calls.push('unschedule')
-  return 2
-})
 
 jest.unstable_mockModule('../../../lib/cleanup-google-crm.ts', () => ({ cleanupGoogleCrmRows }))
 jest.unstable_mockModule('../../../lib/google_client.ts', () => ({
@@ -26,7 +22,6 @@ jest.unstable_mockModule('../../../lib/google_client.ts', () => ({
 }))
 jest.unstable_mockModule('../../../lib/crm-calendars.ts', () => ({ listCrmCalendarRecords }))
 jest.unstable_mockModule('../../../services/calendar/watch.ts', () => ({ stopCalendarWatch }))
-jest.unstable_mockModule('../../../lib/sync-schedules.ts', () => ({ removeSyncSchedules }))
 
 const { default: uninstall } = await import('../uninstall')
 
@@ -51,7 +46,7 @@ describe('google uninstall hook', () => {
       { client: 'oauth' },
       { channelId: 'ch_a', resourceId: 'res_a' },
     )
-    expect(calls).toEqual(['stop:ch_a', 'unschedule', 'revoke', 'cleanup'])
+    expect(calls).toEqual(['stop:ch_a', 'revoke', 'cleanup'])
     expect(revokeGoogleRefreshToken).toHaveBeenCalledWith({ GOOGLE_REFRESH_TOKEN: 'refresh' })
     expect(cleanupGoogleCrmRows).toHaveBeenCalledWith(log)
   })

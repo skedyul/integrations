@@ -8,7 +8,6 @@ import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { parseSyncDirection } from '../lib/google_install_env'
 import { emitGoogleEvent } from '../lib/emit-google-event'
 import { toCalendarEntityPayload } from '../lib/seed-google-calendars'
-import { ensureSyncSchedulesOnce } from '../lib/sync-schedules'
 import { loadGoogleCalendarRecord } from '../services/calendar/sync'
 import type { GoogleCalendarRecord } from '../events/types'
 import {
@@ -105,8 +104,6 @@ export const addGoogleCalendarRegistry: ToolDefinition<
       } else {
         await removeCalendarWatch(client, record)
       }
-
-      await ensureSyncSchedulesOnce(context.appInstallationId)
 
       await emitGoogleEvent(
         context.appInstallationId,

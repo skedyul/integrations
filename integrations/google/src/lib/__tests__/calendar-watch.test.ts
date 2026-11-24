@@ -8,9 +8,37 @@ const instanceList = jest.fn(async () => ({
   data: [] as Row[],
   pagination: { page: 1, total: 0, hasMore: false, limit: 1 },
 }))
-const webhookList = jest.fn(async () => ({
-  webhooks: [{ id: 'whkr_1', name: 'calendar_push', url: 'https://hooks/calendar_push', context: null, createdAt: '', expiresAt: null }],
+type Registration = {
+  id: string
+  name: string
+  url: string
+  context: Record<string, unknown> | null
+  createdAt: string
+  expiresAt: string | null
+  autoRenew: boolean
+}
+const registration = (calendarId: string, autoRenew = true): Registration => ({
+  id: `whreg_${calendarId}`,
+  name: 'calendar_push',
+  url: `https://hooks/whreg_${calendarId}`,
+  context: { calendar_id: calendarId },
+  createdAt: '',
+  expiresAt: null,
+  autoRenew,
+})
+const webhookList = jest.fn(async () => ({ webhooks: [] as Registration[] }))
+const webhookCreate = jest.fn(async (_name: string, context?: Record<string, unknown>) => ({
+  id: `whreg_${String(context?.calendar_id)}`,
+  url: `https://hooks/whreg_${String(context?.calendar_id)}`,
+  expiresAt: null,
 }))
+const webhookUpdate = jest.fn(async (id: string, params: { expiresAt?: string | null; autoRenew?: boolean }) => ({
+  id,
+  url: `https://hooks/${id}`,
+  expiresAt: params.expiresAt ?? null,
+  autoRenew: params.autoRenew ?? false,
+}))
+const webhookDeleteByName = jest.fn(async (_name: string, _options?: unknown) => ({ count: 1 }))
 const startCalendarWatch = jest.fn<
   (auth: unknown, options: { calendarId: string; webhookUrl: string; token?: string }) => Promise<{
     channelId: string
@@ -26,7 +54,13 @@ jest.unstable_mockModule('skedyul', async () => {
   return {
     ...actual,
     instance: { ...actual.instance, update: instanceUpdate, list: instanceList },
-    webhook: { ...actual.webhook, list: webhookList },
+    webhook: {
+      ...actual.webhook,
+      list: webhookList,
+      create: webhookCreate,
+      update: webhookUpdate,
+      deleteByName: webhookDeleteByName,
+    },
   }
 })
 
@@ -42,8 +76,16 @@ const {
   ensureCalendarWatch,
   reconcileCalendarWatches,
   removeCalendarWatch,
+  renewCalendarChannel,
   watchTokensMatch,
 } = await import('../calendar_link')
+
+const resetWebhookMocks = (registrations: Registration[] = []) => {
+  webhookList.mockReset().mockResolvedValue({ webhooks: registrations })
+  webhookCreate.mockClear()
+  webhookUpdate.mockClear()
+  webhookDeleteByName.mockClear()
+}
 
 const NOW = Date.parse('2026-09-01T00:00:00.000Z')
 const DAY = 24 * 60 * 60 * 1000
@@ -67,6 +109,7 @@ const watched = {
 
 describe('ensureCalendarWatch', () => {
   beforeEach(() => {
+    resetWebhookMocks()
     instanceUpdate.mockReset().mockResolvedValue({ id: 'ins_cal' })
     startCalendarWatch.mockReset().mockImplementation(async (_auth, options) => ({
       channelId: 'ch_new',
@@ -77,23 +120,29 @@ describe('ensureCalendarWatch', () => {
     stopCalendarWatch.mockClear()
   })
 
-  it('opens a channel with a random secret token (not the calendar id) and stores it', async () => {
+  it('opens a channel on its own registration and hands the expiry to the platform', async () => {
     const next = await ensureCalendarWatch(auth, record(), NOW)
 
+    expect(webhookCreate).toHaveBeenCalledWith('calendar_push', { calendar_id: 'primary' })
     const token = startCalendarWatch.mock.calls[0]?.[1].token
     expect(token).toMatch(/^[0-9a-f]{64}$/)
     expect(token).not.toBe('primary')
-    expect(startCalendarWatch.mock.calls[0]?.[1].webhookUrl).toBe('https://hooks/calendar_push')
+    expect(startCalendarWatch.mock.calls[0]?.[1].webhookUrl).toBe('https://hooks/whreg_primary')
     expect(instanceUpdate).toHaveBeenCalledWith('calendar', 'ins_cal', {
       watch_channel_id: 'ch_new',
       watch_resource_id: 'res_new',
       watch_expiration: new Date(NOW + 7 * DAY).toISOString(),
       watch_token: token,
     })
+    expect(webhookUpdate).toHaveBeenCalledWith('whreg_primary', {
+      expiresAt: new Date(NOW + 7 * DAY).toISOString(),
+      autoRenew: true,
+    })
     expect(next.watch_channel_id).toBe('ch_new')
   })
 
-  it('keeps a stored channel that is not close to expiry', async () => {
+  it('keeps a stored channel the platform is renewing', async () => {
+    resetWebhookMocks([registration('primary')])
     const current = record({
       ...watched,
       watch_expiration: new Date(NOW + 3 * DAY).toISOString(),
@@ -101,9 +150,25 @@ describe('ensureCalendarWatch', () => {
 
     await expect(ensureCalendarWatch(auth, current, NOW)).resolves.toBe(current)
     expect(startCalendarWatch).not.toHaveBeenCalled()
+    expect(webhookCreate).not.toHaveBeenCalled()
   })
 
-  it('renews a channel expiring within 24h: new channel first, then stops the old one', async () => {
+  it('reopens a channel whose registration is not renewed by the platform', async () => {
+    resetWebhookMocks([registration('primary', false)])
+    const current = record({
+      ...watched,
+      watch_expiration: new Date(NOW + 3 * DAY).toISOString(),
+    })
+
+    await ensureCalendarWatch(auth, current, NOW)
+
+    expect(startCalendarWatch.mock.calls[0]?.[1].webhookUrl).toBe('https://hooks/whreg_primary')
+    expect(webhookUpdate).toHaveBeenCalledWith('whreg_primary', expect.objectContaining({ autoRenew: true }))
+    expect(stopCalendarWatch).toHaveBeenCalledWith(auth, { channelId: 'ch_old', resourceId: 'res_old' })
+  })
+
+  it('replaces an expiring channel: new channel first, then stops the old one', async () => {
+    resetWebhookMocks([registration('primary')])
     const expiring = record({
       ...watched,
       watch_expiration: new Date(NOW + 2 * 60 * 60 * 1000).toISOString(),
@@ -134,16 +199,57 @@ describe('ensureCalendarWatch', () => {
       channelId: 'ch_new',
       resourceId: 'res_new',
     })
+    expect(webhookUpdate).not.toHaveBeenCalled()
+  })
+
+  it('undoes the new channel when the platform lease cannot be stored', async () => {
+    webhookUpdate.mockRejectedValueOnce(new Error('core api down'))
+
+    await expect(ensureCalendarWatch(auth, record(), NOW)).rejects.toThrow('core api down')
+    expect(stopCalendarWatch).toHaveBeenCalledWith(auth, { channelId: 'ch_new', resourceId: 'res_new' })
+    expect(instanceUpdate).toHaveBeenLastCalledWith('calendar', 'ins_cal', {
+      watch_channel_id: null,
+      watch_resource_id: null,
+      watch_expiration: null,
+      watch_token: null,
+    })
+  })
+})
+
+describe('renewCalendarChannel', () => {
+  beforeEach(() => {
+    resetWebhookMocks()
+    instanceUpdate.mockReset().mockResolvedValue({ id: 'ins_cal' })
+    startCalendarWatch.mockReset().mockImplementation(async (_auth, options) => ({
+      channelId: 'ch_new',
+      resourceId: 'res_new',
+      expiration: new Date(NOW + 7 * DAY).toISOString(),
+      token: options.token ?? '',
+    }))
+    stopCalendarWatch.mockClear()
+  })
+
+  it('opens the new channel on the same URL and stops the old one; the platform stores the lease', async () => {
+    const next = await renewCalendarChannel(auth, record(watched), {
+      url: 'https://hooks/whreg_primary',
+    })
+
+    expect(startCalendarWatch.mock.calls[0]?.[1].webhookUrl).toBe('https://hooks/whreg_primary')
+    expect(stopCalendarWatch).toHaveBeenCalledWith(auth, { channelId: 'ch_old', resourceId: 'res_old' })
+    expect(next.watch_expiration).toBe(new Date(NOW + 7 * DAY).toISOString())
+    expect(webhookUpdate).not.toHaveBeenCalled()
+    expect(webhookList).not.toHaveBeenCalled()
   })
 })
 
 describe('removeCalendarWatch', () => {
   beforeEach(() => {
+    resetWebhookMocks()
     instanceUpdate.mockReset().mockResolvedValue({ id: 'ins_cal' })
     stopCalendarWatch.mockClear()
   })
 
-  it('stops the channel and clears the stored watch fields', async () => {
+  it('stops the channel, clears the stored watch fields and deletes its registration', async () => {
     await removeCalendarWatch(auth, record(watched))
 
     expect(stopCalendarWatch).toHaveBeenCalledWith(auth, {
@@ -156,11 +262,20 @@ describe('removeCalendarWatch', () => {
       watch_expiration: null,
       watch_token: null,
     })
+    expect(webhookDeleteByName).toHaveBeenCalledWith('calendar_push', {
+      filter: { calendar_id: 'primary' },
+    })
+  })
+
+  it('can keep the registration (the platform deletes it after renew returns delete)', async () => {
+    await removeCalendarWatch(auth, record(watched), { keepRegistration: true })
+    expect(webhookDeleteByName).not.toHaveBeenCalled()
   })
 })
 
 describe('reconcileCalendarWatches', () => {
   beforeEach(() => {
+    resetWebhookMocks([registration('expiring'), registration('fresh'), registration('disabled')])
     instanceUpdate.mockReset().mockResolvedValue({ id: 'ins_cal' })
     startCalendarWatch.mockReset().mockImplementation(async (_auth, options) => ({
       channelId: `ch_${options.calendarId}`,
@@ -201,6 +316,12 @@ describe('reconcileCalendarWatches', () => {
       unchanged: ['fresh'],
       unsupported: [],
       failed: [],
+    })
+    // Registrations are listed once for the whole run.
+    expect(webhookList).toHaveBeenCalledTimes(1)
+    expect(webhookCreate).toHaveBeenCalledWith('calendar_push', { calendar_id: 'new' })
+    expect(webhookDeleteByName).toHaveBeenCalledWith('calendar_push', {
+      filter: { calendar_id: 'disabled' },
     })
   })
 

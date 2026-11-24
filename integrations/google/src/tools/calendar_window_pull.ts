@@ -11,7 +11,7 @@ import { findCrmEventsByGoogleIds } from '../lib/crm-events'
 import { decideEventUpsert, eventLookupIds } from '../lib/event-upsert-plan'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { toCalendarWindowPullPayload } from '../lib/seed-google-calendars'
-import { ensureSyncSchedulesOnce } from '../lib/sync-schedules'
+import { ensureCalendarWatchesOnce } from '../lib/calendar-watches'
 import {
   listGoogleCalendarEvents,
   listGoogleCalendars,
@@ -180,8 +180,9 @@ export const calendarWindowPullRegistry: ToolDefinition<
       }
 
       const { client } = await getAuthenticatedOAuthClient(context.env)
-      // Existing installs pick up the renew/catch-up schedules here (memoized).
-      await ensureSyncSchedulesOnce(context.appInstallationId)
+      // Opens push channels for sync-enabled calendars that have none
+      // (memoized per process). The platform renews them.
+      await ensureCalendarWatchesOnce(context.appInstallationId, client)
 
       const listed = await listGoogleCalendars(client)
       const requestedIds = input.calendars?.ids?.filter((id) => id.length > 0)

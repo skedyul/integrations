@@ -6,7 +6,6 @@ import {
   revokeGoogleRefreshToken,
 } from '../../lib/google_client'
 import type { GoogleInstallEnv } from '../../lib/google_install_env'
-import { removeSyncSchedules } from '../../lib/sync-schedules'
 import { stopCalendarWatch } from '../../services/calendar/watch'
 
 type UninstallLog = UninstallHandlerContext['log']
@@ -56,13 +55,6 @@ export default async function uninstall(
 
   const stopped = await stopCalendarWatches(env, ctx.log)
   ctx.log.info(`[Google Uninstall] Stopped ${stopped} push channel(s)`)
-
-  try {
-    const removed = await removeSyncSchedules()
-    ctx.log.info(`[Google Uninstall] Removed ${removed} sync schedule(s)`)
-  } catch (error) {
-    ctx.log.warn('[Google Uninstall] Could not remove sync schedules:', error)
-  }
 
   if (env.GOOGLE_REFRESH_TOKEN) {
     await revokeGoogleRefreshToken(env)
