@@ -4,8 +4,7 @@ import { isRuntimeContext } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { queryGoogleFreeBusy } from '../services/calendar/client'
 import {
-  googleAuthToolFailure,
-  createGoogleError,
+  googleToolFailure,
   createSuccessResponse,
   createValidationError,
 } from '../lib/response'
@@ -58,9 +57,7 @@ export const calendarFreeBusyQueryRegistry: ToolDefinition<
 
       return createSuccessResponse({ calendars })
     } catch (error) {
-      const authFailure = googleAuthToolFailure(error)
-      if (authFailure) return authFailure
-      return createGoogleError(error instanceof Error ? error.message : String(error))
+      return googleToolFailure(error)
     }
   },
 }

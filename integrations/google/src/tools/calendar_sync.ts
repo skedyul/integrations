@@ -12,11 +12,11 @@ import {
   loadLinkedGoogleCalendars,
 } from '../services/calendar/sync'
 import {
-  googleAuthToolFailure,
   createGoogleError,
   createNotFoundError,
   createSuccessResponse,
   createValidationError,
+  googleToolFailure,
 } from '../lib/response'
 
 const CalendarSyncInputSchema = z.object({
@@ -29,12 +29,16 @@ const CalendarSyncInputSchema = z.object({
 const CalendarSyncOutputSchema = z.object({
   batch_job_id: z.string(),
   operation_handle: z.string(),
+  /** `queued` when it runs after an import already in progress */
+  status: z.enum(['started', 'queued']),
   calendars: z.number().int().nonnegative(),
   live_sync_enabled: z.boolean(),
 })
 
 type CalendarSyncInput = z.infer<typeof CalendarSyncInputSchema>
 type CalendarSyncOutput = z.infer<typeof CalendarSyncOutputSchema>
+
+const OPERATION_HANDLE = 'import_calendar_events'
 
 export const calendarSyncRegistry: ToolDefinition<
   CalendarSyncInput,
@@ -44,7 +48,8 @@ export const calendarSyncRegistry: ToolDefinition<
   label: 'Sync Google Calendar',
   ui: { title: 'Synced calendar', activeTitle: 'Syncing calendar' },
   description:
-    'Start one calendar-event import batch for a Google calendar or every calendar on the connected account. Does not emit per-event webhooks.',
+    'Start one incremental calendar-event import batch (stored sync tokens) for a Google calendar or every sync-enabled calendar, queued behind an import already running. With enable_live_sync, opens push channels (the platform renews them). Does not emit per-event webhooks.',
+  timeout: 60_000,
   inputSchema: CalendarSyncInputSchema,
   outputSchema: CalendarSyncOutputSchema,
   handler: async (input, context) => {
@@ -73,7 +78,7 @@ export const calendarSyncRegistry: ToolDefinition<
       }
 
       const started = await startAppBatchOperation({
-        operationHandle: 'import_calendar_events',
+        operationHandle: OPERATION_HANDLE,
         entityHandle: 'calendar_event',
         label: input.calendar_id
           ? `Sync calendar ${input.calendar_id}`
@@ -84,27 +89,24 @@ export const calendarSyncRegistry: ToolDefinition<
           ...(input.time_max ? { time_max: input.time_max } : {}),
           use_sync_token: true,
         },
+        ifRunning: 'queue',
       })
 
       return createSuccessResponse({
         batch_job_id: started.batchJobId,
-        operation_handle: 'import_calendar_events',
+        operation_handle: OPERATION_HANDLE,
+        status: started.status,
         calendars: records.length,
         live_sync_enabled: Boolean(input.enable_live_sync),
       })
     } catch (error) {
-      const authFailure = googleAuthToolFailure(error)
-      if (authFailure) return authFailure
       if (error instanceof StartAppBatchOperationError) {
-        if (error.code === 'PRECONDITION_FAILED') {
-          return createValidationError(error.message)
-        }
-        if (error.code === 'CONFLICT') {
+        if (error.code === 'PRECONDITION_FAILED' || error.code === 'CONFLICT') {
           return createValidationError(error.message)
         }
         return createGoogleError(error.message)
       }
-      return createGoogleError(error instanceof Error ? error.message : String(error))
+      return googleToolFailure(error)
     }
   },
 }

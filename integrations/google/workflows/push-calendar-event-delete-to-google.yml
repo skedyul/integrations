@@ -1,6 +1,6 @@
 name: Push Calendar Event Delete to Google
 handle: push-calendar-event-delete-to-google
-description: "When a mapped CRM record is deleted, unformat through the install map and delete the corresponding Google Calendar event. Skips Google-originated writes so import and inbound sync do not loop."
+description: "When a mapped CRM record is deleted, unformat through the install map and delete the corresponding Google Calendar event (idempotent: an event that is already gone counts as deleted). Does not emit inbound sync events, so the deleted row is not upserted back as cancelled. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
@@ -10,6 +10,16 @@ inputs:
     label: CRM record
     description: Workplace instance.deleted payload for the model bound on the trigger
     required: true
+  google:
+    type: object
+    label: Google
+    description: App-namespaced context from the calendar_event saveInteraction (guest notifications)
+    required: false
+  calendarEdit:
+    type: object
+    label: Calendar edit
+    description: "Platform calendar edit envelope ({ action, scope, masterId, originalStart }), when the delete came from a calendar edit"
+    required: false
 
 outputs:
   google-event-id:
@@ -18,7 +28,7 @@ outputs:
     value: "{{ steps.build-delete.outputs.response.data.event_id }}"
   deleted:
     type: boolean
-    description: Whether the event was successfully deleted
+    description: Whether the event was deleted (or was already gone)
     value: "{{ steps.delete-google.outputs.response.data.deleted }}"
 
 steps:
@@ -43,22 +53,99 @@ steps:
         {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
         {%- assign calendar_id = calendar_id[0] -%}
         {%- endif -%}
-        {%- if event_id != blank and calendar_id != blank -%}
+        {%- assign related = record.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- if related == blank -%}
+        {%- assign related = inputs.data.record.calendar -%}
+        {%- if related[0] != blank and related[1] == blank -%}
+        {%- assign related = related[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- assign calendar_instance_id = related.id -%}
+        {%- if calendar_instance_id == blank -%}
+        {%- assign calendar_instance_id = related -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign related_mapped = related | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = related_mapped.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = related.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- if event_id != blank -%}
         {
           "calendar_id": {{ calendar_id | json }},
+          "calendar_instance_id": {{ calendar_instance_id | json }},
           "event_id": {{ event_id | json }}
         }
         {%- else -%}
         {}
         {%- endif -%}
 
-  delete-google:
+  load-calendar:
     needs: [build-delete]
     type: task
-    name: Delete Google Calendar event
-    description: Delete the Google Calendar event via calendar_event_delete
-    timeout: 2 minutes
+    name: Load related calendar
+    description: Resolve the Google calendar id from the assigned CRM calendar when the event string is empty
+    timeout: 30 seconds
+    if: "{{ steps.build-delete.outputs.response.data.event_id != blank and steps.build-delete.outputs.response.data.calendar_id == blank and steps.build-delete.outputs.response.data.calendar_instance_id != blank }}"
+    service:
+      name: skedyul/crm
+      cmd: instance.find
+    inputs:
+      id: "{{ steps.build-delete.outputs.response.data.calendar_instance_id }}"
+
+  resolve-delete:
+    needs: [build-delete, load-calendar]
+    on-parent-skip: run
+    type: task
+    name: Resolve Google calendar id
+    timeout: 30 seconds
     if: "{{ steps.build-delete.outputs.response.data.event_id != blank }}"
+    service:
+      name: skedyul/tools
+      cmd: liquid.render
+    inputs:
+      outputFormat: json
+      template: |
+        {%- assign calendar_id = steps.build-delete.outputs.response.data.calendar_id -%}
+        {%- if calendar_id == blank -%}
+        {%- assign loaded = steps.load-calendar.outputs.response.data | google: "unformat", "calendar" -%}
+        {%- assign calendar_id = loaded.google_calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- if calendar_id == blank -%}
+        {%- assign calendar_id = steps.load-calendar.outputs.response.data.google_calendar_id -%}
+        {%- endif -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- if calendar_id != blank -%}
+        {
+          "calendar_id": {{ calendar_id | json }},
+          "event_id": {{ steps.build-delete.outputs.response.data.event_id | json }}
+        }
+        {%- else -%}
+        {}
+        {%- endif -%}
+
+  delete-google:
+    needs: [resolve-delete]
+    type: task
+    name: Delete Google Calendar event
+    description: Delete the Google Calendar event via calendar_event_delete (404/410 count as deleted) without emitting calendar.event.deleted
+    timeout: 2 minutes
+    if: "{{ steps.resolve-delete.outputs.response.data.event_id != blank and steps.resolve-delete.outputs.response.data.calendar_id != blank }}"
     service:
       name: skedyul/app
       cmd: tool.call
@@ -66,5 +153,7 @@ steps:
         app: google
         toolName: calendar_event_delete
     inputs:
-      calendar_id: "{{ steps.build-delete.outputs.response.data.calendar_id }}"
-      event_id: "{{ steps.build-delete.outputs.response.data.event_id }}"
+      calendar_id: "{{ steps.resolve-delete.outputs.response.data.calendar_id }}"
+      event_id: "{{ steps.resolve-delete.outputs.response.data.event_id }}"
+      send_updates: "{{ inputs.google.send_updates | default: 'externalOnly' }}"
+      emit_event: "false"

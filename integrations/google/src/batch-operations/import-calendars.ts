@@ -1,19 +1,35 @@
 import { defineBatchOperation, type BatchOperationContext } from 'skedyul'
 import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import type { GoogleInstallEnv } from '../lib/google_install_env'
-import { toCalendarEntityPayload } from '../lib/seed-google-calendars'
+import { toCalendarImportPayload } from '../lib/seed-google-calendars'
 import {
   filterSyncEnabledCalendars,
+  overlayCrmCalendarState,
   recordFromGoogleSummary,
 } from '../lib/calendar-record'
+import { listCrmCalendarRecords } from '../lib/crm-calendars'
 import {
   iterateCalendarEventImport,
   type ImportCalendarEventsState,
 } from '../lib/calendar-event-import'
 import { listGoogleCalendars, type GoogleCalendarSummary } from '../services/calendar/client'
+import type { GoogleCalendarRecord } from '../events/types'
 
 interface ImportCalendarsState extends Partial<ImportCalendarEventsState> {
   listedCalendars: GoogleCalendarSummary[]
+  /** CRM calendar rows that existed before this import (keep their sync flags). */
+  crmCalendars?: GoogleCalendarRecord[]
+}
+
+async function safeCrmCalendars(ctx: BatchOperationContext): Promise<GoogleCalendarRecord[]> {
+  try {
+    return await listCrmCalendarRecords()
+  } catch (error) {
+    ctx.log.warn('Could not read CRM calendar rows; treating every calendar as new', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return []
+  }
 }
 
 export default defineBatchOperation({
@@ -35,11 +51,13 @@ export default defineBatchOperation({
   setup: async (ctx: BatchOperationContext) => {
     const { client } = await getAuthenticatedOAuthClient(ctx.env as GoogleInstallEnv)
     const listedCalendars = await listGoogleCalendars(client)
+    const crmCalendars = await safeCrmCalendars(ctx)
 
     ctx.log.info(`Prepared ${listedCalendars.length} Google calendars for CRM import`)
     return {
       state: {
         listedCalendars,
+        crmCalendars,
         calendarsEmitted: false,
       } satisfies ImportCalendarsState,
     }
@@ -52,11 +70,20 @@ export default defineBatchOperation({
     }
 
     if (!state.calendarsEmitted) {
+      const crmCalendars = state.crmCalendars ?? []
+      const existingIds = new Set(crmCalendars.map((record) => record.calendar_id))
+      // Sync flags only on first create: re-importing must not reset the
+      // workplace's sync_enabled / sync_direction choices.
       const items = state.listedCalendars.map((calendar) => ({
-        calendar: toCalendarEntityPayload(calendar),
+        calendar: toCalendarImportPayload(calendar, {
+          exists: existingIds.has(calendar.calendar_id),
+        }),
       }))
       const eventCalendars = filterSyncEnabledCalendars(
-        state.listedCalendars.map((calendar) => recordFromGoogleSummary(calendar)),
+        overlayCrmCalendarState(
+          state.listedCalendars.map((calendar) => recordFromGoogleSummary(calendar)),
+          crmCalendars,
+        ),
       )
       ctx.log.info(
         `Emitted ${items.length} calendars; paging events for ${eventCalendars.length} sync-enabled`,
@@ -84,6 +111,7 @@ export default defineBatchOperation({
         nextSyncToken: state.nextSyncToken,
         calendarsEmitted: true,
         useSyncToken: state.useSyncToken,
+        pendingSyncState: state.pendingSyncState,
       } satisfies ImportCalendarEventsState,
     })
 

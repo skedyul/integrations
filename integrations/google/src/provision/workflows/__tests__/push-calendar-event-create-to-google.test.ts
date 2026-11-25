@@ -6,11 +6,9 @@ const yamlPath = join(
   process.cwd(),
   'workflows/push-calendar-event-create-to-google.yml',
 )
-const setupPath = join(process.cwd(), 'src/provision/setup.ts')
 
 describe('push-calendar-event-create-to-google', () => {
   const yaml = readFileSync(yamlPath, 'utf8')
-  const setup = readFileSync(setupPath, 'utf8')
 
   it('subscribes to any mapped CRM model create, not Google inbound events', () => {
     expect(yaml).toContain('type: "@crm/*/created"')
@@ -18,11 +16,11 @@ describe('push-calendar-event-create-to-google', () => {
     expect(yaml).not.toContain('@app/google/calendar/event')
   })
 
-  it('reloads the created row then skips Google create when calendar_id is still blank', () => {
+  it('reloads the created row, skips when calendar_id is blank, and never inserts for a row with a Google id', () => {
     expect(yaml).toContain('cmd: instance.find')
     expect(yaml).toContain('id: "{{ inputs.data.record.id }}"')
     expect(yaml).toContain(
-      'if: "{{ steps.resolve-create.outputs.response.data.calendar_id != blank }}"',
+      'if: "{{ steps.resolve-create.outputs.response.data.calendar_id != blank and steps.resolve-create.outputs.response.data.google_event_id == blank }}"',
     )
     expect(yaml).toContain('toolName: calendar_event_create')
     expect(yaml).toContain('emit_event: "false"')
@@ -57,15 +55,26 @@ describe('push-calendar-event-create-to-google', () => {
     )
   })
 
-  it('writes google_event_id back onto the existing CRM instance', () => {
+  it('writes google_event_id, etag, link and updated time back onto the existing CRM instance', () => {
     expect(yaml).toContain('cmd: instance.update')
     expect(yaml).toContain('instanceId: "{{ inputs.data.record.id }}"')
     expect(yaml).toContain("google: 'format', 'calendar_event'")
+    expect(yaml).toContain(
+      '"updated_at": {{ steps.create-google.outputs.response.data.event.updated_at | json }}',
+    )
     expect(yaml).not.toContain('instance.upsertMany')
   })
 
-  it('is auto-wired on calendar event setup', () => {
-    expect(setup).toContain("'push-calendar-event-create-to-google'")
-    expect(setup).toContain("'push-calendar-event-update-to-google'")
+  it('passes recurrence and the CRM instance id (deterministic Google id) to calendar_event_create', () => {
+    expect(yaml).toContain('"recurrence": {{ record.recurrence | json }}')
+    expect(yaml).toContain(
+      'recurrence: "{{ steps.resolve-create.outputs.response.data.recurrence | json }}"',
+    )
+    expect(yaml).toContain('crm_instance_id: "{{ inputs.data.record.id }}"')
   })
+
+  it('declares the optional calendarEdit envelope input', () => {
+    expect(yaml).toMatch(/\n  calendarEdit:\n    type: object\n/)
+  })
+
 })

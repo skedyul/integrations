@@ -1,4 +1,7 @@
 import { setup, type SetupRevalidateHandler } from 'skedyul'
+import { ensureCalendarWatches } from '../../lib/calendar-watches'
+import { getAuthenticatedOAuthClient } from '../../lib/google_client'
+import type { GoogleInstallEnv } from '../../lib/google_install_env'
 
 /**
  * On CRM changes: invalidate listening CRM steps, then reconcile so steps
@@ -27,6 +30,15 @@ export const setupRevalidateHandler: SetupRevalidateHandler = async (ctx) => {
 
   if (typeof setup.reconcile === 'function') {
     await setup.reconcile()
+  }
+
+  // Maps changed (e.g. calendars just mapped): open push channels for
+  // sync-enabled calendars. The platform renews them. Best-effort.
+  try {
+    const { client } = await getAuthenticatedOAuthClient(ctx.env as GoogleInstallEnv)
+    await ensureCalendarWatches(client)
+  } catch (error) {
+    ctx.log?.warn?.('[Google Setup] Could not open calendar push channels:', error)
   }
 
   const after = await setup.list()

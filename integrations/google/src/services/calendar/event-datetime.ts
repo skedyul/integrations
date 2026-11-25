@@ -8,6 +8,9 @@ export type EventDateTimeInput = {
 }
 
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})(?:$|T)/
+
+/** Google requires a time zone on timed recurring events; used when none is known. */
+export const RECURRING_EVENT_FALLBACK_TIMEZONE = 'UTC'
 const COMPACT_UTC = /(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/
 
 export class InvalidGoogleEventTimeError extends Error {
@@ -22,19 +25,46 @@ export function isDateOnlyValue(value: string): boolean {
 }
 
 /**
- * Google recurring instance ids are `{masterId}_{yyyyMMdd'T'HHmmss'Z'}`.
+ * Google recurring instance ids are `{masterId}_{stamp}`: the stamp is
+ * `yyyyMMdd` for all-day series and `yyyyMMdd'T'HHmmss'Z'` (UTC) for timed ones.
  */
 export function googleSeriesInstanceId(
   recurringEventId: string,
   originalStart: string,
+  options?: { allDay?: boolean | null },
 ): string {
-  const compact = toCompactUtcStamp(originalStart)
-  if (!compact) {
+  const stamp = googleInstanceStamp(originalStart, options)
+  if (!stamp) {
     throw new InvalidGoogleEventTimeError(
       `Cannot build Google instance id from original start "${originalStart}"`,
     )
   }
-  return `${recurringEventId}_${compact}`
+  return `${recurringEventId}_${stamp}`
+}
+
+const COMPACT_DATE = /^(\d{4})(\d{2})(\d{2})$/
+
+/**
+ * Instance stamp for `{masterId}_{stamp}`. Date-only original starts (the
+ * platform stores all-day `original_start` as `YYYY-MM-DD`) and `allDay`
+ * rows use the calendar date as written, never a UTC conversion.
+ */
+export function googleInstanceStamp(
+  originalStart: string,
+  options?: { allDay?: boolean | null },
+): string | null {
+  const trimmed = originalStart.trim()
+  if (!trimmed) {
+    return null
+  }
+  const compactDate = COMPACT_DATE.exec(trimmed)
+  if (compactDate) {
+    return trimmed
+  }
+  if (isDateOnlyValue(trimmed) || (options?.allDay === true && DATE_ONLY.test(trimmed))) {
+    return trimmed.slice(0, 10).replaceAll('-', '')
+  }
+  return toCompactUtcStamp(trimmed)
 }
 
 /** Google this-and-following split masters end with `_RyyyyMMddTHHmmss` (optional Z). */
@@ -49,7 +79,8 @@ export function isSkedyulInstanceId(value: string): boolean {
   return value.trim().startsWith('ins_')
 }
 
-function asGoogleEventId(value?: string | null): string | undefined {
+/** A Google event id, or undefined for blanks and CRM instance ids. */
+export function asGoogleEventId(value?: string | null): string | undefined {
   const trimmed = value?.trim()
   if (!trimmed || isSkedyulInstanceId(trimmed)) {
     return undefined
@@ -65,7 +96,8 @@ export function toCompactUtcStamp(value: string): string | null {
   }
 
   if (isDateOnlyValue(trimmed)) {
-    return `${trimmed.replaceAll('-', '')}T000000Z`
+    // All-day instance ids carry the date only; see googleInstanceStamp.
+    return trimmed.replaceAll('-', '')
   }
 
   const parsed = new Date(trimmed)
@@ -112,15 +144,15 @@ function toRfc3339WithOffset(instant: Date): string {
 }
 
 /**
- * Google EventDateTime: all-day uses `date`; timed events send either a naive
- * local dateTime + timeZone, or an RFC3339 timestamp with offset and no timeZone.
- * Sending both a Z/offset timestamp and timeZone yields "Invalid start time."
+ * Which Google event a CRM row writes to: its stored id, the series instance
+ * `{recurring_event_id}_{stamp}` for an exception, or a new insert.
  */
 export function resolveGoogleWriteTarget(input: {
   google_event_id?: string | null
   event_id?: string | null
   recurring_event_id?: string | null
   original_start?: string | null
+  all_day?: boolean | null
 }): { mode: 'insert' } | { mode: 'patch'; eventId: string } {
   const storedId =
     asGoogleEventId(input.google_event_id) || asGoogleEventId(input.event_id)
@@ -134,7 +166,9 @@ export function resolveGoogleWriteTarget(input: {
     if (isGoogleThisAndFollowingMasterId(recurringEventId)) {
       return { mode: 'patch', eventId: recurringEventId }
     }
-    const instanceId = googleSeriesInstanceId(recurringEventId, originalStart)
+    const instanceId = googleSeriesInstanceId(recurringEventId, originalStart, {
+      allDay: input.all_day,
+    })
     if (!storedId || storedId === recurringEventId) {
       return { mode: 'patch', eventId: instanceId }
     }
@@ -147,6 +181,11 @@ export function resolveGoogleWriteTarget(input: {
   return { mode: 'insert' }
 }
 
+/**
+ * Google EventDateTime: all-day uses `date`; timed events send either a naive
+ * local dateTime + timeZone, or an RFC3339 timestamp with offset and no timeZone.
+ * Sending both a Z/offset timestamp and timeZone yields "Invalid start time."
+ */
 export function buildEventDateTime(
   input: EventDateTimeInput,
   kind: 'start' | 'end',

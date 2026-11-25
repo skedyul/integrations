@@ -4,10 +4,17 @@ export type StartAppBatchOperationParams = {
   input?: Record<string, unknown>
   label?: string
   pageSize?: number
+  /**
+   * When another operation is running: `reject` (default) fails with
+   * CONFLICT, `queue` runs this one after it (identical requests coalesce).
+   */
+  ifRunning?: 'reject' | 'queue'
 }
 
 export type StartAppBatchOperationResult = {
   batchJobId: string
+  /** `queued` when it will start after the running operation */
+  status: 'started' | 'queued'
 }
 
 export class StartAppBatchOperationError extends Error {
@@ -57,7 +64,7 @@ export async function startAppBatchOperation(
 
   const payload = (await response.json().catch(() => null)) as {
     success?: boolean
-    data?: { batchJobId?: string } | null
+    data?: { batchJobId?: string; status?: string } | null
     errors?: Array<{ code?: string; message?: string }>
   } | null
 
@@ -69,5 +76,8 @@ export async function startAppBatchOperation(
     )
   }
 
-  return { batchJobId: payload.data.batchJobId }
+  return {
+    batchJobId: payload.data.batchJobId,
+    status: payload.data.status === 'queued' ? 'queued' : 'started',
+  }
 }

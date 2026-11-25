@@ -96,6 +96,9 @@ describe('oauth_callback source', () => {
     expect(source).not.toContain('runPrimaryCalendarBackfill')
     expect(source).not.toContain('ensureInstallCalendarPushWebhook')
     expect(source).not.toContain('ensureCalendarWatch')
+    // Channel renewal is a platform lease, not an app schedule.
+    expect(source).not.toContain('cron')
+    expect(source).not.toContain('SyncSchedules')
     expect(source).not.toContain('startAppBatchOperation')
     expect(source).not.toContain('upsertLinkedGoogleCalendars')
     expect(source).not.toContain('listGoogleCalendars')

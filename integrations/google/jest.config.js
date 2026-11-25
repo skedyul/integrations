@@ -12,6 +12,10 @@ export default {
       'ts-jest',
       {
         useESM: true,
+        // Transpile only. Type-checking every suite against the full
+        // googleapis typings ran Jest workers out of heap; `tsc --noEmit`
+        // (tsconfig.json covers src/**, tests included) is the type check.
+        tsconfig: './tsconfig.jest.json',
       },
     ],
   },

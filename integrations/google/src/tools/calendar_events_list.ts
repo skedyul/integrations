@@ -5,8 +5,7 @@ import { getAuthenticatedOAuthClient } from '../lib/google_client'
 import { listGoogleCalendarEvents } from '../services/calendar/client'
 import { normalizeGoogleCalendarEvent } from '../services/calendar/normalize'
 import {
-  googleAuthToolFailure,
-  createGoogleError,
+  googleToolFailure,
   createSuccessResponse,
   createValidationError,
 } from '../lib/response'
@@ -88,9 +87,7 @@ export const calendarEventsListRegistry: ToolDefinition<
         next_sync_token: page.nextSyncToken ?? null,
       })
     } catch (error) {
-      const authFailure = googleAuthToolFailure(error)
-      if (authFailure) return authFailure
-      return createGoogleError(error instanceof Error ? error.message : String(error))
+      return googleToolFailure(error)
     }
   },
 }

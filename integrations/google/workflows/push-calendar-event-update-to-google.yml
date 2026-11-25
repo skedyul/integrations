@@ -1,6 +1,6 @@
 name: Push Calendar Event Update to Google
 handle: push-calendar-event-update-to-google
-description: "When a mapped CRM record changes, unformat through the install map and patch the Google Calendar event, or create it when the row has no Google id yet. Skips Google-originated writes so import and inbound sync do not loop."
+description: "When a mapped CRM record changes, unformat through the install map and patch the Google Calendar event (If-Match etag), patch the series occurrence for an exception, move it when its calendar changed, or create it (deterministic id) when the row has no Google id yet. Writes the Google id, etag, link and updated time back. Skips Google-originated writes so import and inbound sync do not loop."
 
 variables: {}
 
@@ -14,6 +14,11 @@ inputs:
     type: object
     label: Google
     description: App-namespaced context from the calendar_event saveInteraction (not CRM fields)
+    required: false
+  calendarEdit:
+    type: object
+    label: Calendar edit
+    description: "Platform calendar edit envelope ({ action, scope, masterId, originalStart }). A delete edit lets a cancellation whose Google occurrence is already gone succeed."
     required: false
 
 outputs:
@@ -45,10 +50,6 @@ steps:
         {%- if event_id[0] != blank and event_id[1] == blank -%}
         {%- assign event_id = event_id[0] -%}
         {%- endif -%}
-        {%- assign calendar_id = after.calendar_id -%}
-        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
-        {%- assign calendar_id = calendar_id[0] -%}
-        {%- endif -%}
         {%- assign related = after.calendar -%}
         {%- if related[0] != blank and related[1] == blank -%}
         {%- assign related = related[0] -%}
@@ -62,6 +63,47 @@ steps:
         {%- assign calendar_instance_id = related.id -%}
         {%- if calendar_instance_id == blank -%}
         {%- assign calendar_instance_id = related -%}
+        {%- endif -%}
+        {%- assign before_related = before.calendar -%}
+        {%- if before_related[0] != blank and before_related[1] == blank -%}
+        {%- assign before_related = before_related[0] -%}
+        {%- endif -%}
+        {%- if before_related == blank -%}
+        {%- assign before_related = inputs.data.before.calendar -%}
+        {%- if before_related[0] != blank and before_related[1] == blank -%}
+        {%- assign before_related = before_related[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- assign previous_calendar_instance_id = before_related.id -%}
+        {%- if previous_calendar_instance_id == blank -%}
+        {%- assign previous_calendar_instance_id = before_related -%}
+        {%- endif -%}
+        {%- assign relation_changed = false -%}
+        {%- if calendar_instance_id != blank and previous_calendar_instance_id != blank and calendar_instance_id != previous_calendar_instance_id -%}
+        {%- assign relation_changed = true -%}
+        {%- endif -%}
+        {%- assign previous_calendar_id = before.calendar_id -%}
+        {%- if previous_calendar_id[0] != blank and previous_calendar_id[1] == blank -%}
+        {%- assign previous_calendar_id = previous_calendar_id[0] -%}
+        {%- endif -%}
+        {%- if previous_calendar_id == blank -%}
+        {%- assign before_mapped = before_related | google: "unformat", "calendar" -%}
+        {%- assign previous_calendar_id = before_mapped.google_calendar_id -%}
+        {%- if previous_calendar_id[0] != blank and previous_calendar_id[1] == blank -%}
+        {%- assign previous_calendar_id = previous_calendar_id[0] -%}
+        {%- endif -%}
+        {%- endif -%}
+        {%- comment -%}
+        When the calendar relation changed, the event's Google calendar id
+        string still names the old calendar: resolve the target from the
+        relation so the tool moves the event.
+        {%- endcomment -%}
+        {%- assign calendar_id = "" -%}
+        {%- if relation_changed == false -%}
+        {%- assign calendar_id = after.calendar_id -%}
+        {%- if calendar_id[0] != blank and calendar_id[1] == blank -%}
+        {%- assign calendar_id = calendar_id[0] -%}
+        {%- endif -%}
         {%- endif -%}
         {%- if calendar_id == blank -%}
         {%- assign related_mapped = related | google: "unformat", "calendar" -%}
@@ -79,6 +121,8 @@ steps:
         {
           "calendar_id": {{ calendar_id | json }},
           "calendar_instance_id": {{ calendar_instance_id | json }},
+          "previous_calendar_id": {{ previous_calendar_id | json }},
+          "previous_calendar_instance_id": {% if relation_changed %}{{ previous_calendar_instance_id | json }}{% else %}null{% endif %},
           "event_id": {{ event_id | json }},
           "before": {{ before | json }},
           "after": {{ after | json }}
@@ -128,6 +172,8 @@ steps:
         {
           "calendar_id": {{ calendar_id | json }},
           "event_id": {{ steps.build-update.outputs.response.data.event_id | json }},
+          "previous_calendar_id": {{ steps.build-update.outputs.response.data.previous_calendar_id | json }},
+          "previous_calendar_instance_id": {{ steps.build-update.outputs.response.data.previous_calendar_instance_id | json }},
           "before": {{ steps.build-update.outputs.response.data.before | json }},
           "after": {{ steps.build-update.outputs.response.data.after | json }}
         }
@@ -139,7 +185,7 @@ steps:
     needs: [resolve-update]
     type: task
     name: Update Google Calendar event
-    description: Patch mapped Google event fields via calendar_event_update, or insert when the CRM row has no Google id
+    description: Patch mapped Google event fields via calendar_event_update (series occurrence for exceptions, events.move when the calendar changed), or insert with the deterministic id when the CRM row has no Google id. Does not emit inbound sync events.
     timeout: 2 minutes
     if: "{{ steps.resolve-update.outputs.response.data.calendar_id != blank }}"
     service:
@@ -153,14 +199,19 @@ steps:
       event_id: "{{ steps.resolve-update.outputs.response.data.event_id | default: '' }}"
       before: "{{ steps.resolve-update.outputs.response.data.before | json }}"
       after: "{{ steps.resolve-update.outputs.response.data.after | json }}"
+      crm_instance_id: "{{ inputs.data.after.id }}"
+      previous_calendar_id: "{{ steps.resolve-update.outputs.response.data.previous_calendar_id | default: '' }}"
+      previous_calendar_instance_id: "{{ steps.resolve-update.outputs.response.data.previous_calendar_instance_id | default: '' }}"
+      calendar_edit: "{{ inputs.calendarEdit | json }}"
       send_updates: "{{ inputs.google.send_updates | default: 'externalOnly' }}"
+      emit_event: "false"
 
   build-writeback:
     needs: [push-google]
     type: task
     name: Build Google id writeback
     timeout: 30 seconds
-    if: "{{ steps.resolve-update.outputs.response.data.event_id == blank and steps.push-google.outputs.response.data.event.google_event_id != blank and inputs.data.after.id != blank }}"
+    if: "{{ steps.push-google.outputs.response.data.writeback == true and steps.push-google.outputs.response.data.event.google_event_id != blank and inputs.data.after.id != blank }}"
     service:
       name: skedyul/tools
       cmd: liquid.render
@@ -172,7 +223,8 @@ steps:
             "google_event_id": {{ steps.push-google.outputs.response.data.event.google_event_id | json }},
             "calendar_id": {{ steps.resolve-update.outputs.response.data.calendar_id | json }},
             "html_link": {{ steps.push-google.outputs.response.data.event.html_link | json }},
-            "etag": {{ steps.push-google.outputs.response.data.event.etag | json }}
+            "etag": {{ steps.push-google.outputs.response.data.event.etag | json }},
+            "updated_at": {{ steps.push-google.outputs.response.data.event.updated_at | json }}
           }
         }
 
@@ -180,7 +232,7 @@ steps:
     needs: [build-writeback]
     type: task
     name: Write Google event id onto CRM record
-    description: Patch the existing instance so later updates can PATCH Google instead of inserting again
+    description: Store the Google id, etag, link and updated time so later updates PATCH (If-Match) and pulls skip changes that are not newer
     timeout: 30 seconds
     if: "{{ steps.build-writeback.outputs.response.data != blank }}"
     service:
