@@ -8,6 +8,7 @@ import {
 } from 'skedyul'
 import { instance } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
+import { MetaWindowClosedError, WINDOW_CLOSED_FAILURE_REASON } from '../lib/meta_send_errors'
 import {
   phoneDigits,
   whatsappPhoneLookupKeys,
@@ -92,14 +93,31 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
 
     const client = new MetaClient(META_APP_ID, META_APP_SECRET, GRAPH_API_VERSION)
 
+    const template = input.message.template
+    if (template && groupId) {
+      return createValidationError('WhatsApp templates can only be sent to one person, not a group')
+    }
+
     try {
-      const result = await client.sendWhatsAppMessage(
-        phoneNumberId,
-        recipient,
-        input.message.content,
-        META_ACCESS_TOKEN,
-        groupId ? { recipientType: 'group' } : { recipientType: 'individual' },
-      )
+      // Outside the 24h window the platform sends an approved template instead of text.
+      const result = template
+        ? await client.sendWhatsAppTemplate(
+            phoneNumberId,
+            recipient,
+            {
+              name: template.name,
+              language: template.language,
+              parameters: template.parameters,
+            },
+            META_ACCESS_TOKEN,
+          )
+        : await client.sendWhatsAppMessage(
+            phoneNumberId,
+            recipient,
+            input.message.content,
+            META_ACCESS_TOKEN,
+            groupId ? { recipientType: 'group' } : { recipientType: 'individual' },
+          )
 
       return createSuccessResponse(
         {
@@ -109,6 +127,13 @@ export const sendWhatsAppRegistry: ToolDefinition<MessageSendInput, MessageSendO
         { billing: { credits: 1 } },
       )
     } catch (error) {
+      if (error instanceof MetaWindowClosedError) {
+        return createSuccessResponse<MessageSendOutput>({
+          status: 'failed',
+          failureCode: 'window_closed',
+          failureReason: WINDOW_CLOSED_FAILURE_REASON,
+        })
+      }
       if (error instanceof AppAuthInvalidError) {
         throw error
       }

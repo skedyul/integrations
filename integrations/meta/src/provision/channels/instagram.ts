@@ -31,6 +31,9 @@ export default defineChannel({
       icon: 'Instagram',
       receive: 'receive_meta',
       send: 'send_instagram',
+      // The person must message the account first; replies only within 24h.
+      initiation: 'contact',
+      window: { hours: 24 },
     },
   },
 })

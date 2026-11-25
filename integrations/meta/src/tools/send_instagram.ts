@@ -8,6 +8,7 @@ import {
 } from 'skedyul'
 import { instance } from 'skedyul'
 import { MetaClient } from '../lib/meta_client'
+import { MetaWindowClosedError, WINDOW_CLOSED_FAILURE_REASON } from '../lib/meta_send_errors'
 import {
   createSuccessResponse,
   createValidationError,
@@ -100,6 +101,14 @@ export const sendInstagramRegistry: ToolDefinition<MessageSendInput, MessageSend
         { billing: { credits: 1 } },
       )
     } catch (error) {
+      // Outside the 24h window: report a failed send, not a broken connection.
+      if (error instanceof MetaWindowClosedError) {
+        return createSuccessResponse<MessageSendOutput>({
+          status: 'failed',
+          failureCode: 'window_closed',
+          failureReason: WINDOW_CLOSED_FAILURE_REASON,
+        })
+      }
       if (error instanceof AppAuthInvalidError) {
         throw error
       }

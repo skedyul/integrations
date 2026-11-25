@@ -43,6 +43,16 @@ src/
 
 Inbound webhooks resolve the installation via token exchange (lookup CRM record by Meta resource ID, then find the matching `communicationChannel`).
 
+### Messaging rules (`skedyul` ≥ 1.8.0)
+
+| Channel | `initiation` | `window` | `templates` | Outside the 24h window |
+|---------|--------------|----------|-------------|------------------------|
+| `whatsapp` | business (default) | 24h | `create_whatsapp_template` / `delete_whatsapp_template` | The platform turns the message into a template, waits for Meta's approval, sends it with `message.template`, then deletes the template |
+| `messenger` | `contact` | 24h | — | Not sent; the person must message the Page again |
+| `instagram` | `contact` | 24h | — | Not sent; the person must message the account again |
+
+`contact` means the business can't start a conversation: new threads only go to people who already messaged the channel, and bulk sends are off. Send tools return `{ status: 'failed', failureCode: 'window_closed' }` when Meta reports the window is closed (WhatsApp 131047, Messenger/Instagram code 10 outside-window subcodes), rather than treating it as a broken token.
+
 ## Tools
 
 | Tool | Description |
@@ -57,6 +67,8 @@ Inbound webhooks resolve the installation via token exchange (lookup CRM record 
 | `remove_facebook_page` | Remove Facebook Page, Messenger channel, and subscriptions |
 | `remove_instagram_account` | Remove Instagram account, channel, and subscriptions |
 | `fetch_registered_wa_business_numbers` | List WABA numbers from Meta |
+| `create_whatsapp_template` | Submit a message template for review (`POST /{waba}/message_templates`, named variables). Called by the platform outside the 24h window |
+| `delete_whatsapp_template` | Delete a template the platform created once nothing unsent uses it |
 
 ## Webhooks
 
@@ -66,7 +78,7 @@ Inbound webhooks resolve the installation via token exchange (lookup CRM record 
 
 Meta sends different `object` values on the same callback URL:
 
-- `whatsapp_business_account` → WhatsApp messages and status updates
+- `whatsapp_business_account` → WhatsApp messages and status updates; `message_template_status_update` changes are forwarded with `communicationChannel.updateTemplateStatus`
 - `page` → Messenger messaging events
 - `instagram` → Instagram Direct messaging events
 
@@ -84,7 +96,7 @@ On each app version deploy, the provision hook:
 
 1. Registers `receive_meta` with Skedyul via `webhook.create`
 2. Calls the Meta Graph API `/{app-id}/subscriptions` edge to set the callback URL and subscribe to:
-   - `whatsapp_business_account`: `messages`, `message_deliveries`, `message_reads`
+   - `whatsapp_business_account`: `messages`, `message_deliveries`, `message_reads`, `message_template_status_update`
    - `page`: `messages`, `messaging_postbacks`, `message_reads`
    - `instagram`: `messages`
 

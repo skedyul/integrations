@@ -16,6 +16,8 @@ import { addInstagramAccountRegistry } from './tools/add_instagram_account'
 import { removeWhatsAppNumberRegistry } from './tools/remove_whatsapp_number'
 import { removeFacebookPageRegistry } from './tools/remove_facebook_page'
 import { removeInstagramAccountRegistry } from './tools/remove_instagram_account'
+import { createWhatsAppTemplateRegistry } from './tools/create_whatsapp_template'
+import { deleteWhatsAppTemplateRegistry } from './tools/delete_whatsapp_template'
 
 export const toolRegistry: ToolRegistry = {
   send_whatsapp: sendWhatsAppRegistry,
@@ -30,6 +32,8 @@ export const toolRegistry: ToolRegistry = {
   remove_whatsapp_number: removeWhatsAppNumberRegistry,
   remove_facebook_page: removeFacebookPageRegistry,
   remove_instagram_account: removeInstagramAccountRegistry,
+  create_whatsapp_template: createWhatsAppTemplateRegistry,
+  delete_whatsapp_template: deleteWhatsAppTemplateRegistry,
 }
 
 import { receiveMetaRegistry } from './webhooks/receive_meta'

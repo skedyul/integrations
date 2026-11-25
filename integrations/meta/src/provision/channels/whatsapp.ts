@@ -31,6 +31,13 @@ export default defineChannel({
       icon: 'MessageSquare',
       receive: 'receive_meta',
       send: 'send_whatsapp',
+      // Free-form messages only within 24h of the customer's last message.
+      // Outside it the platform sends an approved template it creates here.
+      window: { hours: 24 },
+      templates: {
+        create: 'create_whatsapp_template',
+        delete: 'delete_whatsapp_template',
+      },
     },
   },
 })
