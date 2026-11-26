@@ -9,6 +9,13 @@ import {
 } from '../lib/slack_room'
 import { botUserIdFromEvent, mentionsBot } from '../lib/slack_mention'
 import { slackMentionedUserIds, slackTextToPlain } from '../lib/slack_markup'
+import {
+  downloadableSlackFiles,
+  isReceivedSubtype,
+  uploadSlackFiles,
+  type InboundAttachment,
+  type SlackEventFile,
+} from '../lib/slack_files'
 
 type SlackEventBody = {
   type?: string
@@ -25,6 +32,7 @@ type SlackEventBody = {
     text?: string
     ts?: string
     thread_ts?: string
+    files?: SlackEventFile[]
   }
 }
 
@@ -70,10 +78,19 @@ async function handleReceiveSlack(
   if (payload.type !== 'event_callback' || event?.type !== 'message') {
     return { status: 200, body: { ok: true } }
   }
-  if (event.subtype || event.bot_id || !event.user || !event.channel || !payload.team_id) {
+  // File uploads arrive as subtype `file_share`; edits, joins and bot posts are skipped.
+  if (
+    !isReceivedSubtype(event.subtype) ||
+    event.bot_id ||
+    !event.user ||
+    !event.channel ||
+    !payload.team_id
+  ) {
     return { status: 200, body: { ok: true } }
   }
-  if (!event.text) {
+  const eventText = event.text ?? ''
+  const hasFiles = downloadableSlackFiles(event.files).length > 0
+  if (!eventText && !hasFiles) {
     return { status: 200, body: { ok: true } }
   }
 
@@ -91,18 +108,22 @@ async function handleReceiveSlack(
   let participants: SlackPerson[] = []
   let roomName: string | undefined
   let senderEmail: string | undefined
+  let attachments: InboundAttachment[] = []
   const installationId = channels[0]?.appInstallationId
   if (installationId) {
     try {
       const env = await readInstallationEnv(installationId)
       const botToken = env.SLACK_BOT_TOKEN
+      if (botToken && hasFiles) {
+        attachments = await uploadSlackFiles(event.files, botToken)
+      }
       if (botToken) {
         const room = await describeSlackConversation({
           botToken,
           channelId: event.channel,
           senderId: event.user,
           direct: isDirect,
-          mentionedIds: slackMentionedUserIds(event.text),
+          mentionedIds: slackMentionedUserIds(eventText),
         })
         participants = room.participants
         roomName = room.name
@@ -123,10 +144,17 @@ async function handleReceiveSlack(
 
   const botUserId = botUserIdFromEvent(payload)
   // Slack markup (<@U123>, <https://…|label>) becomes readable text.
-  const text = slackTextToPlain(event.text, {
+  const plain = slackTextToPlain(eventText, {
     botUserId,
     names: new Map(participants.map((person) => [person.identifierValue, person.displayName])),
   })
+  const text = plain || (attachments.length > 0 ? '[Attachment]' : '')
+  if (!text) {
+    console.log('[receiveSlack] File-only message with no downloadable files', {
+      ts: event.ts,
+    })
+    return { status: 200, body: { ok: true } }
+  }
 
   await communicationChannel.receiveMessage({
     communicationChannelId: channelId,
@@ -139,6 +167,7 @@ async function handleReceiveSlack(
     message: {
       message: text,
       remoteId: event.ts,
+      attachments: attachments.length > 0 ? attachments : undefined,
     },
     remoteId: event.ts,
     threadExternalId:
@@ -147,7 +176,7 @@ async function handleReceiveSlack(
     // Matches the sender to a workplace member for Ask Skedyul.
     identity: senderEmail ? { email: senderEmail } : undefined,
     // In channels, Ask Skedyul replies only when the app is @mentioned.
-    mentioned: mentionsBot(event.text, botUserId),
+    mentioned: mentionsBot(eventText, botUserId),
   })
 
   return { status: 200, body: { ok: true } }
