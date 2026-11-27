@@ -118,8 +118,12 @@ export function complianceSteps(record: ComplianceRecord): ComplianceStep[] {
   const documents = values(record, ['address_proof_type'])
   const hasFile = Boolean(text(record.file))
   const hasProof = Boolean(text(record.address_proof))
+  // Once the carrier has the submission (in review or approved), the steps
+  // before it are done, even for records submitted before a field existed
+  // (e.g. approved before proof of address was collected).
+  const submitted = review === 'in_review' || review === 'approved'
   const filled = (data: Record<string, string>, keys: string[]): RequirementState =>
-    keys.every((k) => data[k]) ? 'approved' : 'not_started'
+    submitted || keys.every((k) => data[k]) ? 'approved' : 'not_started'
 
   return [
     {
@@ -130,12 +134,15 @@ export function complianceSteps(record: ComplianceRecord): ComplianceStep[] {
     { item: COMPLIANCE_STEPS.address, state: filled(address, ['address']), data: address },
     {
       item: COMPLIANCE_STEPS.documents,
-      state: hasFile && hasProof && documents.address_proof_type ? 'approved' : 'not_started',
+      state: submitted || (hasFile && hasProof && documents.address_proof_type) ? 'approved' : 'not_started',
       data: documents,
-      documents: [
-        { name: 'Registration document', state: hasFile ? 'uploaded' : 'missing' },
-        { name: 'Proof of address', state: hasProof ? 'uploaded' : 'missing' },
-      ],
+      // After submission, list only what is on file; before, show what's missing.
+      documents: (
+        [
+          { name: 'Registration document', state: hasFile ? 'uploaded' : 'missing' },
+          { name: 'Proof of address', state: hasProof ? 'uploaded' : 'missing' },
+        ] as const
+      ).filter((d) => !submitted || d.state === 'uploaded'),
     },
     {
       item: COMPLIANCE_STEPS.review,

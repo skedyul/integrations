@@ -77,6 +77,21 @@ describe('complianceSteps', () => {
     ])
   })
 
+  it('treats earlier steps as done once submitted, even with fields from before they existed', () => {
+    // Approved before proof of address was collected: registration file only.
+    const steps = complianceSteps({
+      business_name: 'Skedyul',
+      business_id: '1',
+      business_email: 'a@b.test',
+      country: 'AU',
+      address: '1 Main St',
+      file: 'fl_1',
+      status: 'approved',
+    })
+    expect(steps.map((s) => s.state)).toEqual(['approved', 'approved', 'approved', 'approved', 'approved'])
+    expect(steps[2].documents).toEqual([{ name: 'Registration document', state: 'uploaded' }])
+  })
+
   it('carries the rejection reason on the review step', () => {
     const review = complianceSteps({ ...full, status: 'rejected', rejection_reason: 'Blurry' })[3]
     expect(review).toEqual({ item: 'review', state: 'rejected', reason: 'Blurry' })
