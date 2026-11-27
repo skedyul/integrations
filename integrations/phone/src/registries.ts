@@ -40,6 +40,11 @@ import { updateForwardingNumberRegistry } from './tools/update_forwarding_number
 import { updateOutboundVoiceRegistry } from './tools/update_outbound_voice'
 import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
 import { backfillInboundSmsRegistry } from './tools/backfill_inbound_sms'
+import { syncChannelSetupRegistry } from './tools/sync_channel_setup'
+import { saveComplianceBusinessRegistry } from './tools/save_compliance_business'
+import { saveComplianceAddressRegistry } from './tools/save_compliance_address'
+import { saveComplianceDocumentsRegistry } from './tools/save_compliance_documents'
+import { submitComplianceForReviewRegistry } from './tools/submit_compliance_for_review'
 
 /**
  * Tool Registry
@@ -82,6 +87,15 @@ export const toolRegistry: ToolRegistry = {
 
   /** Re-ingest inbound SMS from Twilio over a time window to recover dropped messages. */
   backfill_inbound_sms: backfillInboundSmsRegistry,
+
+  /** Report compliance and every number to Settings → Communication (its `management.sync`). */
+  sync_channel_setup: syncChannelSetupRegistry,
+
+  /** Compliance, one step at a time (Settings → Communication). */
+  save_compliance_business: saveComplianceBusinessRegistry,
+  save_compliance_address: saveComplianceAddressRegistry,
+  save_compliance_documents: saveComplianceDocumentsRegistry,
+  submit_compliance_for_review: submitComplianceForReviewRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
