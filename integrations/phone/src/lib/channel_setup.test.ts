@@ -14,6 +14,7 @@ jest.unstable_mockModule('skedyul', () => ({
 
 const {
   complianceRequirementState,
+  complianceSteps,
   reportCompliance,
   reportPhoneNumber,
   resolvePhoneNumberId,
@@ -44,26 +45,62 @@ describe('complianceRequirementState', () => {
   })
 })
 
+describe('complianceSteps', () => {
+  const full = {
+    business_name: 'ACME',
+    business_id: '123',
+    business_email: 'a@acme.test',
+    country: 'AU',
+    address: '1 Main St',
+    file: 'fl_1',
+    address_proof: 'fl_2',
+    address_proof_type: 'utility_bill',
+  }
+
+  it('marks saved steps done and the rest not started', () => {
+    const steps = complianceSteps({ business_name: 'ACME', business_id: '123', business_email: 'a@acme.test', country: 'AU' })
+    expect(steps.map((s) => [s.item, s.state])).toEqual([
+      ['business', 'approved'],
+      ['address', 'not_started'],
+      ['documents', 'not_started'],
+      ['review', 'not_started'],
+      ['verification', 'not_started'],
+    ])
+  })
+
+  it('follows the carrier review and marks verification once approved', () => {
+    expect(complianceSteps({ ...full, status: 'pending_review' }).map((s) => s.state)).toEqual([
+      'approved', 'approved', 'approved', 'in_review', 'not_started',
+    ])
+    expect(complianceSteps({ ...full, status: 'approved' }).map((s) => s.state)).toEqual([
+      'approved', 'approved', 'approved', 'approved', 'approved',
+    ])
+  })
+
+  it('carries the rejection reason on the review step', () => {
+    const review = complianceSteps({ ...full, status: 'rejected', rejection_reason: 'Blurry' })[3]
+    expect(review).toEqual({ item: 'review', state: 'rejected', reason: 'Blurry' })
+  })
+
+  it('lists which documents are uploaded', () => {
+    const docs = complianceSteps({ file: 'fl_1' })[2]
+    expect(docs.documents).toEqual([
+      { name: 'Registration document', state: 'uploaded' },
+      { name: 'Proof of address', state: 'missing' },
+    ])
+  })
+})
+
 describe('reportCompliance', () => {
-  it('reports state, reason and the submitted details', async () => {
-    await reportCompliance(
-      {
-        status: 'rejected',
-        rejection_reason: 'Blurry document',
-        business_name: 'ACME',
-        business_id: '123',
-        address: '1 Main St',
-      },
-      'ins_1',
+  it('reports every step in the compliance section', async () => {
+    await reportCompliance({ status: 'rejected', rejection_reason: 'Blurry', business_name: 'ACME' }, 'ins_1')
+    expect(setRequirement).toHaveBeenCalledTimes(5)
+    expect(setRequirement).toHaveBeenCalledWith(
+      expect.objectContaining({ appInstallationId: 'ins_1', section: 'compliance', item: 'review', state: 'rejected', reason: 'Blurry' }),
     )
-    expect(setRequirement).toHaveBeenCalledWith({
-      appInstallationId: 'ins_1',
-      section: 'compliance',
-      item: 'business',
-      state: 'rejected',
-      reason: 'Blurry document',
-      data: { business_name: 'ACME', business_id: '123', address: '1 Main St' },
-    })
+    expect(setRequirement).toHaveBeenCalledWith(
+      expect.objectContaining({ item: 'business', data: { business_name: 'ACME' } }),
+    )
   })
 
   it('never throws when the platform call fails', async () => {

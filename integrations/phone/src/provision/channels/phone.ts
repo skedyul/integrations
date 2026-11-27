@@ -5,7 +5,91 @@
  */
 
 import { defineChannel } from 'skedyul'
-import { COMPLIANCE_ITEM, COMPLIANCE_SECTION } from '../../lib/channel_setup_handles'
+import { COMPLIANCE_SECTION, COMPLIANCE_STEPS } from '../../lib/channel_setup_handles'
+
+/** Step forms; each saves through its step's tool, with the same inputs. */
+const businessForm = {
+  title: 'Business details',
+  description: 'As they appear on your business registration.',
+  submitLabel: 'Save',
+  fields: [
+    { kind: 'text' as const, key: 'business_name', label: 'Business name', placeholder: 'ACME Pty Ltd', required: true },
+    {
+      kind: 'text' as const,
+      key: 'business_id',
+      label: 'Business ID number',
+      placeholder: 'e.g. ABN, EIN',
+      help: 'Your business registration or tax ID number.',
+      required: true,
+    },
+    {
+      kind: 'text' as const,
+      key: 'business_email',
+      label: 'Business email',
+      inputType: 'email' as const,
+      placeholder: 'compliance@yourcompany.com',
+      help: "We'll send review updates here.",
+      required: true,
+    },
+    {
+      kind: 'select' as const,
+      key: 'country',
+      label: 'Country',
+      default: 'AU',
+      options: [{ value: 'AU', label: 'Australia' }],
+      required: true,
+    },
+  ],
+}
+
+const addressForm = {
+  title: 'Business address',
+  submitLabel: 'Save',
+  fields: [
+    {
+      kind: 'text' as const,
+      key: 'address',
+      label: 'Business address',
+      placeholder: '123 Main St, Sydney NSW 2000',
+      help: 'A street address. PO boxes are not accepted.',
+      required: true,
+    },
+  ],
+}
+
+const documentsForm = {
+  title: 'Supporting documents',
+  description: 'PDF or image files.',
+  submitLabel: 'Save',
+  fields: [
+    {
+      kind: 'file' as const,
+      key: 'file',
+      label: 'Business registration document',
+      help: 'A commercial register extract.',
+      accept: '.pdf,.jpg,.jpeg,.png',
+    },
+    {
+      kind: 'select' as const,
+      key: 'address_proof_type',
+      label: 'Proof of address type',
+      options: [
+        { value: 'utility_bill', label: 'Utility bill' },
+        { value: 'tax_document', label: 'Tax notice' },
+        { value: 'rental_receipt', label: 'Rent receipt' },
+        { value: 'title_deed', label: 'Title deed' },
+      ],
+      required: true,
+    },
+    {
+      kind: 'file' as const,
+      key: 'address_proof',
+      label: 'Proof of address',
+      help: 'Dated in the last 3 months.',
+      accept: '.pdf,.jpg,.jpeg,.png',
+    },
+  ],
+}
 
 export default defineChannel({
   handle: 'phone',
@@ -70,37 +154,88 @@ export default defineChannel({
           unlocks: 'Buying phone numbers',
           items: [
             {
-              handle: COMPLIANCE_ITEM,
-              title: 'Business registration',
-              description: 'Business details, a registration extract and a proof of address.',
+              handle: COMPLIANCE_STEPS.business,
+              title: 'Business details',
+              description: 'Your legal business name, business ID and an email for review updates.',
               fields: [
                 { key: 'business_name', label: 'Business' },
                 { key: 'business_id', label: 'Business ID', copy: true },
-                { key: 'address', label: 'Address' },
+                { key: 'business_email', label: 'Email' },
               ],
               actions: {
                 not_started: {
-                  handle: 'submit',
-                  label: 'Submit documents',
-                  icon: 'FileText',
+                  handle: 'add',
+                  label: 'Add details',
                   variant: 'default',
-                  tool: 'submit_compliance_document',
-                  form: complianceForm('Submit for review'),
+                  tool: 'save_compliance_business',
+                  form: businessForm,
+                },
+                approved: { handle: 'edit', label: 'Edit', variant: 'ghost', tool: 'save_compliance_business', form: businessForm },
+              },
+            },
+            {
+              handle: COMPLIANCE_STEPS.address,
+              title: 'Business address',
+              description: 'Where the business is registered. PO boxes are not accepted.',
+              fields: [{ key: 'address', label: 'Address' }],
+              actions: {
+                not_started: { handle: 'add', label: 'Add address', variant: 'default', tool: 'save_compliance_address', form: addressForm },
+                approved: { handle: 'edit', label: 'Edit', variant: 'ghost', tool: 'save_compliance_address', form: addressForm },
+              },
+            },
+            {
+              handle: COMPLIANCE_STEPS.documents,
+              title: 'Supporting documents',
+              description: 'A business registration extract, and a proof of address dated in the last 3 months.',
+              actions: {
+                not_started: {
+                  handle: 'upload',
+                  label: 'Upload documents',
+                  icon: 'Upload',
+                  variant: 'default',
+                  tool: 'save_compliance_documents',
+                  form: documentsForm,
+                },
+                approved: { handle: 'replace', label: 'Replace', variant: 'ghost', tool: 'save_compliance_documents', form: documentsForm },
+              },
+            },
+            {
+              handle: COMPLIANCE_STEPS.review,
+              title: 'Carrier review',
+              description: 'We send the steps above to our carrier partner. Review usually takes 1 to 3 business days.',
+              actions: {
+                not_started: {
+                  handle: 'submit',
+                  label: 'Submit for review',
+                  icon: 'Send',
+                  variant: 'default',
+                  tool: 'submit_compliance_for_review',
+                  confirm: {
+                    title: 'Submit for review?',
+                    body: "Your details and documents go to the carrier. You can't change them while they are reviewed.",
+                    confirmLabel: 'Submit',
+                  },
                 },
                 rejected: {
                   handle: 'resubmit',
-                  label: 'Fix and resubmit',
-                  icon: 'FileText',
+                  label: 'Resubmit',
+                  icon: 'Send',
                   variant: 'default',
-                  tool: 'submit_compliance_document',
-                  form: complianceForm('Resubmit'),
+                  tool: 'submit_compliance_for_review',
+                  confirm: {
+                    title: 'Resubmit for review?',
+                    body: 'Fix the steps above first. Your updated details and documents go back to the carrier.',
+                    confirmLabel: 'Resubmit',
+                  },
                 },
-                in_review: {
-                  handle: 'check',
-                  label: 'Check status',
-                  icon: 'RefreshCw',
-                  tool: 'check_compliance_status',
-                },
+              },
+            },
+            {
+              handle: COMPLIANCE_STEPS.verification,
+              title: 'Check verification',
+              description: "We hear from the carrier when the review is done. If an update doesn't reach us, check here.",
+              actions: {
+                not_started: { handle: 'check', label: 'Check now', icon: 'RefreshCw', tool: 'check_compliance_status' },
               },
             },
           ],
@@ -200,74 +335,3 @@ export default defineChannel({
     },
   },
 })
-
-/** The compliance submission form (same inputs as `submit_compliance_document`). */
-function complianceForm(submitLabel: string) {
-  return {
-    title: 'Business registration',
-    description: 'Provide your business details, a commercial register extract and a separate proof of address.',
-    submitLabel,
-    fields: [
-      { kind: 'text' as const, key: 'business_name', label: 'Business name', placeholder: 'ACME Pty Ltd', required: true },
-      {
-        kind: 'text' as const,
-        key: 'business_id',
-        label: 'Business ID number',
-        placeholder: 'e.g. ABN, EIN',
-        help: 'Your business registration or tax ID number.',
-        required: true,
-      },
-      {
-        kind: 'text' as const,
-        key: 'business_email',
-        label: 'Business email',
-        inputType: 'email' as const,
-        placeholder: 'compliance@yourcompany.com',
-        help: "We'll send compliance updates here.",
-        required: true,
-      },
-      {
-        kind: 'select' as const,
-        key: 'country',
-        label: 'Country',
-        default: 'AU',
-        options: [{ value: 'AU', label: 'Australia' }],
-        required: true,
-      },
-      {
-        kind: 'text' as const,
-        key: 'address',
-        label: 'Business address',
-        placeholder: '123 Main St, Sydney NSW 2000',
-        required: true,
-      },
-      {
-        kind: 'file' as const,
-        key: 'file',
-        label: 'Business registration document',
-        help: 'A commercial register excerpt.',
-        accept: '.pdf,.jpg,.jpeg,.png',
-        required: true,
-      },
-      {
-        kind: 'select' as const,
-        key: 'address_proof_type',
-        label: 'Proof of address type',
-        options: [
-          { value: 'utility_bill', label: 'Utility bill' },
-          { value: 'tax_document', label: 'Tax notice' },
-          { value: 'rental_receipt', label: 'Rent receipt' },
-          { value: 'title_deed', label: 'Title deed' },
-        ],
-        required: true,
-      },
-      {
-        kind: 'file' as const,
-        key: 'address_proof',
-        label: 'Proof of address',
-        accept: '.pdf,.jpg,.jpeg,.png',
-        required: true,
-      },
-    ],
-  }
-}
