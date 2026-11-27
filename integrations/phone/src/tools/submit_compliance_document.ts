@@ -1,4 +1,5 @@
 import skedyul, { type z as ZodType, instance, file, webhook, isRuntimeContext } from 'skedyul'
+import { reportCompliance } from '../lib/channel_setup'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -242,6 +243,16 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
       return createValidationError(
         `Failed to parse address: ${err instanceof Error ? err.message : 'Unknown error'}. Please provide a valid, complete address.`,
       )
+    }
+
+    /** What was submitted, reported to Settings → Communication (prefills a resubmit). */
+    const submitted = {
+      business_name,
+      business_email,
+      business_id,
+      country: isoCountry,
+      address,
+      address_proof_type: addressProofType,
     }
 
     // 1. Get or create the compliance record for this installation
@@ -501,6 +512,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           status: 'pending',
           rejection_reason: reason,
         })
+        await reportCompliance({ ...submitted, status: 'pending', rejection_reason: reason })
         return createPhoneError(
           `Compliance documents were not submitted. ${reason}`,
         )
@@ -518,6 +530,7 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
         status: 'pending_review',
         rejection_reason: '',
       })
+      await reportCompliance({ ...submitted, status: 'pending_review' })
 
       console.log('[Compliance] Compliance submission complete:', {
         addressSid: outcome.addressSid,
@@ -547,6 +560,11 @@ export const submitComplianceDocumentRegistry: ToolDefinition<
           rejection_reason: err instanceof Error ? err.message : 'Unknown error during submission',
         },
       )
+      await reportCompliance({
+        ...submitted,
+        status: 'pending',
+        rejection_reason: err instanceof Error ? err.message : 'Unknown error during submission',
+      })
 
       return createPhoneError(
         `Failed to submit compliance documents: ${err instanceof Error ? err.message : 'Unknown error'}`,

@@ -1,4 +1,5 @@
 import skedyul, { type z as ZodType, instance, isRuntimeContext } from 'skedyul'
+import { reportPhoneNumber, resolvePhoneNumberId } from '../lib/channel_setup'
 import type { ToolDefinition } from 'skedyul'
 import {
   createSuccessResponse,
@@ -19,6 +20,7 @@ const UpdateOutboundVoiceInputSchema = z.object({
     .optional()
     .describe('Field change value for outbound_voice_enabled'),
   phone_id: z.string().optional().describe('Instance ID from path params'),
+  communicationChannelId: z.string().optional().describe('Channel id from Settings → Communication'),
 })
 
 const UpdateOutboundVoiceOutputSchema = z.object({
@@ -53,7 +55,7 @@ export const updateOutboundVoiceRegistry: ToolDefinition<
       return createValidationError('This tool can only be called in a runtime context')
     }
 
-    const phoneNumberId = input.phone_id || context.request.params?.phone_id
+    const phoneNumberId = await resolvePhoneNumberId(input, context)
     if (!phoneNumberId) {
       return createValidationError('Missing phone_id')
     }
@@ -76,6 +78,10 @@ export const updateOutboundVoiceRegistry: ToolDefinition<
       await instance.update('phone_number', phoneNumberId, {
         outbound_voice_enabled: enabled,
       })
+      await reportPhoneNumber(
+        { ...(phoneRecord as Record<string, unknown>), outbound_voice_enabled: enabled },
+        { communicationChannelId: input.communicationChannelId },
+      )
 
       return createSuccessResponse({
         status: 'success',

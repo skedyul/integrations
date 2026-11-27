@@ -1,4 +1,5 @@
 import { instance, isRuntimeWebhookContext, type WebhookContext, type WebhookRequest, type WebhookResponse, type WebhookDefinition } from 'skedyul'
+import { reportCompliance } from '../lib/channel_setup'
 
 /**
  * Twilio compliance bundle status mapping.
@@ -113,6 +114,13 @@ async function handleComplianceStatusCallback(
         status: internalStatus,
         rejection_reason: failureReason ?? null,
       },
+    )
+    const record = (await instance.get('compliance_record', complianceRecordId).catch(() => null)) as
+      | Record<string, string | null>
+      | null
+    await reportCompliance(
+      { ...(record ?? {}), status: internalStatus, rejection_reason: failureReason ?? null },
+      context.appInstallationId,
     )
 
     console.log('[Compliance Webhook] Successfully updated compliance record')
