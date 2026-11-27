@@ -50,6 +50,8 @@ export default defineChannel({
   management: {
     noun: { one: 'number', many: 'numbers' },
     order: 1,
+    // Reports compliance and every number from our models when the page opens.
+    sync: { tool: 'sync_channel_setup' },
     archiveNote: 'The number stays in your Twilio account. Remove it from the Calls & number tab to release it.',
     features: [
       { key: 'sms', label: 'SMS', icon: 'MessageSquare' },

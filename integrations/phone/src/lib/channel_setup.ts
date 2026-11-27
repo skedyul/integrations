@@ -41,13 +41,26 @@ export async function resolvePhoneNumberId(
 }
 
 /** Twilio-derived compliance statuses → requirement states. */
+/** A stored value as text: select fields can come back as `{ value }`. */
+function text(value: unknown): string | null {
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object' && typeof (value as { value?: unknown }).value === 'string') {
+    return (value as { value: string }).value
+  }
+  return null
+}
+
 export function complianceRequirementState(
-  status: string | null | undefined,
+  rawStatus: unknown,
   rejectionReason?: string | null,
 ): 'not_started' | 'in_review' | 'approved' | 'rejected' {
+  // Older records may hold Twilio's own value (`twilio-approved`, `in-review`).
+  const status = text(rawStatus)?.replace(/^twilio-/, '').replace(/-/g, '_')
   // A submission that failed evaluation goes back to `pending` with a reason.
   if (status === 'pending' && rejectionReason) return 'rejected'
   switch (status) {
+    case 'in_review':
+      return 'in_review'
     case 'approved':
       return 'approved'
     case 'rejected':
@@ -61,7 +74,7 @@ export function complianceRequirementState(
 }
 
 type ComplianceRecord = {
-  status?: string | null
+  status?: unknown
   rejection_reason?: string | null
   business_name?: string | null
   business_id?: string | null
@@ -88,7 +101,10 @@ export async function reportCompliance(
         'address',
         'address_proof_type',
       ] as const
-    ).flatMap((key) => (record[key] ? [[key, String(record[key])]] : [])),
+    ).flatMap((key) => {
+      const value = text(record[key])
+      return value ? [[key, value]] : []
+    }),
   )
   try {
     await channelSetup.setRequirement({

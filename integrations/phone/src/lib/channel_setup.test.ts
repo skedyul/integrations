@@ -33,6 +33,12 @@ describe('complianceRequirementState', () => {
     expect(complianceRequirementState('rejected')).toBe('rejected')
   })
 
+  it('reads raw Twilio values and select-shaped values', () => {
+    expect(complianceRequirementState('twilio-approved')).toBe('approved')
+    expect(complianceRequirementState('in-review')).toBe('in_review')
+    expect(complianceRequirementState({ value: 'approved', label: 'Approved' })).toBe('approved')
+  })
+
   it('treats a pending record with a reason as rejected (failed evaluation)', () => {
     expect(complianceRequirementState('pending', 'Address not verified')).toBe('rejected')
   })

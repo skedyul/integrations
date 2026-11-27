@@ -40,6 +40,7 @@ import { updateForwardingNumberRegistry } from './tools/update_forwarding_number
 import { updateOutboundVoiceRegistry } from './tools/update_outbound_voice'
 import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
 import { backfillInboundSmsRegistry } from './tools/backfill_inbound_sms'
+import { syncChannelSetupRegistry } from './tools/sync_channel_setup'
 
 /**
  * Tool Registry
@@ -82,6 +83,9 @@ export const toolRegistry: ToolRegistry = {
 
   /** Re-ingest inbound SMS from Twilio over a time window to recover dropped messages. */
   backfill_inbound_sms: backfillInboundSmsRegistry,
+
+  /** Report compliance and every number to Settings → Communication (its `management.sync`). */
+  sync_channel_setup: syncChannelSetupRegistry,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
