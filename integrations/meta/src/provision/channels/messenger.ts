@@ -31,6 +31,9 @@ export default defineChannel({
       icon: 'MessageCircle',
       receive: 'receive_meta',
       send: 'send_messenger',
+      // The person must message the Page first; replies only within 24h.
+      initiation: 'contact',
+      window: { hours: 24 },
     },
   },
 })

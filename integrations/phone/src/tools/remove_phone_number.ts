@@ -1,4 +1,5 @@
 import skedyul, { type z as ZodType, instance, communicationChannel, isRuntimeContext } from 'skedyul'
+import { resolvePhoneNumberId } from '../lib/channel_setup'
 import type { ToolDefinition } from 'skedyul'
 import {
   createSuccessResponse,
@@ -21,6 +22,7 @@ const RemovePhoneNumberInputSchema = z.object({
   instance_id: z.string().optional().describe('Instance ID from modal context'),
   /** Instance ID from path params (e.g., /phone-numbers/[phone_id]/overview) */
   phone_id: z.string().optional().describe('Instance ID from path params'),
+  communicationChannelId: z.string().optional().describe('Channel id from Settings → Communication'),
 })
 // Note: We don't use .refine() here because phone_id can also come from context.params
 
@@ -50,7 +52,8 @@ export const removePhoneNumberRegistry: ToolDefinition<
 
     // Accept phone_number_id (from hidden field), instance_id (from modal context), 
     // phone_id (from input), or phone_id from context.request.params (path params)
-    const phoneNumberId = input.phone_number_id || input.instance_id || input.phone_id || context.request.params?.phone_id
+    const phoneNumberId =
+      input.phone_number_id || input.instance_id || (await resolvePhoneNumberId(input, context))
     const { appInstallationId, workplace } = context
 
     // Validate required context fields

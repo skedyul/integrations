@@ -1,6 +1,7 @@
 import skedyul, { type z as ZodType, instance, webhook, isRuntimeContext } from 'skedyul'
 import type { ToolDefinition } from 'skedyul'
 import { createTwilioClient } from '../lib/twilio_client'
+import { reportPhoneNumber, resolvePhoneNumberId } from '../lib/channel_setup'
 import {
   createSuccessResponse,
   createValidationError,
@@ -22,6 +23,7 @@ const UpdateForwardingNumberInputSchema = z.object({
     .optional()
     .describe('Forwarding phone number to save'),
   phone_id: z.string().optional().describe('Instance ID from path params'),
+  communicationChannelId: z.string().optional().describe('Channel id from Settings → Communication'),
 })
 
 const UpdateForwardingNumberOutputSchema = z.object({
@@ -111,7 +113,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       return createValidationError('This tool can only be called in a runtime context')
     }
 
-    const phoneNumberId = input.phone_id || context.request.params?.phone_id
+    const phoneNumberId = await resolvePhoneNumberId(input, context)
     if (!phoneNumberId) {
       return createValidationError('Missing phone_id')
     }
@@ -181,6 +183,10 @@ export const updateForwardingNumberRegistry: ToolDefinition<
         `Failed to save inbound voice settings: ${formatToolError(error)}`,
       )
     }
+    await reportPhoneNumber(
+      { ...phoneRecord, ...modelUpdate },
+      { communicationChannelId: input.communicationChannelId },
+    )
 
     // Mint webhook registration before Twilio so receive_call URL exists even if
     // Twilio API credentials are missing or the API call fails.

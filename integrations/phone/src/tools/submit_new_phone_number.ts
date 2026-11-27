@@ -1,4 +1,5 @@
 import skedyul, { type z as ZodType, instance, communicationChannel, webhook, isRuntimeContext } from 'skedyul'
+import { reportPhoneNumber } from '../lib/channel_setup'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -22,7 +23,10 @@ const { z } = skedyul
  */
 const SubmitNewPhoneNumberInputSchema = z.object({
   /** Instance ID of the compliance record to link the phone number to */
-  compliance_record: z.string().describe('Instance ID of the compliance record'),
+  compliance_record: z
+    .string()
+    .optional()
+    .describe("Instance ID of the compliance record. Defaults to this installation's record."),
   /** Friendly name for the phone number */
   name: z.string().optional().describe('Friendly name for the phone number'),
 })
@@ -57,12 +61,17 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
       return createValidationError('This tool can only be called in a runtime context')
     }
 
-    const { compliance_record: complianceRecordId, name } = input
+    const { name } = input
     const { appInstallationId, workplace, env } = context
 
-    // Validate compliance record ID is provided
+    // Settings → Communication doesn't send the record: use the installation's.
+    let complianceRecordId = input.compliance_record
     if (!complianceRecordId) {
-      return createValidationError('Missing required field: compliance_record')
+      const { data } = await instance.list('compliance_record', { page: 1, limit: 1 })
+      complianceRecordId = (data[0] as { id?: string } | undefined)?.id
+    }
+    if (!complianceRecordId) {
+      return createValidationError('Submit your compliance documents before adding a number.')
     }
 
     // 1. Fetch the compliance record and validate it's approved
@@ -300,6 +309,9 @@ export const submitNewPhoneNumberRegistry: ToolDefinition<
           identifierValue: purchasedNumber.phoneNumber,
         })
         console.log('[PhoneNumber] Channel created:', JSON.stringify(channel, null, 2))
+        await reportPhoneNumber(phoneNumberData, {
+          communicationChannelId: channel.id,
+        })
       } catch (channelErr) {
         console.error('[PhoneNumber] Failed to create communication channel:', channelErr)
         // Continue even if channel creation fails - the phone number was already created

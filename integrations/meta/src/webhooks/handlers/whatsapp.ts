@@ -1,4 +1,8 @@
-import { instance } from 'skedyul'
+import { communicationChannel, instance } from 'skedyul'
+import {
+  readTemplateStatusUpdate,
+  type MetaTemplateStatusUpdate,
+} from '../../lib/whatsapp_templates'
 import { MetaClient } from '../../lib/meta_client'
 import { groupFromWhatsApp } from '../../lib/inbound_group'
 import { describeWhatsAppGroup } from '../../lib/whatsapp_room'
@@ -168,6 +172,11 @@ export async function handleWhatsAppWebhookEntries(
 }
 
 async function handleWhatsAppChange(change: MetaWebhookChange): Promise<void> {
+  if (change.field === 'message_template_status_update') {
+    await handleTemplateStatusUpdate(change.value as MetaTemplateStatusUpdate | undefined)
+    return
+  }
+
   const value = change.value
   if (!value || value.messaging_product !== 'whatsapp') {
     return
@@ -200,5 +209,28 @@ async function handleWhatsAppChange(change: MetaWebhookChange): Promise<void> {
       status: status.status,
       recipientId: status.recipient_id,
     })
+  }
+}
+
+/**
+ * A template's review result. Forwarded to the platform, which sends, fails
+ * or cleans up the messages waiting on that template. Templates the platform
+ * didn't create are ignored there.
+ */
+async function handleTemplateStatusUpdate(
+  value: MetaTemplateStatusUpdate | undefined,
+): Promise<void> {
+  const update = readTemplateStatusUpdate(value)
+  if (!update) {
+    console.log('[receiveMeta:whatsapp] Ignoring template status update', {
+      event: value?.event,
+      templateId: value?.message_template_id,
+    })
+    return
+  }
+  try {
+    await communicationChannel.updateTemplateStatus(update)
+  } catch (err) {
+    console.error('[receiveMeta:whatsapp] Failed to report template status:', err)
   }
 }

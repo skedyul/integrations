@@ -13,6 +13,17 @@
 import { AppAuthInvalidError } from 'skedyul'
 import { GraphPermissionError, lookupWhatsAppBusinessAccounts } from './meta_wabas'
 import { subscribePageFields, type PageSubscriptionResult } from './page_subscriptions'
+import {
+  classifyMetaSendError,
+  MetaWindowClosedError,
+  WINDOW_CLOSED_FAILURE_REASON,
+} from './meta_send_errors'
+import {
+  buildCreateTemplateBody,
+  buildTemplateMessage,
+  type CreateTemplateInput,
+  type SendTemplateInput,
+} from './whatsapp_templates'
 
 interface MetaErrorResponse {
   error?: {
@@ -39,20 +50,24 @@ async function parseMetaError(response: Response): Promise<MetaErrorResponse> {
  * Check if an error response indicates token invalidation
  */
 function isTokenInvalidError(errorResponse: MetaErrorResponse): boolean {
-  const error = errorResponse.error
-  if (!error) return false
+  // Window-closed errors (code 10 + subcode) are not token problems.
+  return classifyMetaSendError(errorResponse.error) === 'auth'
+}
 
-  // Primary token error codes
-  if (error.code === 190) return true // Invalid OAuth 2.0 Access Token
-  if (error.code === 102) return true // Session key invalid/expired
-
-  // Token expired subcode
-  if (error.code === 190 && error.error_subcode === 463) return true
-
-  // Permission denied can sometimes indicate token issues
-  if (error.code === 10 && error.type === 'OAuthException') return true
-
-  return false
+/** Throws the right error for a failed send: auth, window closed, or generic. */
+function throwSendError(errorResponse: MetaErrorResponse, label: string): never {
+  const kind = classifyMetaSendError(errorResponse.error)
+  if (kind === 'auth') {
+    throw new AppAuthInvalidError(
+      errorResponse.error?.message || 'Meta access token is invalid or expired',
+    )
+  }
+  if (kind === 'window_closed') {
+    throw new MetaWindowClosedError(
+      errorResponse.error?.message || WINDOW_CLOSED_FAILURE_REASON,
+    )
+  }
+  throw new Error(`${label}: ${JSON.stringify(errorResponse)}`)
 }
 
 interface TokenExchangeResponse {
@@ -399,16 +414,107 @@ export class MetaClient {
     })
 
     if (!response.ok) {
+      throwSendError(await parseMetaError(response), 'Failed to send message')
+    }
+
+    return (await response.json()) as SendMessageResponse
+  }
+
+  /**
+   * Send an approved WhatsApp message template (1:1). Used outside the
+   * 24-hour customer service window.
+   */
+  async sendWhatsAppTemplate(
+    phoneNumberId: string,
+    to: string,
+    template: SendTemplateInput,
+    accessToken: string,
+  ): Promise<SendMessageResponse> {
+    const url = new URL(`${this.baseUrl}/${phoneNumberId}/messages`)
+    url.searchParams.set('access_token', accessToken)
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to,
+        type: 'template',
+        template: buildTemplateMessage(template),
+      }),
+    })
+
+    if (!response.ok) {
+      throwSendError(await parseMetaError(response), 'Failed to send template')
+    }
+
+    return (await response.json()) as SendMessageResponse
+  }
+
+  /** Create a message template on a WhatsApp Business Account (goes to review). */
+  async createMessageTemplate(
+    wabaId: string,
+    accessToken: string,
+    input: CreateTemplateInput,
+  ): Promise<{ id: string; status?: string; category?: string }> {
+    const url = new URL(`${this.baseUrl}/${wabaId}/message_templates`)
+    url.searchParams.set('access_token', accessToken)
+
+    const response = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildCreateTemplateBody(input)),
+    })
+
+    if (!response.ok) {
       const errorResponse = await parseMetaError(response)
       if (isTokenInvalidError(errorResponse)) {
         throw new AppAuthInvalidError(
           errorResponse.error?.message || 'Meta access token is invalid or expired',
         )
       }
-      throw new Error(`Failed to send message: ${JSON.stringify(errorResponse)}`)
+      throw new Error(
+        errorResponse.error?.message
+          ? `Template not accepted: ${errorResponse.error.message}`
+          : `Failed to create template: ${JSON.stringify(errorResponse)}`,
+      )
     }
 
-    return (await response.json()) as SendMessageResponse
+    return (await response.json()) as { id: string; status?: string; category?: string }
+  }
+
+  /**
+   * Delete a message template. With `hsmId` only that template is deleted;
+   * otherwise every language of `name` is. "Not found" counts as deleted.
+   */
+  async deleteMessageTemplate(
+    wabaId: string,
+    accessToken: string,
+    input: { name: string; hsmId?: string },
+  ): Promise<{ deleted: boolean }> {
+    const url = new URL(`${this.baseUrl}/${wabaId}/message_templates`)
+    url.searchParams.set('access_token', accessToken)
+    url.searchParams.set('name', input.name)
+    if (input.hsmId) url.searchParams.set('hsm_id', input.hsmId)
+
+    const response = await fetch(url.toString(), { method: 'DELETE' })
+
+    if (!response.ok) {
+      const errorResponse = await parseMetaError(response)
+      if (isTokenInvalidError(errorResponse)) {
+        throw new AppAuthInvalidError(
+          errorResponse.error?.message || 'Meta access token is invalid or expired',
+        )
+      }
+      if (/not found|does not exist/i.test(errorResponse.error?.message ?? '')) {
+        return { deleted: true }
+      }
+      throw new Error(`Failed to delete template: ${JSON.stringify(errorResponse)}`)
+    }
+
+    const data = (await response.json()) as { success?: boolean }
+    return { deleted: data.success !== false }
   }
 
   /** @deprecated Use sendWhatsAppMessage */
@@ -444,13 +550,7 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const errorResponse = await parseMetaError(response)
-      if (isTokenInvalidError(errorResponse)) {
-        throw new AppAuthInvalidError(
-          errorResponse.error?.message || 'Meta page access token is invalid or expired',
-        )
-      }
-      throw new Error(`Failed to send Messenger message: ${JSON.stringify(errorResponse)}`)
+      throwSendError(await parseMetaError(response), 'Failed to send Messenger message')
     }
 
     return (await response.json()) as { message_id?: string }
@@ -478,13 +578,7 @@ export class MetaClient {
     })
 
     if (!response.ok) {
-      const errorResponse = await parseMetaError(response)
-      if (isTokenInvalidError(errorResponse)) {
-        throw new AppAuthInvalidError(
-          errorResponse.error?.message || 'Meta access token is invalid or expired',
-        )
-      }
-      throw new Error(`Failed to send Instagram message: ${JSON.stringify(errorResponse)}`)
+      throwSendError(await parseMetaError(response), 'Failed to send Instagram message')
     }
 
     return (await response.json()) as { message_id?: string }

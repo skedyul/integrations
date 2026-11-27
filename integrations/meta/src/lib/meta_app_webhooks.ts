@@ -3,7 +3,13 @@ import { MetaClient } from './meta_client'
 export const META_APP_WEBHOOK_SUBSCRIPTIONS = [
   {
     object: 'whatsapp_business_account',
-    fields: ['messages', 'message_deliveries', 'message_reads'],
+    fields: [
+      'messages',
+      'message_deliveries',
+      'message_reads',
+      // Review results for templates the platform creates (messaging window)
+      'message_template_status_update',
+    ],
   },
   {
     object: 'page',

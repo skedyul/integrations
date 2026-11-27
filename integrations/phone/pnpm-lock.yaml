@@ -12,8 +12,8 @@ importers:
         specifier: ^1.13.11
         version: 1.13.11
       skedyul:
-        specifier: 1.7.48
-        version: 1.7.48
+        specifier: 1.8.4
+        version: 1.8.4
       twilio:
         specifier: ^5.0.0
         version: 5.11.1
@@ -2155,8 +2155,8 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  skedyul@1.7.48:
-    resolution: {integrity: sha512-hOfa3Z9WClNvG+LjP0zxvVn5sryJne9ECzE2vY+eTXyjTr8UwmJL1Hd+M+k+luhCdBS+0++yFsLyTtKnS5bVvw==}
+  skedyul@1.8.4:
+    resolution: {integrity: sha512-t7PYxg3AqxTDuGOhfmynW1w7xjAOsZbRsxIP4aVcZYiqIVZPnFFZC/Ycl1B9FvRSmb/Mk7c1qkNkiligpr2n0Q==}
     hasBin: true
 
   slash@3.0.0:
@@ -4660,7 +4660,7 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  skedyul@1.7.48:
+  skedyul@1.8.4:
     dependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
       esbuild: 0.27.7

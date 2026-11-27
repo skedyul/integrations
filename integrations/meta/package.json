@@ -9,7 +9,7 @@
     "test": "node --experimental-strip-types --test $(find src -name '*.test.ts')"
   },
   "dependencies": {
-    "skedyul": "1.7.48"
+    "skedyul": "1.8.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

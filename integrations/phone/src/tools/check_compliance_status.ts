@@ -1,4 +1,5 @@
 import skedyul, { type z as ZodType, instance, isRuntimeContext } from 'skedyul'
+import { reportCompliance } from '../lib/channel_setup'
 import type { ToolDefinition } from 'skedyul'
 import {
   createTwilioClient,
@@ -132,6 +133,13 @@ export const checkComplianceStatusRegistry: ToolDefinition<
           },
         )
       }
+      // Always report: also brings Settings → Communication up to date for
+      // records from before it existed.
+      await reportCompliance({
+        ...(complianceRecord as Record<string, string | null>),
+        status: newStatus,
+        rejection_reason: (bundle as { failureReason?: string | null }).failureReason || null,
+      })
 
       return createSuccessResponse({
         status: newStatus,
