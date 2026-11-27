@@ -19,6 +19,7 @@ export default async function install(
 
   const scopes = [
     'chat:write',
+    'files:read',
     'channels:history',
     'channels:read',
     'groups:history',
