@@ -22,6 +22,12 @@ const UpdateForwardingNumberInputSchema = z.object({
     .string()
     .optional()
     .describe('Forwarding phone number to save'),
+  inbound_call_route: z
+    .enum(['forward', 'app'])
+    .optional()
+    .describe(
+      'Where incoming calls go: forward (to the forwarding number) or app (ring the team in the Skedyul app, then the forwarding number if nobody answers)',
+    ),
   phone_id: z.string().optional().describe('Instance ID from path params'),
   communicationChannelId: z.string().optional().describe('Channel id from Settings → Communication'),
 })
@@ -122,6 +128,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       phone?: string
       inbound_voice_enabled?: boolean
       forwarding_phone_number?: string | null
+      inbound_call_route?: string | null
     } | null = null
     try {
       phoneRecord = (await instance.get('phone_number', phoneNumberId)) as {
@@ -164,7 +171,13 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       }
     }
 
-    if (inboundEnabled && !forwardingValue) {
+    // Where calls go. Ringing the team in the app needs no forwarding
+    // number; one is still used, when given, if nobody answers there.
+    const route: 'forward' | 'app' =
+      input.inbound_call_route ??
+      (phoneRecord.inbound_call_route === 'app' ? 'app' : 'forward')
+
+    if (inboundEnabled && route === 'forward' && !forwardingValue) {
       return createValidationError(
         'Provide a forwarding phone number before enabling inbound voice',
       )
@@ -172,7 +185,9 @@ export const updateForwardingNumberRegistry: ToolDefinition<
 
     const modelUpdate = {
       inbound_voice_enabled: inboundEnabled,
-      forwarding_phone_number: inboundEnabled ? forwardingValue : null,
+      inbound_call_route: route,
+      forwarding_phone_number:
+        inboundEnabled && forwardingValue ? forwardingValue : null,
     }
 
     try {
@@ -191,7 +206,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
     // Mint webhook registration before Twilio so receive_call URL exists even if
     // Twilio API credentials are missing or the API call fails.
     let voiceUrl: string | undefined
-    if (inboundEnabled && forwardingValue) {
+    if (inboundEnabled) {
       try {
         voiceUrl = await ensureReceiveCallVoiceUrl()
       } catch (error) {
@@ -207,7 +222,8 @@ export const updateForwardingNumberRegistry: ToolDefinition<
       const twilioResult = await configureTwilioVoiceUrl(
         twilioClient,
         phoneRecord.phone,
-        inboundEnabled ? forwardingValue : '',
+        // Any value means "answer calls"; empty clears the voice URL.
+        inboundEnabled ? forwardingValue || route : '',
         voiceUrl,
       )
 
@@ -217,7 +233,7 @@ export const updateForwardingNumberRegistry: ToolDefinition<
         )
       }
 
-      if (inboundEnabled && forwardingValue) {
+      if (inboundEnabled) {
         return createSuccessResponse({
           status: 'success',
           message: 'Inbound voice enabled and Twilio webhooks configured',
