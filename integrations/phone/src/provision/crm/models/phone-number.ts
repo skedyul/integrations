@@ -79,7 +79,7 @@ export default defineModel({
       requirement: 'optional',
       system: false,
       description:
-        'Team members whose Skedyul app rings when this number is called (member ids, comma separated). Added to as each person's Skedyul app registers for calls.',
+        'Team members whose Skedyul app rings when this number is called (member ids, comma separated). Added to as the Skedyul app on each team member\'s phone registers for calls.',
       owner: 'app',
     },
     {
