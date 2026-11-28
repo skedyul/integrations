@@ -28,15 +28,14 @@ const { z } = skedyul
 
 const MakeCallInputSchema = z.object({
   intent: z
-    .enum(['call', 'listen', 'recipients'])
+    .enum(['call', 'listen'])
     .optional()
     .describe(
-      'call (default): let a client ring toNumber. listen: let a device be rung when the number is called. recipients: record which members the number rings.',
+      'call (default): let a client ring toNumber. listen: let a device be rung when the workplace numbers are called.',
     ),
   communicationChannelId: z.string().describe('The channel (number) this is about'),
   toNumber: z.string().optional().describe('The number to call (intent call)'),
   device: z.enum(['ios', 'android']).optional().describe('The device registering (intent listen)'),
-  memberIds: z.array(z.string()).optional().describe('Who the number rings (intent recipients)'),
   threadId: z.string().optional().describe('The conversation the call was started from'),
   agentMemberId: z.string().optional().describe('The team member placing the call'),
   agentName: z.string().optional().describe("The team member's name"),
@@ -52,8 +51,6 @@ const MakeCallOutputSchema = z.object({
   params: z.record(z.string(), z.string()).optional(),
   fromNumber: z.string().optional(),
   expiresInSeconds: z.number().optional(),
-  /** For intent recipients. */
-  status: z.string().optional(),
 })
 
 type MakeCallInput = ZodType.infer<typeof MakeCallInputSchema>
@@ -93,6 +90,32 @@ async function ensureTwimlAppSid(
   return created.sid
 }
 
+/**
+ * Add a member to the people each number can ring in the app. Best effort:
+ * a number that could not be updated is retried the next time their app
+ * registers.
+ */
+async function rememberCallRecipient(memberId: string): Promise<void> {
+  try {
+    const numbers = await instance.list('phone_number', { limit: 100 })
+    for (const row of numbers.data as unknown as {
+      id: string
+      app_call_recipients?: string | null
+    }[]) {
+      const current = (row.app_call_recipients ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+      if (current.includes(memberId)) continue
+      await instance.update('phone_number', row.id, {
+        app_call_recipients: formatCallRecipients([...current, memberId]),
+      })
+    }
+  } catch (error) {
+    console.warn('[MakeCall] Could not record a call recipient:', error)
+  }
+}
+
 export const makeCallRegistry: ToolDefinition<MakeCallInput, MakeCallOutput> = {
   name: 'make_call',
   label: 'Make Call',
@@ -110,35 +133,6 @@ export const makeCallRegistry: ToolDefinition<MakeCallInput, MakeCallOutput> = {
     }
 
     const intent = input.intent ?? 'call'
-
-    // Who the number rings in the app. No Twilio involved: the choice is
-    // kept on the number's record, where receive_call reads it.
-    if (intent === 'recipients') {
-      try {
-        const channel = await communicationChannel.get(input.communicationChannelId)
-        const lineNumber = channel?.identifierValue
-        if (!lineNumber) {
-          return createNotFoundError('Channel', input.communicationChannelId)
-        }
-        const found = await instance.list('phone_number', {
-          filter: { phone: { eq: lineNumber } },
-          limit: 1,
-        })
-        const record = found.data[0] as unknown as { id: string } | undefined
-        if (!record) {
-          return createNotFoundError('Phone number', lineNumber)
-        }
-        await instance.update('phone_number', record.id, {
-          app_call_recipients: formatCallRecipients(input.memberIds ?? []),
-        })
-        return createSuccessResponse({ status: 'success' })
-      } catch (error) {
-        console.error('[MakeCall] Failed to record call recipients', error)
-        return createPhoneError(
-          `Failed to update who this number rings: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        )
-      }
-    }
 
     const toNumber = intent === 'call' ? dialableNumber(input.toNumber) : null
     if (intent === 'call' && !toNumber) {
@@ -194,6 +188,12 @@ export const makeCallRegistry: ToolDefinition<MakeCallInput, MakeCallOutput> = {
             pushCredentialSid,
           }),
         )
+        // This person's app can now be rung: note them on every number of
+        // the installation. Which numbers actually ring the app is each
+        // number's own setting (inbound_call_route).
+        if (input.agentMemberId) {
+          await rememberCallRecipient(input.agentMemberId)
+        }
         return createSuccessResponse({
           provider: 'twilio' as const,
           token: listenToken.toJwt(),

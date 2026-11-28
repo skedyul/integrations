@@ -129,13 +129,17 @@ async function handleReceiveCall(
         phone: string
         name?: string | null
         app_call_recipients?: string | null
+        inbound_call_route?: string | null
       }
     | undefined
 
-  // Team members who answer this number in the Skedyul app. They are rung
-  // first; the forwarding number is the fallback (and the only route when
-  // nobody has switched the line on).
-  const appIdentities = parseCallRecipients(phoneRecord?.app_call_recipients)
+  // A number set to ring the team rings everyone whose Skedyul app has
+  // registered for calls; the forwarding number is then only the fallback.
+  // A number set to forward never rings the app.
+  const appIdentities =
+    phoneRecord?.inbound_call_route === 'app'
+      ? parseCallRecipients(phoneRecord.app_call_recipients)
+      : []
 
   if (
     !phoneRecord ||

@@ -173,6 +173,7 @@ type PhoneNumberRecord = {
   forwarding_phone_number?: string | null
   inbound_voice_enabled?: boolean | null
   outbound_voice_enabled?: boolean | null
+  inbound_call_route?: string | null
 }
 
 /**
@@ -201,6 +202,7 @@ export async function reportPhoneNumber(
         ...(record.phone ? { phone: record.phone } : {}),
         forwarding_phone_number: record.forwarding_phone_number ?? '',
         inbound_voice_enabled: Boolean(record.inbound_voice_enabled),
+        inbound_call_route: record.inbound_call_route === 'app' ? 'app' : 'forward',
         outbound_voice_enabled: Boolean(record.outbound_voice_enabled),
       },
     })

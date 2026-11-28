@@ -252,26 +252,50 @@ export default defineChannel({
             kind: 'form',
             handle: 'incoming',
             title: 'Incoming calls',
-            description: 'Calls to this number ring the number you forward them to.',
+            description: 'What happens when a customer calls this number.',
             icon: 'PhoneIncoming',
             fields: [
-              { kind: 'toggle', key: 'inbound_voice_enabled', label: 'Forward incoming calls' },
+              { kind: 'toggle', key: 'inbound_voice_enabled', label: 'Answer incoming calls' },
+              {
+                kind: 'radio',
+                key: 'inbound_call_route',
+                label: 'Send calls to',
+                default: 'forward',
+                options: [
+                  {
+                    value: 'forward',
+                    label: 'Another phone number',
+                    description: 'Calls are forwarded to the number below.',
+                  },
+                  {
+                    value: 'app',
+                    label: 'The team, in the Skedyul app',
+                    description:
+                      'Rings every team member signed in to the Skedyul app. The first to answer takes the call.',
+                  },
+                ],
+              },
               {
                 kind: 'text',
                 key: 'forwarding_phone_number',
                 label: 'Forward to',
+                help: 'When calls go to the app, this number is rung if nobody answers there within 20 seconds. Leave empty to have no fallback.',
                 inputType: 'tel',
                 placeholder: '+61 4XX XXX XXX',
               },
             ],
-            showWhen: { forwarding_phone_number: { field: 'inbound_voice_enabled', equals: true } },
+            showWhen: {
+              inbound_call_route: { field: 'inbound_voice_enabled', equals: true },
+              forwarding_phone_number: { field: 'inbound_voice_enabled', equals: true },
+            },
             submit: { handle: 'save', label: 'Save', tool: 'update_forwarding_number' },
           },
           {
             kind: 'form',
             handle: 'outgoing',
             title: 'Outgoing calls',
-            description: 'Let your team call customers from this number.',
+            description:
+              'Let your team call customers from this number. Turning this on shows a call button in this number\'s conversations in the Skedyul app.',
             icon: 'PhoneOutgoing',
             fields: [{ kind: 'toggle', key: 'outbound_voice_enabled', label: 'Allow outgoing calls' }],
             submit: { handle: 'save', label: 'Save', tool: 'update_outbound_voice' },

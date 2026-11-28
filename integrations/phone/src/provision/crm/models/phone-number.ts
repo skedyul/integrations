@@ -63,13 +63,23 @@ export default defineModel({
       owner: 'shared',
     },
     {
+      handle: 'inbound_call_route',
+      label: 'Inbound Call Route',
+      type: 'string',
+      requirement: 'optional',
+      system: false,
+      description:
+        'Where incoming calls go: "forward" (the forwarding number) or "app" (ring the team in the Skedyul app first)',
+      owner: 'shared',
+    },
+    {
       handle: 'app_call_recipients',
       label: 'App Call Recipients',
       type: 'string',
       requirement: 'optional',
       system: false,
       description:
-        'Team members whose Skedyul app rings when this number is called (member ids, comma separated). Kept up to date by the platform as people switch the line on or off.',
+        'Team members whose Skedyul app rings when this number is called (member ids, comma separated). Added to as each person's Skedyul app registers for calls.',
       owner: 'app',
     },
     {
