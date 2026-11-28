@@ -25,6 +25,41 @@ export default defineEnv({
     description: 'Your Twilio Auth Token from the Twilio Console',
     placeholder: 'Your auth token',
   },
+  TWILIO_API_KEY_SID: {
+    label: 'Twilio API Key SID',
+    scope: 'provision',
+    required: false,
+    visibility: 'encrypted',
+    description:
+      'Optional. A Twilio API key (Console → Account → API keys) to sign the short-lived tokens the Skedyul app connects with. Without one the app creates and rotates its own.',
+    placeholder: 'SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  },
+  TWILIO_API_KEY_SECRET: {
+    label: 'Twilio API Key Secret',
+    scope: 'provision',
+    required: false,
+    visibility: 'encrypted',
+    description: 'The secret shown once when the API key above was created',
+    placeholder: 'Your API key secret',
+  },
+  TWILIO_PUSH_CREDENTIAL_SID_IOS: {
+    label: 'Twilio Push Credential SID (iOS)',
+    scope: 'provision',
+    required: false,
+    visibility: 'visible',
+    description:
+      'A Twilio Push Credential made from the Skedyul iOS app\'s Apple VoIP key. Needed for incoming calls to ring iPhones.',
+    placeholder: 'CRxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  },
+  TWILIO_PUSH_CREDENTIAL_SID_ANDROID: {
+    label: 'Twilio Push Credential SID (Android)',
+    scope: 'provision',
+    required: false,
+    visibility: 'visible',
+    description:
+      'A Twilio Push Credential made from the Skedyul Android app\'s Firebase key. Needed for incoming calls to ring Android phones.',
+    placeholder: 'CRxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+  },
   TWILIO_CALL_FORWARD_USERNAME: {
     label: 'Call Forward Username',
     scope: 'provision',

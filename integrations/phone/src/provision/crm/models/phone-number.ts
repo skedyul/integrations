@@ -63,6 +63,16 @@ export default defineModel({
       owner: 'shared',
     },
     {
+      handle: 'app_call_recipients',
+      label: 'App Call Recipients',
+      type: 'string',
+      requirement: 'optional',
+      system: false,
+      description:
+        'Team members whose Skedyul app rings when this number is called (member ids, comma separated). Kept up to date by the platform as people switch the line on or off.',
+      owner: 'app',
+    },
+    {
       handle: 'outbound_voice_enabled',
       label: 'Outbound Voice Enabled',
       type: 'boolean',

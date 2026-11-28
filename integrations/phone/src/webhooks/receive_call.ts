@@ -8,8 +8,10 @@ import type {
 import { URLSearchParams } from 'url'
 import twilio from 'twilio'
 import { getHeaderValue, serializeBody } from './lib/helpers'
+import { APP_RING_SECONDS, parseCallRecipients } from '../lib/outbound_voice'
 import {
   buildDialTwiml,
+  buildRingAppsTwiml,
   ensureHttpsWebhookUrl,
   twimlError,
   twimlResponse,
@@ -18,7 +20,7 @@ import {
 /** for an inbound webhook request and return the
  * parsed form/query params, or a TwiML error response on failure.
  */
-function validateAndParse(
+export function validateAndParse(
   request: WebhookRequest,
   context: WebhookContext,
 ): { params: Record<string, string> } | { error: WebhookResponse } {
@@ -122,18 +124,34 @@ async function handleReceiveCall(
     limit: 1,
   })
   const phoneRecord = searchResult.data[0] as unknown as
-    | { forwarding_phone_number?: string | null; phone: string }
+    | {
+        forwarding_phone_number?: string | null
+        phone: string
+        name?: string | null
+        app_call_recipients?: string | null
+      }
     | undefined
 
-  if (!phoneRecord || !phoneRecord.forwarding_phone_number) {
+  // Team members who answer this number in the Skedyul app. They are rung
+  // first; the forwarding number is the fallback (and the only route when
+  // nobody has switched the line on).
+  const appIdentities = parseCallRecipients(phoneRecord?.app_call_recipients)
+
+  if (
+    !phoneRecord ||
+    (!phoneRecord.forwarding_phone_number && appIdentities.length === 0)
+  ) {
     console.log('[receiveCall] No forwarding number configured for', to)
     return twimlError('This number is not configured to receive calls.')
   }
 
-  const forwarding = phoneRecord.forwarding_phone_number
+  const forwarding = phoneRecord.forwarding_phone_number ?? undefined
   const transcriptionEngine = context.env.TRANSCRIPTION_ENGINE || 'deepgram'
 
   let callSessionId: string | undefined
+  let threadId: string | undefined
+  let channelName: string | undefined
+  let communicationChannelId: string | undefined
   let transcriptionCallbackUrl: string | undefined
   let statusCallbackUrl: string | undefined
 
@@ -150,13 +168,16 @@ async function handleReceiveCall(
         communicationChannelId: channel.id,
         fromNumber: from,
         toNumber: to,
-        forwardedToNumber: forwarding,
+        ...(forwarding ? { forwardedToNumber: forwarding } : {}),
         direction: 'INBOUND',
         externalId: callSid,
         externalStatus: callStatus,
         transcriptionEngine,
       })
       callSessionId = started.callSessionId
+      threadId = started.threadId
+      communicationChannelId = channel.id
+      channelName = (channel as { name?: string | null }).name ?? undefined
 
       try {
         const callbacks = await registerCallWebhooks(callSessionId)
@@ -174,6 +195,48 @@ async function handleReceiveCall(
       await endCallSession(callSessionId, 'setup_error')
     }
     return twimlError('We are sorry, an error occurred. Please try again later.')
+  }
+
+  // Ring the app first. When that ringing ends, `call_fallback` decides:
+  // answered → the call is over; unanswered → on to the forwarding number.
+  if (appIdentities.length > 0) {
+    try {
+      const fallback = await webhook.create('call_fallback', {
+        ...(callSessionId ? { callSessionId } : {}),
+        ...(forwarding ? { forwardingNumber: forwarding } : {}),
+        callerId: phoneRecord.phone,
+      })
+      return twimlResponse(
+        buildRingAppsTwiml({
+          callerId: from || phoneRecord.phone,
+          identities: appIdentities,
+          parameters: {
+            CallerName: from,
+            LineName: phoneRecord.name || channelName || phoneRecord.phone,
+            ...(threadId ? { ThreadId: threadId } : {}),
+            ...(communicationChannelId ? { ChannelId: communicationChannelId } : {}),
+          },
+          actionUrl: fallback.url,
+          timeoutSeconds: APP_RING_SECONDS,
+          transcriptionCallbackUrl,
+          transcriptionEngine,
+          transcriptionName: callSessionId ?? callSid ?? `call-${Date.now()}`,
+        }),
+      )
+    } catch (err) {
+      // Could not set up the app leg: carry on to forwarding if there is
+      // somewhere to forward to.
+      console.error('[receiveCall] Failed to ring the app:', err)
+      if (!forwarding) {
+        if (callSessionId) await endCallSession(callSessionId, 'app_ring_error')
+        return twimlError('We are sorry, an error occurred. Please try again later.')
+      }
+    }
+  }
+
+  if (!forwarding) {
+    if (callSessionId) await endCallSession(callSessionId, 'not_configured')
+    return twimlError('This number is not configured to receive calls.')
   }
 
   try {

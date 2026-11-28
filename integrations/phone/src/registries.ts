@@ -38,6 +38,7 @@ import { removePhoneNumberRegistry } from './tools/remove_phone_number'
 import { updatePhoneDetailsRegistry } from './tools/update_phone_details'
 import { updateForwardingNumberRegistry } from './tools/update_forwarding_number'
 import { updateOutboundVoiceRegistry } from './tools/update_outbound_voice'
+import { makeCallRegistry } from './tools/make_call'
 import { syncTwilioWebhookRegistry } from './tools/sync_twilio_webhook'
 import { backfillInboundSmsRegistry } from './tools/backfill_inbound_sms'
 import { syncChannelSetupRegistry } from './tools/sync_channel_setup'
@@ -82,6 +83,9 @@ export const toolRegistry: ToolRegistry = {
   /** Update the outbound voice enabled setting for a phone number. */
   update_outbound_voice: updateOutboundVoiceRegistry,
 
+  /** Let a Skedyul client place a call from a workplace number (the channel's voice.send). */
+  make_call: makeCallRegistry,
+
   /** Sync the SMS webhook URL to Twilio for a given phone number. */
   sync_twilio_webhook: syncTwilioWebhookRegistry,
 
@@ -107,6 +111,8 @@ import { complianceStatusRegistry } from './webhooks/compliance_status'
 import { receiveCallRegistry } from './webhooks/receive_call'
 import { callTranscriptionRegistry } from './webhooks/call_transcription'
 import { callStatusRegistry } from './webhooks/call_status'
+import { outboundCallRegistry } from './webhooks/outbound_call'
+import { callFallbackRegistry } from './webhooks/call_fallback'
 
 /**
  * Webhook Registry
@@ -125,6 +131,12 @@ export const webhookRegistry: WebhookRegistry = {
 
   /** Receive Twilio call/dial status callbacks for a call. ACTION level (per-call). */
   call_status: callStatusRegistry,
+
+  /** Twilio asks what to do with a call a Skedyul client is placing. */
+  outbound_call: outboundCallRegistry,
+
+  /** After ringing the team's apps for an incoming call: finish it, or forward it. */
+  call_fallback: callFallbackRegistry,
 
   /** Receive compliance status updates from Twilio. ACTION level. */
   compliance_status: complianceStatusRegistry,

@@ -51,6 +51,12 @@ function getCallSessionId(context: WebhookContext): string | undefined {
   return typeof value === 'string' ? value : undefined
 }
 
+/** The call was placed by us (`outbound_call` registered this URL). */
+function isOutboundRegistration(context: WebhookContext): boolean {
+  const reg = (context as { registration?: Record<string, unknown> }).registration
+  return reg?.direction === 'OUTBOUND'
+}
+
 /**
  * Receive Twilio Real-Time Transcription events.
  *
@@ -76,8 +82,16 @@ async function handleCallTranscription(
 
   const event = params.TranscriptionEvent
   const rawTrack = params.Track
-  const track: 'inbound_track' | 'outbound_track' =
+  const twilioTrack: 'inbound_track' | 'outbound_track' =
     rawTrack === 'outbound_track' ? 'outbound_track' : 'inbound_track'
+  // Twilio's `inbound_track` is whoever started the call. The platform's is
+  // always the customer, so a call we placed has its tracks the other way
+  // round.
+  const track = isOutboundRegistration(context)
+    ? twilioTrack === 'inbound_track'
+      ? 'outbound_track'
+      : 'inbound_track'
+    : twilioTrack
 
   try {
     if (event === 'transcription-content') {
